@@ -136,6 +136,8 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .fs-grp-bo:active{background:#e74c3c}
 .fs-grp-fo{background:#e67e22;color:#000;font-size:0.7em;padding:3px 6px;border:none;border-radius:3px;cursor:pointer;user-select:none;touch-action:none;font-weight:bold}
 .fs-grp-fo:active{background:#f39c12}
+.fs-grp-solo{background:#9b59b6;color:#fff;font-size:0.7em;padding:3px 6px;border:none;border-radius:3px;cursor:pointer;user-select:none;touch-action:none;font-weight:bold}
+.fs-grp-solo:active{background:#8e44ad}
 .fullon-btn{background:#e67e22;color:#000;font-weight:bold;font-size:0.65em;padding:3px 8px;border:none;border-radius:3px;cursor:pointer;user-select:none;touch-action:none;white-space:nowrap;flex-shrink:0}
 .fullon-btn:active{background:#f39c12}
 .fs-cf-bar{height:4px;background:#222;border-radius:2px;overflow:hidden;margin:2px 0}
@@ -143,6 +145,8 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .fs-close{background:#555;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;flex-shrink:0}
 .fs-close:hover{background:#777}
 .fs-fx-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:4px}
+.fs-color-dot{width:18px;height:18px;border-radius:50%;border:2px solid #555;flex-shrink:0;transition:background 0.1s,box-shadow 0.1s}
+.ch-fine-input{width:42px;font-size:0.75em;text-align:center;padding:2px;background:#0f3460;color:#0ff;border:1px solid #0af;border-radius:3px;outline:none}
 
 </style></head><body>
 
@@ -338,6 +342,8 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   <div class="fs-top">
     <button class="fs-close" onclick="exitFullConsole()">&#x2715; Izhod</button>
     <button class="bo" id="fsBoBtn" onclick="toggleBlackout()">BLACKOUT</button>
+    <button id="fsUndoBtn" onclick="doUndo()" style="background:#555;color:#fff;padding:4px 10px;font-size:0.8em;display:none;border:none;border-radius:4px;cursor:pointer" title="Razveljavi">&#x21A9; Undo</button>
+    <button onclick="fsSaveScene()" style="background:#1a6;color:#fff;padding:4px 10px;font-size:0.8em;border:none;border-radius:4px;cursor:pointer" title="Shrani sceno">&#x1F4BE; Shrani sceno</button>
     <div class="fs-master">
       <label>Master</label>
       <input type="range" min="0" max="255" value="255" id="fsMasterSlider" oninput="sendMaster(this.value)">
@@ -356,7 +362,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0;
-var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={};
+var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={};
 
 function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>setTimeout(wsConnect,2000)}
 function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
@@ -408,6 +414,7 @@ function handleWs(d){
     if(d.fxl)updateFxPreview(d.fxl);
     // Undo visibility
     document.getElementById('undoBtn').style.display=d.undo?'inline-block':'none';
+    document.getElementById('fsUndoBtn').style.display=d.undo?'inline-block':'none';
   }
 }
 
@@ -560,6 +567,7 @@ function syncFxValues(fxv){
       }
     }
   }
+  updateFsColorDots();
 }
 
 // ---- Kompakt pogled (horizontalni) — skupna kontrola vseh izbranih ----
@@ -687,7 +695,7 @@ function renderConsole(){
         const gKey=fi+'_'+ci;
         const checked=consGang.has(gKey)?'checked':'';
         h+='<div class="fx-col" style="background:'+bg+'">';
-        h+='<div class="ch-vval" style="color:'+col+'" id="cv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+')" title="Klik: pokazi samo ta">'+v+'</div>';
+        h+='<div class="ch-vval" style="color:'+col+'" id="cv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+')" ondblclick="event.stopPropagation();startFineTune(this,'+f.idx+','+fi+','+ci+')" title="Klik: solo | 2x klik: natančna vrednost">'+v+'</div>';
         h+='<input type="range" orient="vertical" id="vs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
         h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+')">'+ch.name+'</div>';
         h+='<div class="gang-wrap"><input type="checkbox" '+checked+' onchange="toggleGang('+fi+','+ci+')"><div class="gang-lbl">gang</div></div>';
@@ -755,6 +763,62 @@ function getFsFixtures(){
     return false;
   });
 }
+// Double-click na vrednost = fine-tune input polje
+function startFineTune(el,fxIdx,fi,ci){
+  if(el.querySelector('.ch-fine-input'))return;// že aktiven
+  const f=fixtures.find(x=>x.idx===fxIdx);
+  const cur=f&&f.channels&&f.channels[ci]?f.channels[ci].currentValue||0:0;
+  const inp=document.createElement('input');
+  inp.type='number';inp.min=0;inp.max=255;inp.value=cur;
+  inp.className='ch-fine-input';
+  el.textContent='';el.appendChild(inp);
+  inp.focus();inp.select();
+  const commit=()=>{
+    let v=parseInt(inp.value)||0;
+    if(v<0)v=0;if(v>255)v=255;
+    el.textContent=v;
+    sendCGang(fxIdx,fi,ci,v);
+    // Posodobi slider
+    ['vs_','fvs_'].forEach(p=>{const s=document.getElementById(p+fxIdx+'_'+ci);if(s)s.value=v});
+  };
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();inp.blur()}if(e.key==='Escape'){el.textContent=cur;inp.remove()}});
+}
+
+// Izračunaj barvo fixture-a iz kanalov (R/G/B/W/A/L/UV/C)
+function getFxColor(f){
+  if(!f||!f.channels)return{css:'#222',bri:0};
+  let r=0,g=0,b=0,dim=255;
+  f.channels.forEach(ch=>{
+    const v=ch.currentValue||0;
+    switch(ch.type){
+      case 1:dim=v;break;// intensity
+      case 2:r=Math.max(r,v);break;// red
+      case 3:g=Math.max(g,v);break;// green
+      case 4:b=Math.max(b,v);break;// blue
+      case 5:r=Math.max(r,v);g=Math.max(g,v);b=Math.max(b,v);break;// white
+      case 6:r=Math.max(r,v);g=Math.max(g,Math.round(v*0.65));break;// amber
+      case 19:r=Math.max(r,v);g=Math.max(g,v);break;// yellow
+      case 7:r=Math.max(r,Math.round(v*0.5));b=Math.max(b,v);break;// UV
+      case 21:g=Math.max(g,v);b=Math.max(b,Math.round(v*0.5));break;// cyan-ish (lime)
+      case 22:g=Math.max(g,v);b=Math.max(b,v);break;// cyan
+    }
+  });
+  // Apliciraj dimmer
+  r=Math.round(r*dim/255);g=Math.round(g*dim/255);b=Math.round(b*dim/255);
+  const bri=Math.round((r+g+b)/3*100/255);
+  return{css:'rgb('+r+','+g+','+b+')',bri:bri};
+}
+function updateFsColorDots(){
+  if(!fsActive)return;
+  fixtures.forEach((f,fi)=>{
+    const el=document.getElementById('fcd_'+f.idx);
+    if(!el)return;
+    const c=getFxColor(f);
+    el.style.background=c.css;
+    el.style.boxShadow=c.bri>60?'0 0 8px '+c.css:'none';
+  });
+}
 function renderFsConsole(){
   if(!fsActive)return;
   const grid=document.getElementById('fsConsoleGrid');
@@ -772,6 +836,8 @@ function renderFsConsole(){
     const colIcon=hidden.size>0?(collapsed?'\u25b8':'\u25be'):'';
     h+='<div class="fx-group" style="background:'+bg+'">';
     h+='<div class="fs-fx-hdr">';
+    const fxCol=getFxColor(f);
+    h+='<div class="fs-color-dot" id="fcd_'+f.idx+'" style="background:'+fxCol.css+';'+(fxCol.bri>60?'box-shadow:0 0 8px '+fxCol.css:'')+'"></div>';
     h+='<div class="fx-group-hdr" style="color:'+lbl+';max-width:'+hdrMax+'" onclick="toggleCollapsed('+fi+');renderFsConsole()" title="Skrij/pokazi skrcene kanale">'+colIcon+' '+f.name+'</div>';
     h+='<button class="fullon-btn" data-fi="'+fi+'">FULL ON</button>';
     h+='</div>';
@@ -790,7 +856,7 @@ function renderFsConsole(){
       }else{
         const checked=consGang.has(fi+'_'+ci)?'checked':'';
         h+='<div class="fx-col" style="background:'+bg+'">';
-        h+='<div class="ch-vval" style="color:'+col+'" id="fcv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+');renderFsConsole()" title="Klik: pokazi samo ta">'+v+'</div>';
+        h+='<div class="ch-vval" style="color:'+col+'" id="fcv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+');renderFsConsole()" ondblclick="event.stopPropagation();startFineTune(this,'+f.idx+','+fi+','+ci+')" title="Klik: solo | Dvojni klik: natančna vrednost">'+v+'</div>';
         h+='<input type="range" orient="vertical" id="fvs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
         h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+');renderFsConsole()">'+ch.name+'</div>';
         h+='<div class="gang-wrap"><input type="checkbox" '+checked+' onchange="toggleGang('+fi+','+ci+')"><div class="gang-lbl">gang</div></div>';
@@ -852,6 +918,14 @@ function fsRecallScene(slot){
   const fade=sel?+sel.value:1500;
   wsSend({cmd:'scene_recall',slot:slot,fade:fade});
 }
+function fsSaveScene(){
+  const name=prompt('Ime scene:','Scena '+(scenes.filter(Boolean).length+1));
+  if(!name)return;
+  fetch('/api/scenes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',name:name})}).then(r=>r.json()).then(d=>{
+    showMsg(d.ok?'Scena shranjena':'Napaka',d.ok);
+    loadScenes();// renderFsScenes se pokliče iz renderSceneGrid
+  });
+}
 function renderFsGroups(){
   if(!fsActive)return;
   const row=document.getElementById('fsGrpRow');
@@ -864,6 +938,7 @@ function renderFsGroups(){
     h+='<span class="fs-grp-name'+(isActive?' grp-active':'')+'" data-gi="'+i+'">'+g+'</span>';
     h+='<button class="fs-grp-bo" data-gi="'+i+'">BO</button>';
     h+='<button class="fs-grp-fo" data-gi="'+i+'">FO</button>';
+    h+='<button class="fs-grp-solo" data-gi="'+i+'">SOLO</button>';
     h+='</div>';
   });
   if(!has)h+='<span style="color:#555;font-size:0.8em;margin-left:6px">Ni skupin</span>';
@@ -889,6 +964,18 @@ function renderFsGroups(){
     const gi=+btn.dataset.gi;
     const press=()=>fsGrpFullOn(gi,true);
     const release=()=>{if(fsGrpFullOnState[gi])fsGrpFullOn(gi,false)};
+    btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
+    btn.addEventListener('mouseup',release);
+    btn.addEventListener('mouseleave',release);
+    btn.addEventListener('touchstart',e=>{e.preventDefault();press()},{passive:false});
+    btn.addEventListener('touchend',e=>{e.preventDefault();release()});
+    btn.addEventListener('touchcancel',release);
+  });
+  // Bind group Solo (hold) - zatemni vse RAZEN te skupine
+  row.querySelectorAll('.fs-grp-solo').forEach(btn=>{
+    const gi=+btn.dataset.gi;
+    const press=()=>fsGrpSolo(gi,true);
+    const release=()=>{if(fsGrpSoloState[gi])fsGrpSolo(gi,false)};
     btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
     btn.addEventListener('mouseup',release);
     btn.addEventListener('mouseleave',release);
@@ -950,6 +1037,32 @@ function fsGrpBlackout(gi,press){
       });
     });
     delete fsGrpBoState[gi];
+  }
+}
+// Solo: zatemni dimmerje vseh fixture-ov ki NISO v tej skupini
+function fsGrpSolo(gi,press){
+  if(press){
+    fsGrpSoloState[gi]={};
+    fixtures.forEach((f,i)=>{
+      if(f.groupMask&(1<<gi))return;// v skupini → pusti
+      if(!f.channels)return;
+      fsGrpSoloState[gi][i]={};
+      f.channels.forEach((ch,ci)=>{
+        if(ch.type===1){
+          fsGrpSoloState[gi][i][ci]=ch.currentValue||0;
+          wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});
+        }
+      });
+    });
+  }else{
+    if(!fsGrpSoloState[gi])return;
+    Object.entries(fsGrpSoloState[gi]).forEach(([fi,channels])=>{
+      const f=fixtures[+fi];if(!f)return;
+      Object.entries(channels).forEach(([ci,val])=>{
+        wsSend({cmd:'fxch',f:f.idx,c:+ci,v:val});
+      });
+    });
+    delete fsGrpSoloState[gi];
   }
 }
 
