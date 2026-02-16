@@ -210,6 +210,62 @@ enum SoundZone : uint8_t {
   ZONE_HIGH = 3    // Reagira na high
 };
 
+// Vir beata
+enum BeatSource : uint8_t {
+  BSRC_AUDIO   = 0,  // Iz FFT avdio analize
+  BSRC_MANUAL  = 1,  // Ročni tap tempo / BPM vpis
+  BSRC_AUTO    = 2   // Avdio ko je signal, sicer manual fallback
+};
+
+// Programi za manual beat mode
+enum ManualBeatProgram : uint8_t {
+  MBPROG_PULSE     = 0,   // Intenziteta pada od beata
+  MBPROG_CHASE     = 1,   // Zaporedna aktivacija fixture-ov
+  MBPROG_SINE      = 2,   // Gladka sinusoidna oscilacija
+  MBPROG_STROBE    = 3,   // Ostro vklop/izklop na beat
+  MBPROG_RAINBOW   = 4,   // Barvna rotacija sinhro z beatom
+  MBPROG_BUILD     = 5,   // Gradnja intenzitete čez N beatov
+  MBPROG_RANDOM    = 6,   // Naključne barve ob vsakem beatu
+  MBPROG_ALTERNATE = 7,   // Sode/lihe luči izmenjujejo
+  MBPROG_WAVE      = 8,   // Sinusni val s faznim zamikom
+  MBPROG_STACK     = 9,   // Vsak beat doda luč, potem reset
+  MBPROG_SPARKLE   = 10,  // Naključno utripanje
+  MBPROG_SCANNER   = 11,  // Ena luč skenira levo-desno
+  MBPROG_COUNT     = 12
+};
+
+// Beat subdivizija (množilnik)
+enum BeatSubdiv : uint8_t {
+  SUBDIV_QUARTER = 0,  // 1/4x — počasneje
+  SUBDIV_HALF    = 1,  // 1/2x
+  SUBDIV_NORMAL  = 2,  // 1x
+  SUBDIV_DOUBLE  = 3,  // 2x
+  SUBDIV_QUAD    = 4   // 4x — hitreje
+};
+
+// Nastavitve manual beat
+struct ManualBeatConfig {
+  bool     enabled;           // Manual beat aktiven
+  uint8_t  source;            // BeatSource
+  float    bpm;               // Ročni BPM (30-300)
+  uint8_t  program;           // ManualBeatProgram
+  uint8_t  subdiv;            // BeatSubdiv
+  float    intensity;         // Jakost programa 0.0-1.0
+  bool     colorEnabled;      // Program vpliva na barve
+  uint8_t  buildBeats;        // Koliko beatov za BUILD program (4-32)
+};
+
+static const ManualBeatConfig MANUAL_BEAT_DEFAULTS = {
+  false,          // enabled
+  BSRC_MANUAL,   // source
+  120.0f,         // bpm
+  MBPROG_PULSE,   // program
+  SUBDIV_NORMAL,  // subdiv
+  0.8f,           // intensity
+  true,           // colorEnabled
+  8               // buildBeats
+};
+
 // Easy mode nastavitve
 struct STLEasyConfig {
   bool     enabled;
