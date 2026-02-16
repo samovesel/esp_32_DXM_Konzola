@@ -110,6 +110,39 @@ td{padding:4px 6px;border-bottom:1px solid #222}
 input[orient=vertical]{-webkit-appearance:slider-vertical;appearance:slider-vertical;width:28px;height:160px;outline:none;cursor:pointer;padding:0;margin:0;accent-color:var(--ch-col,#0af)}
 input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:16px;border-radius:4px;background:var(--ch-col,#0af);cursor:pointer;border:2px solid rgba(255,255,255,0.6)}
 input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4px;background:var(--ch-col,#0af);cursor:pointer;border:2px solid rgba(255,255,255,0.6)}
+/* Celozaslonska konzola */
+.fs-console{position:fixed;top:0;left:0;width:100%;height:100%;background:#111;z-index:50;display:none;flex-direction:column}
+.fs-console.active{display:flex}
+.fs-top{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#1a1a2e;border-bottom:2px solid #0af;flex-shrink:0;flex-wrap:wrap}
+.fs-top .fs-master{display:flex;align-items:center;gap:8px;flex:1;min-width:200px}
+.fs-top .fs-master label{font-weight:bold;color:#0ff;margin:0;font-size:0.9em;white-space:nowrap}
+.fs-top .fs-master input[type=range]{flex:1;accent-color:#0ff}
+.fs-top .fs-master .val{font-size:1.1em;color:#0ff;width:36px;text-align:center}
+.fs-mid{flex:1;overflow-x:auto;overflow-y:auto;padding:6px;-webkit-overflow-scrolling:touch}
+.fs-mid .console{min-height:100%}
+.fs-bottom{flex-shrink:0;background:#16213e;border-top:1px solid #333;padding:4px 8px}
+.fs-scene-row{display:flex;gap:4px;overflow-x:auto;padding:3px 0;-webkit-overflow-scrolling:touch;align-items:center}
+.fs-scene-row .fs-lbl{color:#888;font-size:0.7em;white-space:nowrap;flex-shrink:0;margin-right:4px}
+.fs-scene-row button.fs-scn{flex-shrink:0;padding:6px 12px;font-size:0.8em;background:#222;color:#aaa;border:1px solid #333;border-radius:4px;white-space:nowrap}
+.fs-scene-row button.fs-scn.active-scene{border-color:#0f0;color:#0f0;box-shadow:0 0 6px rgba(0,255,0,0.3)}
+.fs-scene-row select.fs-fade{background:#1a1a2e;color:#f90;border:1px solid #333;border-radius:4px;padding:4px 6px;font-size:0.8em;flex-shrink:0}
+.fs-grp-row{display:flex;gap:4px;overflow-x:auto;padding:3px 0;-webkit-overflow-scrolling:touch;align-items:center}
+.fs-grp-row .fs-lbl{color:#888;font-size:0.7em;white-space:nowrap;flex-shrink:0;margin-right:4px}
+.fs-grp-item{display:flex;align-items:center;gap:3px;flex-shrink:0;background:#1a2030;border:1px solid #333;border-radius:4px;padding:3px 6px}
+.fs-grp-name{cursor:pointer;color:#0af;font-weight:bold;font-size:0.8em;padding:4px 6px;border-radius:3px;user-select:none}
+.fs-grp-name:hover{background:rgba(0,170,255,0.15)}
+.fs-grp-name.grp-active{background:#0af;color:#000}
+.fs-grp-bo{background:#c0392b;color:#fff;font-size:0.7em;padding:3px 6px;border:none;border-radius:3px;cursor:pointer;user-select:none;touch-action:none}
+.fs-grp-bo:active{background:#e74c3c}
+.fs-grp-fo{background:#e67e22;color:#000;font-size:0.7em;padding:3px 6px;border:none;border-radius:3px;cursor:pointer;user-select:none;touch-action:none;font-weight:bold}
+.fs-grp-fo:active{background:#f39c12}
+.fullon-btn{background:#e67e22;color:#000;font-weight:bold;font-size:0.65em;padding:3px 8px;border:none;border-radius:3px;cursor:pointer;user-select:none;touch-action:none;white-space:nowrap;flex-shrink:0}
+.fullon-btn:active{background:#f39c12}
+.fs-cf-bar{height:4px;background:#222;border-radius:2px;overflow:hidden;margin:2px 0}
+.fs-cf-fill{height:100%;background:linear-gradient(90deg,#0af,#0f0);width:0%;transition:width 0.08s linear}
+.fs-close{background:#555;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;flex-shrink:0}
+.fs-close:hover{background:#777}
+.fs-fx-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:4px}
 
 </style></head><body>
 
@@ -144,6 +177,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   <div class="view-toggle">
     <button class="sel-comp" id="vbComp" onclick="setView(0)">Kompakt</button>
     <button id="vbCons" onclick="setView(1)">Konzola</button>
+    <button id="vbFull" onclick="enterFullConsole()" style="background:#27ae60;color:#fff;border:1px solid #27ae60">&#x26F6; Celozaslonska</button>
   </div>
   <!-- Kompakt pogled — multi-select = skupna kontrola -->
   <div id="viewCompact">
@@ -299,8 +333,30 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   </div>
 </div>
 
+<!-- CELOZASLONSKA KONZOLA -->
+<div class="fs-console" id="fsConsole">
+  <div class="fs-top">
+    <button class="fs-close" onclick="exitFullConsole()">&#x2715; Izhod</button>
+    <button class="bo" id="fsBoBtn" onclick="toggleBlackout()">BLACKOUT</button>
+    <div class="fs-master">
+      <label>Master</label>
+      <input type="range" min="0" max="255" value="255" id="fsMasterSlider" oninput="sendMaster(this.value)">
+      <span class="val" id="fsMasterVal">255</span>
+    </div>
+  </div>
+  <div class="fs-mid">
+    <div class="console" id="fsConsoleGrid"></div>
+  </div>
+  <div class="fs-bottom">
+    <div class="fs-cf-bar"><div class="fs-cf-fill" id="fsCfBar"></div></div>
+    <div class="fs-scene-row" id="fsSceneRow"></div>
+    <div class="fs-grp-row" id="fsGrpRow"></div>
+  </div>
+</div>
+
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0;
+var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={};
 
 function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>setTimeout(wsConnect,2000)}
 function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
@@ -317,11 +373,21 @@ function handleWs(d){
     document.getElementById('statsText').textContent=d.fps.toFixed(1)+' fps | '+d.pkts+' paketov';
     boState=!!d.bo;document.getElementById('boBtn').style.background=boState?'#f33':'#555';
     document.getElementById('masterSlider').value=d.master;document.getElementById('masterVal').textContent=d.master;
+    // Celozaslonska sinhronizacija
+    if(fsActive){
+      document.getElementById('fsBoBtn').style.background=boState?'#f33':'#555';
+      document.getElementById('fsMasterSlider').value=d.master;document.getElementById('fsMasterVal').textContent=d.master;
+    }
     if(d.snaps)renderSnapshots(d.snaps);
     if(d.cf){
       const bar=document.getElementById('cfBar'),st=document.getElementById('cfStatus');
       if(d.cf.active){bar.style.width=(d.cf.progress*100)+'%';cfTarget=d.cf.target;const sc=scenes.find(s=>s&&s.slot===d.cf.target);st.textContent='Crossfade → '+(sc?sc.name:'?')+' ('+Math.round(d.cf.progress*100)+'%)';}
-      else{if(cfTarget>=0){cfTarget=-1;renderSceneGrid()}bar.style.width='0%';st.textContent=''}
+      else{if(cfTarget>=0){cfTarget=-1;renderSceneGrid();renderFsScenes()}bar.style.width='0%';st.textContent='';if(fsActive)document.getElementById('fsCfBar').style.width='0%'}
+    }
+    if(fsActive&&d.cf){
+      const fsBar=document.getElementById('fsCfBar');
+      if(d.cf.active)fsBar.style.width=(d.cf.progress*100)+'%';
+      else fsBar.style.width='0%';
     }
     // Sinhronizacija fixture vrednosti iz ESP32
     if(d.fxv)syncFxValues(d.fxv);
@@ -479,6 +545,11 @@ function syncFxValues(fxv){
         if(cv)cv.textContent=newVal;
         const vs=document.getElementById('vs_'+i+'_'+c);
         if(vs&&document.activeElement!==vs)vs.value=newVal;
+        // Celozaslonska konzola
+        const fcv=document.getElementById('fcv_'+i+'_'+c);
+        if(fcv)fcv.textContent=newVal;
+        const fvs=document.getElementById('fvs_'+i+'_'+c);
+        if(fvs&&document.activeElement!==fvs)fvs.value=newVal;
         // Kompakt: SAMO za fixture ki je dejansko prikazana
         if(i===compactIdx){
           const hv=document.getElementById('chv'+c);
@@ -636,8 +707,8 @@ function sendCGang(fxIdx,fi,ci,val){
   const delta=val-prev;
   consLastVal[myKey]=val;
 
-  const el=document.getElementById('cv_'+fxIdx+'_'+ci);
-  if(el)el.textContent=val;
+  // Posodobi oba pogleda (navadni + celozaslonski)
+  ['cv_','fcv_'].forEach(p=>{const el=document.getElementById(p+fxIdx+'_'+ci);if(el)el.textContent=val});
   const f=fixtures.find(x=>x.idx===fxIdx);
   if(f&&f.channels&&f.channels[ci])f.channels[ci].currentValue=val;
   wsSend({cmd:'fxch',f:fxIdx,c:ci,v:val});
@@ -653,13 +724,232 @@ function sendCGang(fxIdx,fi,ci,val){
       let gNew=gPrev+delta;
       if(gNew<0)gNew=0;if(gNew>255)gNew=255;
       consLastVal[gKey]=gNew;
-      const gvEl=document.getElementById('cv_'+gf.idx+'_'+gCi);
-      if(gvEl)gvEl.textContent=gNew;
-      const gsEl=document.getElementById('vs_'+gf.idx+'_'+gCi);
-      if(gsEl)gsEl.value=gNew;
+      ['cv_','fcv_'].forEach(p=>{const el=document.getElementById(p+gf.idx+'_'+gCi);if(el)el.textContent=gNew});
+      ['vs_','fvs_'].forEach(p=>{const el=document.getElementById(p+gf.idx+'_'+gCi);if(el)el.value=gNew});
       gf.channels[gCi].currentValue=gNew;
       wsSend({cmd:'fxch',f:gf.idx,c:gCi,v:gNew});
     });
+  }
+}
+
+// ---- Celozaslonska konzola ----
+function enterFullConsole(){
+  fsActive=true;
+  document.getElementById('fsConsole').classList.add('active');
+  document.getElementById('fsMasterSlider').value=document.getElementById('masterSlider').value;
+  document.getElementById('fsMasterVal').textContent=document.getElementById('masterVal').textContent;
+  document.getElementById('fsBoBtn').style.background=boState?'#f33':'#555';
+  renderFsConsole();renderFsScenes();renderFsGroups();
+}
+function exitFullConsole(){
+  fsActive=false;
+  document.getElementById('fsConsole').classList.remove('active');
+  // Osveži navadni pogled
+  if(viewMode===1){renderConsOrder();renderConsole()}
+}
+function getFsFixtures(){
+  if(fsActiveGroups.size===0)return fixtures.map((_,i)=>i);
+  return fixtures.map((_,i)=>i).filter(i=>{
+    const f=fixtures[i];
+    for(const g of fsActiveGroups){if(f.groupMask&(1<<g))return true}
+    return false;
+  });
+}
+function renderFsConsole(){
+  if(!fsActive)return;
+  const grid=document.getElementById('fsConsoleGrid');
+  const visibleFx=getFsFixtures();
+  if(visibleFx.length===0){grid.innerHTML='<p style="color:#666;padding:20px">Ni luči za prikaz. Izberi skupino ali dodaj fixture.</p>';return}
+  let h='';
+  visibleFx.forEach(fi=>{
+    const f=fixtures[fi];if(!f||!f.channels)return;
+    const bg=fxBg(fi);const lbl=fxLbl(fi);
+    const hidden=consHidden[fi]||new Set();
+    const collapsed=!!consCollapsed[fi];
+    const fullCount=f.channels.length-hidden.size;
+    const renderedCount=collapsed?fullCount:f.channels.length;
+    const hdrMax=renderedCount>0?((renderedCount*55)+60)+'px':'120px';
+    const colIcon=hidden.size>0?(collapsed?'\u25b8':'\u25be'):'';
+    h+='<div class="fx-group" style="background:'+bg+'">';
+    h+='<div class="fs-fx-hdr">';
+    h+='<div class="fx-group-hdr" style="color:'+lbl+';max-width:'+hdrMax+'" onclick="toggleCollapsed('+fi+');renderFsConsole()" title="Skrij/pokazi skrcene kanale">'+colIcon+' '+f.name+'</div>';
+    h+='<button class="fullon-btn" data-fi="'+fi+'">FULL ON</button>';
+    h+='</div>';
+    h+='<div class="fx-group-body">';
+    f.channels.forEach((ch,ci)=>{
+      const isMini=hidden.has(ci);
+      if(isMini&&collapsed)return;
+      const v=ch.currentValue||0;
+      const col=chColor(ch.type);
+      const key=fi+'_'+ci;
+      consLastVal[key]=v;
+      if(isMini){
+        h+='<div class="fx-col mini" style="background:'+bg+'" onclick="toggleChVis('+fi+','+ci+');renderFsConsole()">';
+        h+='<div class="ch-label" style="color:'+col+'">'+ch.name+'</div>';
+        h+='</div>';
+      }else{
+        const checked=consGang.has(fi+'_'+ci)?'checked':'';
+        h+='<div class="fx-col" style="background:'+bg+'">';
+        h+='<div class="ch-vval" style="color:'+col+'" id="fcv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+');renderFsConsole()" title="Klik: pokazi samo ta">'+v+'</div>';
+        h+='<input type="range" orient="vertical" id="fvs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
+        h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+');renderFsConsole()">'+ch.name+'</div>';
+        h+='<div class="gang-wrap"><input type="checkbox" '+checked+' onchange="toggleGang('+fi+','+ci+')"><div class="gang-lbl">gang</div></div>';
+        h+='</div>';
+      }
+    });
+    h+='</div>';
+    h+='<div class="fx-group-line" style="background:'+lbl+'"></div>';
+    h+='</div>';
+  });
+  grid.innerHTML=h;
+  // Bind Full On gumbov (press & hold)
+  grid.querySelectorAll('.fullon-btn').forEach(btn=>{
+    const fi=+btn.dataset.fi;
+    const press=()=>fsFullOn(fi,true);
+    const release=()=>{if(fsFullOnState[fi])fsFullOn(fi,false)};
+    btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
+    btn.addEventListener('mouseup',release);
+    btn.addEventListener('mouseleave',release);
+    btn.addEventListener('touchstart',e=>{e.preventDefault();press()},{passive:false});
+    btn.addEventListener('touchend',e=>{e.preventDefault();release()});
+    btn.addEventListener('touchcancel',release);
+  });
+}
+function fsFullOn(fi,press){
+  const f=fixtures[fi];if(!f||!f.channels)return;
+  if(press){
+    fsFullOnState[fi]={};
+    f.channels.forEach((ch,ci)=>{
+      if(ch.type===1){// CH_INTENSITY
+        fsFullOnState[fi][ci]=ch.currentValue||0;
+        wsSend({cmd:'fxch',f:f.idx,c:ci,v:255});
+      }
+    });
+  }else{
+    if(!fsFullOnState[fi])return;
+    Object.entries(fsFullOnState[fi]).forEach(([ci,val])=>{
+      wsSend({cmd:'fxch',f:f.idx,c:+ci,v:val});
+    });
+    delete fsFullOnState[fi];
+  }
+}
+function renderFsScenes(){
+  if(!fsActive)return;
+  const row=document.getElementById('fsSceneRow');
+  let h='<span class="fs-lbl">Scene:</span>';
+  h+='<select class="fs-fade" id="fsFadeSel" title="Fade čas"><option value="0">0s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="1500" selected>1.5s</option><option value="2000">2s</option><option value="3000">3s</option><option value="5000">5s</option></select>';
+  let has=false;
+  scenes.forEach(sc=>{
+    if(!sc)return;has=true;
+    const isActive=cfTarget===sc.slot;
+    h+='<button class="fs-scn'+(isActive?' active-scene':'')+'" onclick="fsRecallScene('+sc.slot+')">'+sc.name+'</button>';
+  });
+  if(!has)h+='<span style="color:#555;font-size:0.8em;margin-left:6px">Ni scen</span>';
+  row.innerHTML=h;
+}
+function fsRecallScene(slot){
+  const sel=document.getElementById('fsFadeSel');
+  const fade=sel?+sel.value:1500;
+  wsSend({cmd:'scene_recall',slot:slot,fade:fade});
+}
+function renderFsGroups(){
+  if(!fsActive)return;
+  const row=document.getElementById('fsGrpRow');
+  let h='<span class="fs-lbl">Skupine:</span>';
+  let has=false;
+  groups.forEach((g,i)=>{
+    if(!g)return;has=true;
+    const isActive=fsActiveGroups.has(i);
+    h+='<div class="fs-grp-item">';
+    h+='<span class="fs-grp-name'+(isActive?' grp-active':'')+'" data-gi="'+i+'">'+g+'</span>';
+    h+='<button class="fs-grp-bo" data-gi="'+i+'">BO</button>';
+    h+='<button class="fs-grp-fo" data-gi="'+i+'">FO</button>';
+    h+='</div>';
+  });
+  if(!has)h+='<span style="color:#555;font-size:0.8em;margin-left:6px">Ni skupin</span>';
+  row.innerHTML=h;
+  // Bind group name click (toggle prikaz)
+  row.querySelectorAll('.fs-grp-name').forEach(el=>{
+    el.addEventListener('click',()=>fsToggleGroup(+el.dataset.gi));
+  });
+  // Bind group Blackout (hold)
+  row.querySelectorAll('.fs-grp-bo').forEach(btn=>{
+    const gi=+btn.dataset.gi;
+    const press=()=>fsGrpBlackout(gi,true);
+    const release=()=>{if(fsGrpBoState[gi])fsGrpBlackout(gi,false)};
+    btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
+    btn.addEventListener('mouseup',release);
+    btn.addEventListener('mouseleave',release);
+    btn.addEventListener('touchstart',e=>{e.preventDefault();press()},{passive:false});
+    btn.addEventListener('touchend',e=>{e.preventDefault();release()});
+    btn.addEventListener('touchcancel',release);
+  });
+  // Bind group Full On (hold)
+  row.querySelectorAll('.fs-grp-fo').forEach(btn=>{
+    const gi=+btn.dataset.gi;
+    const press=()=>fsGrpFullOn(gi,true);
+    const release=()=>{if(fsGrpFullOnState[gi])fsGrpFullOn(gi,false)};
+    btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
+    btn.addEventListener('mouseup',release);
+    btn.addEventListener('mouseleave',release);
+    btn.addEventListener('touchstart',e=>{e.preventDefault();press()},{passive:false});
+    btn.addEventListener('touchend',e=>{e.preventDefault();release()});
+    btn.addEventListener('touchcancel',release);
+  });
+}
+function fsToggleGroup(gi){
+  if(fsActiveGroups.has(gi))fsActiveGroups.delete(gi);
+  else fsActiveGroups.add(gi);
+  renderFsGroups();renderFsConsole();
+}
+function fsGrpFullOn(gi,press){
+  if(press){
+    fsGrpFullOnState[gi]={};
+    fixtures.forEach((f,i)=>{
+      if(!(f.groupMask&(1<<gi)))return;
+      if(!f.channels)return;
+      fsGrpFullOnState[gi][i]={};
+      f.channels.forEach((ch,ci)=>{
+        if(ch.type===1){
+          fsGrpFullOnState[gi][i][ci]=ch.currentValue||0;
+          wsSend({cmd:'fxch',f:f.idx,c:ci,v:255});
+        }
+      });
+    });
+  }else{
+    if(!fsGrpFullOnState[gi])return;
+    Object.entries(fsGrpFullOnState[gi]).forEach(([fi,channels])=>{
+      const f=fixtures[+fi];if(!f)return;
+      Object.entries(channels).forEach(([ci,val])=>{
+        wsSend({cmd:'fxch',f:f.idx,c:+ci,v:val});
+      });
+    });
+    delete fsGrpFullOnState[gi];
+  }
+}
+function fsGrpBlackout(gi,press){
+  if(press){
+    fsGrpBoState[gi]={};
+    fixtures.forEach((f,i)=>{
+      if(!(f.groupMask&(1<<gi)))return;
+      if(!f.channels)return;
+      fsGrpBoState[gi][i]={};
+      f.channels.forEach((ch,ci)=>{
+        if(ch.type===1){
+          fsGrpBoState[gi][i][ci]=ch.currentValue||0;
+          wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});
+        }
+      });
+    });
+  }else{
+    if(!fsGrpBoState[gi])return;
+    Object.entries(fsGrpBoState[gi]).forEach(([fi,channels])=>{
+      const f=fixtures[+fi];if(!f)return;
+      Object.entries(channels).forEach(([ci,val])=>{
+        wsSend({cmd:'fxch',f:f.idx,c:+ci,v:val});
+      });
+    });
+    delete fsGrpBoState[gi];
   }
 }
 
@@ -670,6 +960,7 @@ function recallArtnet(){wsSend({cmd:'recall_artnet'})}
 function updateFadeLabel(){const v=+document.getElementById('fadeSlider').value;document.getElementById('fadeVal').textContent=v<1000?(v+'ms'):(v/1000).toFixed(1)+'s'}
 function loadScenes(){fetch('/api/scenes').then(r=>r.json()).then(d=>{scenes=d.scenes||[];renderSceneGrid()})}
 function renderSceneGrid(){
+  renderFsScenes();
   let h='',has=false;
   scenes.forEach((sc,i)=>{
     if(!sc)return;has=true;
@@ -839,7 +1130,7 @@ function loadFixtures(){fetch('/api/fixtures').then(r=>r.json()).then(d=>{fixtur
   consOrder=consOrder.filter(i=>i<fixtures.length);
   selCons.forEach(i=>{if(i>=fixtures.length)selCons.delete(i)});
   selComp.forEach(i=>{if(i>=fixtures.length)selComp.delete(i)});
-  renderPatchTable();renderProfileList();renderGroupEditor();renderFixBtns();if(viewMode===1){renderConsOrder();renderConsole()}})}
+  renderPatchTable();renderProfileList();renderGroupEditor();renderFixBtns();if(viewMode===1){renderConsOrder();renderConsole()}if(fsActive){renderFsConsole();renderFsGroups()}})}
 function nextFreeDmxAddr(){
   if(!fixtures.length)return 1;
   let maxEnd=0;
