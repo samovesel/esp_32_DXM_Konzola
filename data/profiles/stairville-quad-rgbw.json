@@ -1,0 +1,68 @@
+{
+  "name": "Quad Par RGBW",
+  "comment": "Stairville Quad Par 5x8W RGBW (307515)",
+  "modes": [
+    {
+      "name": "4ch",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" }
+      ]
+    },
+    {
+      "name": "6ch",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Open" },
+            { "range": [11, 255], "label": "Strobe Slow-Fast" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        {
+          "name": "Mode",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 0], "label": "Manual" },
+            { "range": [1, 24], "label": "Static Color" },
+            { "range": [25, 249], "label": "Auto Shows" },
+            { "range": [250, 255], "label": "Sound Active" }
+          ]
+        },
+        {
+          "name": "Color/Speed",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 255], "label": "Color / Speed" }
+          ]
+        },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Open" },
+            { "range": [11, 255], "label": "Strobe Slow-Fast" }
+          ]
+        }
+      ]
+    }
+  ]
+}

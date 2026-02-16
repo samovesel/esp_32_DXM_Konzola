@@ -1,0 +1,39 @@
+{
+  "name": "QuadPar 5x8W",
+  "modes": [
+    {
+      "name": "6ch",
+      "channels": [
+        {"name": "Red",     "type": "color_r",   "default": 0},
+        {"name": "Green",   "type": "color_g",   "default": 0},
+        {"name": "Blue",    "type": "color_b",   "default": 0},
+        {"name": "White",   "type": "color_w",   "default": 0},
+        {"name": "Dimmer",  "type": "intensity", "default": 0},
+        {"name": "Strobe",  "type": "strobe",    "default": 0}
+      ]
+    },
+    {
+      "name": "8ch",
+      "channels": [
+        {"name": "Dimmer",  "type": "intensity", "default": 0},
+        {"name": "Red",     "type": "color_r",   "default": 0},
+        {"name": "Green",   "type": "color_g",   "default": 0},
+        {"name": "Blue",    "type": "color_b",   "default": 0},
+        {"name": "Warm White", "type": "color_w", "default": 0},
+        {"name": "Mode",    "type": "preset",    "default": 0, "ranges": [
+          {"from": 0,   "to": 0,   "label": "Manual RGB"},
+          {"from": 1,   "to": 24,  "label": "Color via ch7"},
+          {"from": 25,  "to": 249, "label": "Auto shows"},
+          {"from": 250, "to": 255, "label": "Sound ctrl"}
+        ]},
+        {"name": "Color/Speed", "type": "macro",  "default": 0, "ranges": [
+          {"from": 0,   "to": 17,  "label": "Dark"},
+          {"from": 18,  "to": 143, "label": "Colors"},
+          {"from": 144, "to": 251, "label": "WW combos"},
+          {"from": 252, "to": 255, "label": "RGBWW all"}
+        ]},
+        {"name": "Strobe",  "type": "strobe",    "default": 0}
+      ]
+    }
+  ]
+}

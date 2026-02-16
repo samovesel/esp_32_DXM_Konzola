@@ -1,0 +1,10 @@
+{
+  "name": "LED Studio 150 2ch",
+  "channels": [
+    { "name": "Dimmer", "type": "intensity", "default": 0 },
+    { "name": "Strobe", "type": "strobe", "default": 0, "ranges": [
+      { "from": 0, "to": 5, "label": "Off" },
+      { "from": 6, "to": 255, "label": "Slow → Fast" }
+    ]}
+  ]
+}

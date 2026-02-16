@@ -1,0 +1,166 @@
+{
+  "name": "Flash PRO 7x10W",
+  "comment": "Flash PRO 7x10W MK2 (P7100408)",
+  "modes": [
+    {
+      "name": "Clas6",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Open" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" }
+      ]
+    },
+    {
+      "name": "Clas8",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Open" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        {
+          "name": "Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 125], "label": "Fixed Colors" },
+            { "range": [126, 180], "label": "Macros" },
+            { "range": [236, 255], "label": "Sound Active" }
+          ]
+        },
+        {
+          "name": "Speed",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 255], "label": "Speed/Pulse" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pro6",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Open" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pro7",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        { "name": "Dimmer", "type": "intensity" },
+        { "name": "Dimmer Fine", "type": "generic" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Open" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3ch",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" }
+      ]
+    },
+    {
+      "name": "4ch",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" }
+      ]
+    },
+    {
+      "name": "16b6",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Red Fine", "type": "generic" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Green Fine", "type": "generic" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "Blue Fine", "type": "generic" }
+      ]
+    },
+    {
+      "name": "16b8",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Red Fine", "type": "generic" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Green Fine", "type": "generic" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "Blue Fine", "type": "generic" },
+        { "name": "White", "type": "color_w" },
+        { "name": "White Fine", "type": "generic" }
+      ]
+    },
+    {
+      "name": "ADMX",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        { "name": "Dimmer", "type": "intensity" },
+        { "name": "Empty", "type": "generic" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Open" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        },
+        {
+          "name": "Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 125], "label": "Fixed Colors" },
+            { "range": [126, 180], "label": "Macros" },
+            { "range": [236, 255], "label": "Sound Active" }
+          ]
+        }
+      ]
+    }
+  ]
+}

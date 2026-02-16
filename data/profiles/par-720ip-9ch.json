@@ -1,0 +1,24 @@
+{
+  "name": "2bright Par 720 IP 9ch",
+  "channels": [
+    { "name": "Dimmer", "type": "intensity", "default": 0 },
+    { "name": "Strobe", "type": "strobe", "default": 0, "ranges": [
+      { "from": 0, "to": 5, "label": "On" },
+      { "from": 6, "to": 10, "label": "Off" },
+      { "from": 11, "to": 127, "label": "FX" },
+      { "from": 128, "to": 255, "label": "Strobe 1→20Hz" }
+    ]},
+    { "name": "Red", "type": "color_r", "default": 0 },
+    { "name": "Green", "type": "color_g", "default": 0 },
+    { "name": "Blue", "type": "color_b", "default": 0 },
+    { "name": "Lime", "type": "generic", "default": 0 },
+    { "name": "Amber", "type": "color_a", "default": 0 },
+    { "name": "Cyan", "type": "generic", "default": 0 },
+    { "name": "Color Macro", "type": "macro", "default": 0, "ranges": [
+      { "from": 0, "to": 10, "label": "Off" },
+      { "from": 11, "to": 125, "label": "Colors 1–35" },
+      { "from": 126, "to": 191, "label": "Jump" },
+      { "from": 192, "to": 255, "label": "Fade" }
+    ]}
+  ]
+}

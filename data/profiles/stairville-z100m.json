@@ -1,0 +1,45 @@
+{
+  "name": "Z100M Par 64",
+  "comment": "Stairville Z100M Par 64 LED 3000K 100W",
+  "modes": [
+    {
+      "name": "1ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" }
+      ]
+    },
+    {
+      "name": "2ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 15], "label": "Open" },
+            { "range": [16, 95], "label": "Strobe Hz" },
+            { "range": [96, 175], "label": "Flash" },
+            { "range": [176, 255], "label": "Random" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        { "name": "Dimmer Fine", "type": "generic" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 15], "label": "Open" },
+            { "range": [16, 95], "label": "Strobe Hz" },
+            { "range": [96, 175], "label": "Flash" },
+            { "range": [176, 255], "label": "Random" }
+          ]
+        }
+      ]
+    }
+  ]
+}

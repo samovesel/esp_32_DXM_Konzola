@@ -1,0 +1,47 @@
+{
+  "name": "Hero Wash 340FX 16ch",
+  "channels": [
+    { "name": "Pan", "type": "pan", "default": 128 },
+    { "name": "Pan fine", "type": "pan_fine", "default": 0 },
+    { "name": "Tilt", "type": "tilt", "default": 128 },
+    { "name": "Tilt fine", "type": "tilt_fine", "default": 0 },
+    { "name": "P/T Speed", "type": "speed", "default": 0, "ranges": [
+      { "from": 0, "to": 0, "label": "Max speed" },
+      { "from": 1, "to": 255, "label": "Fast → Slow" }
+    ]},
+    { "name": "Dimmer", "type": "intensity", "default": 0 },
+    { "name": "Shutter", "type": "strobe", "default": 0, "ranges": [
+      { "from": 0, "to": 9, "label": "Open" },
+      { "from": 10, "to": 250, "label": "Strobe" },
+      { "from": 251, "to": 255, "label": "Open" }
+    ]},
+    { "name": "Red", "type": "color_r", "default": 0 },
+    { "name": "Green", "type": "color_g", "default": 0 },
+    { "name": "Blue", "type": "color_b", "default": 0 },
+    { "name": "White", "type": "color_w", "default": 0 },
+    { "name": "Color Temp", "type": "macro", "default": 0, "ranges": [
+      { "from": 0, "to": 0, "label": "Off" },
+      { "from": 1, "to": 127, "label": "2400→6000K" },
+      { "from": 128, "to": 255, "label": "7200→10800K" }
+    ]},
+    { "name": "Color Macro", "type": "macro", "default": 0, "ranges": [
+      { "from": 0, "to": 10, "label": "Off" },
+      { "from": 11, "to": 150, "label": "Colors" },
+      { "from": 151, "to": 200, "label": "Change" },
+      { "from": 201, "to": 255, "label": "Fade" }
+    ]},
+    { "name": "Zoom", "type": "zoom", "default": 0 },
+    { "name": "Beam FX", "type": "generic", "default": 0, "ranges": [
+      { "from": 0, "to": 100, "label": "0°→90°" },
+      { "from": 101, "to": 133, "label": "Yo-yo" },
+      { "from": 134, "to": 194, "label": "CCW" },
+      { "from": 195, "to": 255, "label": "CW" }
+    ]},
+    { "name": "Auto/Sound", "type": "preset", "default": 0, "ranges": [
+      { "from": 0, "to": 10, "label": "Off" },
+      { "from": 11, "to": 90, "label": "Show 1–8" },
+      { "from": 91, "to": 230, "label": "Sound ctrl" },
+      { "from": 231, "to": 255, "label": "Reset/Off" }
+    ]}
+  ]
+}

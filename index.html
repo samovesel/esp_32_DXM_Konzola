@@ -1,0 +1,1071 @@
+<!DOCTYPE html><html lang="sl"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ArtNet/DMX Node</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,sans-serif;background:#111;color:#ddd;font-size:14px}
+header{background:#1a1a2e;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;border-bottom:2px solid #0af;position:sticky;top:0;z-index:10}
+header .mode{font-weight:bold;font-size:1.1em}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.dot-g{background:#0f0}.dot-y{background:#fc0}
+header .stats{font-size:0.8em;color:#888}
+button{background:#0af;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:0.85em}
+button:hover{background:#0cf}button.danger{background:#c0392b;color:#fff}
+button.scn{background:#222;color:#aaa;border:1px solid #333;padding:10px 14px;font-size:0.95em;min-width:110px;text-align:left;border-radius:6px;position:relative}
+button.scn:hover{border-color:#0af}
+button.scn.active-scene{border-color:#0f0;color:#0f0;box-shadow:0 0 8px rgba(0,255,0,0.3)}
+button.scn .slot{font-size:0.7em;color:#666;display:block}
+.scn-ctx{position:fixed;z-index:100;background:#1e2a3e;border:1px solid #0af;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.6);padding:4px 0;min-width:160px;animation:ctxIn .15s ease}
+@keyframes ctxIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
+.scn-ctx-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:#ddd;font-size:0.9em;cursor:pointer;white-space:nowrap;border:none;background:none;width:100%}
+.scn-ctx-item:hover{background:#0af22;color:#0af}
+.scn-ctx-item .ctx-icon{font-size:1.1em;width:20px;text-align:center}
+.scn-ctx-item.ctx-danger:hover{background:#c0392b33;color:#e74c3c}
+.scn-ctx-hdr{padding:6px 16px 4px;font-size:0.7em;color:#666;border-bottom:1px solid #333;margin-bottom:2px}
+.scn-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:99}
+button.bo{background:#f33;color:#fff;font-size:1.1em;padding:10px 20px}
+nav{display:flex;background:#16213e;border-bottom:1px solid #333;overflow-x:auto}
+nav button{flex:1;border-radius:0;background:transparent;color:#888;padding:10px;font-size:0.85em;white-space:nowrap}
+nav button.sel{color:#0af;border-bottom:2px solid #0af;background:#1a1a2e}
+.tab{display:none;padding:12px}.tab.show{display:block}
+.card{background:#16213e;border-radius:6px;padding:12px;margin-bottom:10px;border:1px solid #222}
+h3{color:#0af;margin-bottom:8px;font-size:1em}
+label{display:block;font-size:0.8em;color:#888;margin:6px 0 2px}
+input,select{width:100%;padding:7px;border:1px solid #333;border-radius:4px;background:#0f3460;color:#fff}
+.fxsel{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.fxsel button{font-size:0.8em;padding:4px 10px;background:#222;color:#aaa;border:1px solid #333}
+.ch-grid{display:flex;flex-direction:column;gap:6px}
+.ch-row{display:flex;align-items:center;gap:8px}
+.ch-row .ch-name{width:90px;font-size:0.8em;color:#aaa;text-align:right;flex-shrink:0}
+.ch-row input[type=range]{flex:1;accent-color:#0af}
+.ch-row .ch-val{width:36px;font-size:0.85em;text-align:center;color:#0ff}
+.ch-row .ch-range{font-size:0.7em;color:#666;width:80px}
+.master-row{display:flex;align-items:center;gap:10px;padding:10px;background:#1a1a2e;border-radius:6px;margin-bottom:10px}
+.master-row label{margin:0;font-weight:bold;color:#0ff}
+.master-row input[type=range]{flex:1;accent-color:#0ff}
+.master-row .val{font-size:1.2em;color:#0ff;width:40px;text-align:center}
+.cf-bar{height:6px;background:#222;border-radius:3px;margin:8px 0;overflow:hidden}
+.cf-fill{height:100%;background:linear-gradient(90deg,#0af,#0f0);width:0%;transition:width 0.08s linear}
+.scene-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.fade-row{display:flex;align-items:center;gap:10px;margin:10px 0}
+.fade-row label{margin:0;color:#aaa;white-space:nowrap}
+.fade-row input[type=range]{flex:1;accent-color:#f90}
+.fade-row .val{width:50px;color:#f90;text-align:center;font-weight:bold}
+table{width:100%;border-collapse:collapse;font-size:0.85em}
+th{text-align:left;color:#0af;padding:4px 6px;border-bottom:1px solid #333}
+td{padding:4px 6px;border-bottom:1px solid #222}
+.upload-area{border:2px dashed #333;border-radius:6px;padding:20px;text-align:center;color:#666;margin:8px 0;transition:border-color 0.2s}
+.row{display:flex;gap:8px}.row>div{flex:1}
+.toggle{display:flex;align-items:center;gap:8px;margin:4px 0}
+.toggle input[type=checkbox]{width:auto}
+.toggle label{margin:0;font-size:0.9em;color:#ccc}
+.fft-box{display:flex;align-items:flex-end;height:100px;gap:2px;background:#0a0a1e;border-radius:6px;padding:6px;margin:8px 0}
+.fft-bar{flex:1;background:linear-gradient(to top,#0af,#0f0);border-radius:2px 2px 0 0;min-height:2px;transition:height 0.08s ease}
+.preset-btns{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}.preset-btns button{padding:4px 10px;font-size:0.8em;background:#222;border:1px solid #444;border-radius:4px}.preset-btns button.ps-sel{background:#0af;color:#000;border-color:#0af}
+.fx-preview{display:flex;flex-wrap:wrap;gap:6px;min-height:30px;padding:4px 0}
+.fx-prev-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:0.65em;color:#888}
+.fx-prev-dot{width:28px;height:28px;border-radius:50%;border:2px solid #333;transition:background 0.15s,box-shadow 0.15s}
+.zone-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:0.85em}.zone-row select{background:#1a1a2e;color:#ddd;border:1px solid #333;border-radius:4px;padding:2px 6px}
+.scene-prev{display:flex;gap:2px;margin-top:4px}.scene-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.stl-stat{display:flex;gap:16px;margin:8px 0;font-size:0.85em}
+.stl-stat span{color:#0af}
+.stl-meter{height:8px;background:#222;border-radius:4px;overflow:hidden;margin:3px 0}
+.stl-meter-fill{height:100%;border-radius:4px;transition:width 0.08s}
+.bass-fill{background:#f33}.mid-fill{background:#fc0}.high-fill{background:#0af}
+#msg{position:fixed;top:60px;left:50%;transform:translateX(-50%);padding:8px 16px;border-radius:4px;display:none;z-index:20;font-weight:bold}
+#msg.ok{display:block;background:#27ae60;color:#fff}#msg.err{display:block;background:#e74c3c;color:#fff}
+/* Konzola — vertikalni faderji */
+.view-toggle{display:flex;gap:4px;margin-bottom:10px}
+.view-toggle button{background:#222;color:#888;border:1px solid #333}
+.view-toggle button.sel-comp{background:#0af;color:#000;border-color:#0af}
+.view-toggle button.sel-cons{background:#e67e22;color:#000;border-color:#e67e22}
+.fxsel .sel-comp{background:#0af!important;color:#000!important;border-color:#0af!important}
+.fxsel .sel-cons{background:#e67e22!important;color:#000!important;border-color:#e67e22!important}
+.cons-order{display:flex;gap:4px;margin-top:6px;padding:6px;background:#1a1510;border-radius:6px;min-height:32px;flex-wrap:wrap;align-items:center}
+.cons-order:empty::after{content:'Izberi fixture zgoraj';color:#555;font-size:0.8em}
+.cons-order .co-item{display:flex;align-items:center;gap:2px;background:#2a2010;border:1px solid #e67e22;border-radius:4px;padding:2px 6px;cursor:grab;touch-action:none;user-select:none;font-size:0.8em;color:#e67e22;transition:transform 0.15s,opacity 0.15s}
+.cons-order .co-item.dragging{opacity:0.4;transform:scale(0.95)}
+.cons-order .co-item .grip{color:#886;margin-right:3px;font-size:0.9em}
+.cons-order .co-drop{width:3px;background:#e67e22;border-radius:2px;align-self:stretch;min-height:24px;transition:width 0.1s}
+.cons-order .co-drop.active{width:8px;background:#f90}
+.grp-check{display:flex;flex-wrap:wrap;gap:4px}.grp-check label{font-size:0.8em;background:#222;padding:2px 8px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:3px}.grp-check input{margin:0}
+.console-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:10px}
+.console{display:flex;gap:6px;min-width:min-content}
+.fx-group{display:flex;flex-direction:column;border-radius:6px;overflow:hidden}
+.fx-group-hdr{font-size:0.7em;font-weight:bold;padding:3px 8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;user-select:none;max-width:var(--hdr-max,none)}
+.fx-group-hdr:hover{filter:brightness(1.3)}
+.fx-group-body{display:flex;gap:1px;padding:2px 2px 0 2px}
+.fx-group-line{height:3px;border-radius:0 0 6px 6px}
+.fx-col{display:flex;flex-direction:column;align-items:center;min-width:52px;border-radius:4px;padding:5px 3px 2px;border:1px solid transparent;transition:min-width 0.2s,padding 0.2s,opacity 0.2s}
+.fx-col.mini{min-width:28px!important;max-width:28px;padding:5px 2px;cursor:pointer;opacity:0.55}
+.fx-col.mini .ch-vval,.fx-col.mini input[type=range],.fx-col.mini .gang-wrap{display:none}
+.fx-col.mini .ch-label{writing-mode:vertical-lr;font-size:0.6em;max-width:28px;overflow:hidden;margin-top:auto;text-overflow:clip;padding:6px 2px;min-height:60px}
+.fx-col .ch-label{font-size:0.55em;white-space:nowrap;margin-top:3px;max-width:50px;overflow:hidden;text-align:center;cursor:pointer;padding:2px 0;border-radius:3px}
+.fx-col .ch-label:hover{background:rgba(255,255,255,0.08)}
+.gang-wrap{margin-top:2px;display:flex;flex-direction:column;align-items:center}
+.gang-wrap input{margin:0;accent-color:#e67e22;width:16px;height:16px}
+.gang-wrap .gang-lbl{font-size:0.45em;color:#886;margin-top:1px}
+.fx-col .ch-vval{font-size:0.75em;font-weight:bold;margin-bottom:2px;height:1.2em;text-align:center;cursor:pointer}
+.fx-col .ch-vval:hover{text-decoration:underline}
+input[orient=vertical]{-webkit-appearance:slider-vertical;appearance:slider-vertical;width:28px;height:160px;outline:none;cursor:pointer;padding:0;margin:0;accent-color:var(--ch-col,#0af)}
+input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:16px;border-radius:4px;background:var(--ch-col,#0af);cursor:pointer;border:2px solid rgba(255,255,255,0.6)}
+input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4px;background:var(--ch-col,#0af);cursor:pointer;border:2px solid rgba(255,255,255,0.6)}
+
+</style></head><body>
+
+<header>
+  <div>
+    <span class="mode"><span class="dot dot-y" id="dot"></span><span id="modeText">...</span></span>
+    <button id="modeBtn" onclick="toggleMode()">...</button>
+    <button class="bo" id="boBtn" onclick="toggleBlackout()">BLACKOUT</button>
+    <button id="undoBtn" onclick="doUndo()" style="background:#555;padding:4px 10px;font-size:0.8em;display:none" title="Razveljavi">↩ Undo</button>
+  </div>
+  <div class="stats"><span id="statsText">...</span></div>
+</header>
+
+<nav>
+  <button class="sel" onclick="showTab(0,this)">Mixer</button>
+  <button onclick="showTab(1,this)">Scene</button>
+  <button onclick="showTab(2,this)">Sound</button>
+  <button onclick="showTab(3,this)">Fixtures</button>
+  <button onclick="showTab(4,this)">Nastavitve</button>
+  <button onclick="showTab(5,this)">Konfig</button>
+</nav>
+
+<div id="msg"></div>
+
+<!-- TAB 0: MIXER -->
+<div class="tab show" id="tab0">
+  <div class="master-row">
+    <label>Master</label>
+    <input type="range" min="0" max="255" value="255" id="masterSlider" oninput="sendMaster(this.value)">
+    <span class="val" id="masterVal">255</span>
+  </div>
+  <div class="view-toggle">
+    <button class="sel-comp" id="vbComp" onclick="setView(0)">Kompakt</button>
+    <button id="vbCons" onclick="setView(1)">Konzola</button>
+  </div>
+  <!-- Kompakt pogled — multi-select = skupna kontrola -->
+  <div id="viewCompact">
+    <div class="card"><h3>Izberi fixture / skupino</h3><p style="font-size:0.7em;color:#0af;margin:0 0 6px">Več izbranih = skupna kontrola vseh</p><div class="fxsel" id="groupBtns"></div><div class="fxsel" id="fixBtns"></div></div>
+    <div class="card" id="faderBox" style="display:none"><h3 id="faderTitle">Kanali</h3><div class="ch-grid" id="faders"></div></div>
+  </div>
+  <!-- Konzola pogled — multi-select = prikaz vseh -->
+  <div id="viewConsole" style="display:none">
+    <div class="card"><h3>Izberi fixture</h3><p style="font-size:0.7em;color:#e67e22;margin:0 0 6px">Več izbranih = prikaz vseh sliderjev</p><div class="fxsel" id="fixBtns2"></div>
+    <p style="font-size:0.65em;color:#886;margin:6px 0 2px">Vrstni red (povleci za premik):</p><div class="cons-order" id="consOrderList"></div>
+    <p style="font-size:0.6em;color:#555;margin:4px 0 0">Ime kanala: skrči/razširi. Vrednost: pokaži samo ta. Naslov fixture: skrij/pokaži skrčene.</p></div>
+    <div class="console-wrap"><div class="console" id="consoleGrid"></div></div>
+  </div>
+  <div class="card"><h3>Zgodovina stanj</h3><p style="font-size:0.75em;color:#888;margin:0 0 6px"><span style="color:#27ae60;font-weight:bold">A</span> = ArtNet &nbsp; <span style="color:#e67e22;font-weight:bold">L</span> = Lokalno</p><div id="snapList">Ni shranjenih stanj.</div><button onclick="recallArtnet()" style="margin-top:6px;background:#555">Obnovi trenutno ArtNet senco</button></div>
+</div>
+
+<!-- TAB 1: SCENE -->
+<div class="tab" id="tab1">
+  <div class="card"><h3>Crossfade</h3>
+    <div class="fade-row"><label>Čas:</label><input type="range" min="0" max="10000" step="100" value="1500" id="fadeSlider" oninput="updateFadeLabel()"><span class="val" id="fadeVal">1.5s</span></div>
+    <div class="cf-bar"><div class="cf-fill" id="cfBar"></div></div><div id="cfStatus" style="font-size:0.8em;color:#666;height:1.2em"></div>
+  </div>
+  <div class="card"><h3>Scene</h3><div class="scene-grid" id="sceneGrid"></div><div style="margin-top:10px"><button onclick="saveNewScene()">Shrani trenutno stanje</button></div></div>
+</div>
+
+<!-- TAB 2: SOUND -->
+<div class="tab" id="tab2">
+  <div class="card">
+    <h3>FFT Spekter</h3>
+    <div class="fft-box" id="fftBox"></div>
+    <div class="stl-stat">
+      <div style="flex:1">Bass<div class="stl-meter"><div class="stl-meter-fill bass-fill" id="mBass" style="width:0%"></div></div></div>
+      <div style="flex:1">Mid<div class="stl-meter"><div class="stl-meter-fill mid-fill" id="mMid" style="width:0%"></div></div></div>
+      <div style="flex:1">High<div class="stl-meter"><div class="stl-meter-fill high-fill" id="mHigh" style="width:0%"></div></div></div>
+    </div>
+    <div class="stl-stat">Peak: <span id="sPeak">0%</span> | BPM: <span id="sBpm">--</span> | Beat: <span id="sBeat">-</span> | Phase: <span id="sBeatPh">0</span> | SR: <span id="sSr">--</span></div>
+  </div>
+
+  <div class="card">
+    <h3>Fixture Preview</h3>
+    <div class="fx-preview" id="fxPreview"><p style="color:#555;font-size:0.8em">Vklopi Easy Mode za predogled</p></div>
+  </div>
+
+  <div class="card">
+    <h3>Easy Mode</h3>
+    <div class="toggle"><input type="checkbox" id="easyOn" onchange="sendEasy()"><label for="easyOn">Vklopljeno</label></div>
+    <p style="font-size:0.7em;color:#888;margin:6px 0">Preset:</p>
+    <div class="preset-btns" id="presetBtns">
+      <button onclick="setPreset(0)" class="ps-sel">Custom</button>
+      <button onclick="setPreset(1)">Pulse</button>
+      <button onclick="setPreset(2)">Rainbow</button>
+      <button onclick="setPreset(3)">Storm</button>
+      <button onclick="setPreset(4)">Ambient</button>
+      <button onclick="setPreset(5)">Club</button>
+    </div>
+    <div class="fade-row"><label>Občutljivost:</label><input type="range" min="10" max="500" step="10" value="100" id="easySens" oninput="sendEasy()"><span class="val" id="easySensV">1.0</span></div>
+    <div class="fade-row"><label>Jakost:</label><input type="range" min="0" max="100" step="5" value="50" id="easyAmt" oninput="sendEasy()"><span class="val" id="easyAmtV">50%</span></div>
+    <div class="toggle"><input type="checkbox" id="eBass" checked onchange="sendEasy()"><label>Bass → Dimmer</label></div>
+    <div class="toggle"><input type="checkbox" id="eMid" checked onchange="sendEasy()"><label>Mid → Barve (Rainbow)</label></div>
+    <div class="toggle"><input type="checkbox" id="eHigh" checked onchange="sendEasy()"><label>High → Strobe</label></div>
+    <div class="toggle"><input type="checkbox" id="eBeat" checked onchange="sendEasy()"><label>Beat → Bump</label></div>
+    <div class="toggle"><input type="checkbox" id="eBeatSync" onchange="sendEasy()"><label>Beat Sync (efekti sinhroni z BPM)</label></div>
+    <button onclick="saveSoundCfg()" style="margin-top:8px;background:#555">Shrani nastavitve</button>
+  </div>
+
+  <div class="card">
+    <h3>Cone (per-fixture mapiranje)</h3>
+    <p style="font-size:0.7em;color:#888;margin:0 0 6px">Določi na katero frekvenco reagira posamezna luč</p>
+    <div id="zoneList"></div>
+  </div>
+
+  <div class="card">
+    <h3>Pro Mode — Pravila</h3>
+    <table><thead><tr><th>Fixture</th><th>Kanal</th><th>Freq</th><th>Izhod</th><th>Krivulja</th><th></th></tr></thead>
+    <tbody id="ruleTable"></tbody></table>
+    <button onclick="addRule()" style="margin-top:8px">+ Dodaj pravilo</button>
+  </div>
+</div>
+
+<!-- TAB 3: FIXTURES -->
+<div class="tab" id="tab3">
+  <div class="card"><h3>Patchane luči</h3>
+    <div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Ime</th><th>Profil</th><th>DMX</th><th>Skupine</th><th>Zvok</th><th></th></tr></thead><tbody id="patchTable"></tbody></table></div>
+    <button onclick="showAddFixture()" style="margin-top:8px">+ Dodaj luč</button>
+  </div>
+  <div class="card" id="addFixBox" style="display:none">
+    <h3>Dodaj luč</h3>
+    <div class="row"><div><label>Ime</label><input id="af_name" placeholder="PAR levo 1"></div><div><label>DMX naslov</label><input id="af_addr" type="number" min="1" max="512"></div></div>
+    <label>Profil</label><select id="af_prof" onchange="updateAfAddr()"></select>
+    <label style="margin-top:6px">Skupine</label><div class="grp-check" id="af_grps"></div>
+    <div class="toggle" style="margin-top:6px"><input type="checkbox" id="af_snd"><label>Sound reactive</label></div>
+    <div style="margin-top:8px"><button onclick="addFixture()">Dodaj</button> <button onclick="document.getElementById('addFixBox').style.display='none'" style="background:#555">Prekliči</button></div>
+  </div>
+  <div class="card" id="editFixBox" style="display:none;border-left:3px solid #e67e22">
+    <h3>Uredi luč</h3>
+    <input type="hidden" id="ef_idx">
+    <div class="row"><div><label>Ime</label><input id="ef_name"></div><div><label>DMX naslov</label><input id="ef_addr" type="number" min="1" max="512"></div></div>
+    <label>Profil</label><span id="ef_prof_lbl" style="color:#888;font-size:0.85em;margin-left:6px"></span>
+    <label style="margin-top:6px">Skupine</label><div class="grp-check" id="ef_grps"></div>
+    <div class="toggle" style="margin-top:6px"><input type="checkbox" id="ef_snd"><label>Sound reactive</label></div>
+    <div style="margin-top:8px"><button onclick="saveEditFx()" style="background:#e67e22">Shrani</button> <button onclick="document.getElementById('editFixBox').style.display='none'" style="background:#555">Prekliči</button></div>
+  </div>
+  <div class="card"><h3>Profili luči</h3><div id="profileList">Nalagam...</div>
+    <div class="upload-area" id="profDropZone" ondragover="event.preventDefault();this.style.borderColor='#0af'" ondragleave="this.style.borderColor='#333'" ondrop="event.preventDefault();this.style.borderColor='#333';dropProfile(event)"><p>Povleci .json profil sem ali <label style="color:#0af;cursor:pointer;display:inline"><input type="file" accept=".json" style="display:none" onchange="uploadProfile(this)">klikni za izbiro</label></p></div>
+  </div>
+  <div class="card"><h3>Skupine</h3><div id="groupEditor"></div></div>
+</div>
+
+<!-- TAB 4: NASTAVITVE -->
+<div class="tab" id="tab4">
+  <div class="card"><h3>Naprava</h3>
+    <div class="row"><div><label>Ime (hostname)</label><input id="s_host" maxlength="27"></div><div><label>ArtNet Univerza</label><input id="s_univ" type="number" min="0" max="32767"></div></div>
+    <label>Število DMX kanalov</label><input id="s_ch" type="number" min="1" max="512">
+  </div>
+  <div class="card"><h3>WiFi omrežja</h3>
+    <p style="font-size:0.7em;color:#666;margin:-4px 0 6px">Do 5 omrežij s samodejnim failover. Prvo delujoče se uporabi.</p>
+    <div id="wifiApList"></div>
+    <button onclick="addWifiAp()" style="margin-top:6px;font-size:0.85em">+ Dodaj omrežje</button>
+    <button onclick="scanWifi()" style="margin-top:6px;font-size:0.85em;margin-left:6px">Skeniraj WiFi</button>
+    <div id="scanResults" style="display:none;margin-top:8px;max-height:200px;overflow-y:auto"></div>
+    <div style="margin-top:8px">
+      <label><input type="checkbox" id="s_dhcp" onchange="document.getElementById('staticNet').style.display=this.checked?'none':'block'"> DHCP</label>
+      <div id="staticNet"><div class="row"><div><label>IP</label><input id="s_ip"></div><div><label>Prehod</label><input id="s_gw"></div></div><label>Maska</label><input id="s_sn"></div>
+    </div>
+  </div>
+  <div class="card"><h3>Avtentikacija</h3>
+    <label><input type="checkbox" id="s_auth"> Zahtevaj prijavo</label>
+    <div class="row" style="margin-top:6px"><div><label>Uporabnik</label><input id="s_auser" maxlength="19"></div><div><label>Geslo</label><input id="s_apass" type="password" maxlength="19"></div></div>
+  </div>
+  <div class="card"><h3>Zvok</h3>
+    <select id="s_audio"><option value="0">Izklopljeno</option><option value="1">Line-in (ADC GPIO36)</option><option value="2">I2S mikrofon (INMP441)</option></select>
+    <p style="font-size:0.75em;color:#666;margin-top:4px">Sprememba zahteva ponovni zagon.</p>
+  </div>
+  <button onclick="saveSettings()">Shrani in ponovni zagon</button>
+  <button class="danger" onclick="if(confirm('Res ponastaviti?'))factoryReset()" style="margin-top:6px">Tovarniška ponastavitev</button>
+  <p style="font-size:0.75em;color:#555;margin-top:12px;text-align:center" id="verInfo"></p>
+</div>
+
+<div class="tab" id="tab5">
+  <div class="card">
+    <h3>Shranjene konfiguracije</h3>
+    <p style="font-size:0.7em;color:#666;margin:-4px 0 8px">Celotna postavitev: patch, scene, zvočne nastavitve, skupine.</p>
+    <div id="cfgList"></div>
+    <div style="margin-top:10px;display:flex;gap:6px;align-items:center">
+      <input id="cfgName" placeholder="Ime konfiguracije" maxlength="32" style="flex:1">
+      <button onclick="saveConfig()">Shrani trenutno</button>
+    </div>
+    <div style="margin-top:8px">
+      <label style="color:#0af;cursor:pointer"><input type="file" accept=".json" style="display:none" onchange="uploadConfig(this)">Uvozi konfig iz datoteke</label>
+    </div>
+    <div id="cfgStorage" style="margin-top:10px;font-size:0.7em;color:#666"></div>
+    <div id="cfgWarn" style="display:none;background:#a33;color:#fff;padding:6px 10px;border-radius:4px;margin-top:6px;font-size:0.8em"></div>
+  </div>
+</div>
+
+<script>
+let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0;
+
+function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>setTimeout(wsConnect,2000)}
+function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
+
+// FFT bars init
+(function(){const b=document.getElementById('fftBox');for(let i=0;i<8;i++){const d=document.createElement('div');d.className='fft-bar';d.id='fb'+i;d.style.height='2px';b.appendChild(d)}})();
+
+function handleWs(d){
+  if(d.t==='status'){
+    const modes=['ARTNET','LOKALNO (auto)','LOKALNO (ročno)'];
+    document.getElementById('dot').className='dot '+(d.mode===0?'dot-g':'dot-y');
+    document.getElementById('modeText').textContent=modes[d.mode]||'?';
+    document.getElementById('modeBtn').textContent=d.mode===0?'Preklopi lokalno':'Preklopi ArtNet';
+    document.getElementById('statsText').textContent=d.fps.toFixed(1)+' fps | '+d.pkts+' paketov';
+    boState=!!d.bo;document.getElementById('boBtn').style.background=boState?'#f33':'#555';
+    document.getElementById('masterSlider').value=d.master;document.getElementById('masterVal').textContent=d.master;
+    if(d.snaps)renderSnapshots(d.snaps);
+    if(d.cf){
+      const bar=document.getElementById('cfBar'),st=document.getElementById('cfStatus');
+      if(d.cf.active){bar.style.width=(d.cf.progress*100)+'%';cfTarget=d.cf.target;const sc=scenes.find(s=>s&&s.slot===d.cf.target);st.textContent='Crossfade → '+(sc?sc.name:'?')+' ('+Math.round(d.cf.progress*100)+'%)';}
+      else{if(cfTarget>=0){cfTarget=-1;renderSceneGrid()}bar.style.width='0%';st.textContent=''}
+    }
+    // Sinhronizacija fixture vrednosti iz ESP32
+    if(d.fxv)syncFxValues(d.fxv);
+    // FFT data
+    if(d.fft){
+      for(let i=0;i<8;i++){const el=document.getElementById('fb'+i);if(el)el.style.height=Math.max(2,d.fft.b[i]*100)+'%'}
+      document.getElementById('mBass').style.width=(d.fft.bass*100)+'%';
+      document.getElementById('mMid').style.width=(d.fft.mid*100)+'%';
+      document.getElementById('mHigh').style.width=(d.fft.high*100)+'%';
+      document.getElementById('sBeat').textContent=d.fft.beat?'!':'-';
+      document.getElementById('sBeat').style.color=d.fft.beat?'#f33':'#666';
+      document.getElementById('sBpm').textContent=d.fft.bpm>0?d.fft.bpm.toFixed(0):'--';
+      document.getElementById('sBeatPh').textContent=d.fft.bp!==undefined?d.fft.bp.toFixed(2):'0';
+      document.getElementById('sPeak').textContent=Math.round(d.fft.peak*100)+'%';
+      document.getElementById('sSr').textContent=d.fft.sr>0?(d.fft.sr/1000).toFixed(1)+'kHz':'--';
+    }
+    // Fixture sound preview
+    if(d.fxl)updateFxPreview(d.fxl);
+    // Undo visibility
+    document.getElementById('undoBtn').style.display=d.undo?'inline-block':'none';
+  }
+}
+
+function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1)loadScenes();if(n===2){loadRules();renderZoneList();renderFxPreviewInit()}if(n===5)loadConfigs()}
+function toggleMode(){wsSend({cmd:'mode',v:document.getElementById('modeText').textContent.includes('ARTNET')?'local':'artnet'})}
+function toggleBlackout(){wsSend({cmd:'blackout',v:boState?0:1})}
+function sendMaster(v){document.getElementById('masterVal').textContent=v;wsSend({cmd:'master',v:+v})}
+
+// Mixer
+// Barve krogcev sliderjev po tipu kanala
+var CH_COLORS={1:'#0af',2:'#ff2020',3:'#20ff20',4:'#2060ff',5:'#ffffff',6:'#ffaa00',7:'#cc00ff',19:'#ffff00',14:'#ffff00',8:'#999',9:'#999',10:'#999',11:'#999',12:'#777',13:'#cc8800',0:'#0af',21:'#aaff00',22:'#00ffcc',23:'#ffd070',24:'#ffe0a0'};
+function chColor(t){return CH_COLORS[t]||'#0af'}
+// Podlage fixture-ov
+var FX_BG=['#1a1a2e','#1e2a1a','#2a1a2a','#2a261a','#1a2a2a','#2a1a1a','#1e1e30','#2a1e1a'];
+var FX_LABEL=['#6af','#6fa','#f6a','#fa6','#6ff','#f66','#aaf','#fa8'];
+function fxBg(i){return FX_BG[i%FX_BG.length]}
+function fxLbl(i){return FX_LABEL[i%FX_LABEL.length]}
+
+function setView(v){viewMode=v;document.getElementById('viewCompact').style.display=v===0?'block':'none';document.getElementById('viewConsole').style.display=v===1?'block':'none';document.getElementById('vbComp').className=v===0?'sel-comp':'';document.getElementById('vbCons').className=v===1?'sel-cons':'';if(v===0)renderFaders();if(v===1){renderConsOrder();renderConsole()}}
+
+function renderFixBtns(){
+  // Kompakt: skupinske + fixture gumbi (modra selekcija)
+  let h='';groups.forEach((g,i)=>{if(g)h+='<button data-g="'+i+'" onclick="selGroupFn('+i+')" class="'+(selGroup===i?'sel-comp':'')+'">'+g+'</button>'});document.getElementById('groupBtns').innerHTML=h;
+  h='';fixtures.forEach((f,i)=>{h+='<button onclick="selCompFn('+i+')" class="'+(selComp.has(i)?'sel-comp':'')+'">'+f.name+'</button>'});document.getElementById('fixBtns').innerHTML=h;
+  // Konzola: fixture gumbi (oranžna selekcija)
+  let h2='';fixtures.forEach((f,i)=>{h2+='<button onclick="selConsFn('+i+')" class="'+(selCons.has(i)?'sel-cons':'')+'" style="border-bottom:3px solid '+fxLbl(i)+'">'+f.name+'</button>'});document.getElementById('fixBtns2').innerHTML=h2;
+}
+function selCompFn(i){selGroup=-1;if(selComp.has(i))selComp.delete(i);else selComp.add(i);renderFixBtns();renderFaders()}
+function selConsFn(i){
+  if(selCons.has(i)){selCons.delete(i);consOrder=consOrder.filter(x=>x!==i)}
+  else{selCons.add(i);consOrder.push(i)}
+  renderFixBtns();renderConsOrder();renderConsole();
+}
+function selGroupFn(g){selGroup=selGroup===g?-1:g;selComp.clear();if(selGroup>=0)fixtures.forEach((f,i)=>{if(f.groupMask&(1<<selGroup))selComp.add(i)});renderFixBtns();renderFaders()}
+
+// ---- Konzola vrstni red (drag & drop) ----
+var dragIdx=-1,dragOverIdx=-1;
+function renderConsOrder(){
+  const box=document.getElementById('consOrderList');
+  if(consOrder.length===0){box.innerHTML='';return}
+  let h='';
+  consOrder.forEach((fi,pos)=>{
+    const f=fixtures[fi];if(!f)return;
+    const lbl=fxLbl(fi);
+    h+='<div class="co-item" data-pos="'+pos+'" draggable="false" style="border-color:'+lbl+';color:'+lbl+'">';
+    h+='<span class="grip">☰</span>'+f.name+'</div>';
+  });
+  box.innerHTML=h;
+  // Bind touch & mouse events
+  box.querySelectorAll('.co-item').forEach(el=>{
+    el.addEventListener('touchstart',coStart,{passive:false});
+    el.addEventListener('mousedown',coStart);
+  });
+}
+function coStart(e){
+  e.preventDefault();
+  const el=e.currentTarget;
+  dragIdx=+el.dataset.pos;
+  el.classList.add('dragging');
+  const box=document.getElementById('consOrderList');
+  const items=[...box.querySelectorAll('.co-item')];
+  const rects=items.map(it=>it.getBoundingClientRect());
+
+  function getPos(ev){
+    const t=ev.touches?ev.touches[0]:ev;
+    return{x:t.clientX,y:t.clientY};
+  }
+  function findTarget(p){
+    for(let i=0;i<rects.length;i++){
+      const r=rects[i];
+      const cx=r.left+r.width/2;
+      if(p.x<cx)return i;
+    }
+    return rects.length;
+  }
+  function onMove(ev){
+    ev.preventDefault();
+    const p=getPos(ev);
+    const newOver=findTarget(p);
+    if(newOver!==dragOverIdx){
+      dragOverIdx=newOver;
+      // Vizualni feedback: premakni items z CSS transform
+      items.forEach((it,i)=>{
+        if(i===dragIdx){it.style.opacity='0.4';return}
+        let shift=0;
+        if(dragIdx<dragOverIdx&&i>dragIdx&&i<dragOverIdx)shift=-1;
+        else if(dragIdx>dragOverIdx&&i>=dragOverIdx&&i<dragIdx)shift=1;
+        it.style.transform=shift?'translateX('+(shift*40)+'px)':'';
+      });
+    }
+  }
+  function onEnd(ev){
+    document.removeEventListener('touchmove',onMove);
+    document.removeEventListener('touchend',onEnd);
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onEnd);
+    items.forEach(it=>{it.style.transform='';it.style.opacity=''});
+    el.classList.remove('dragging');
+    if(dragOverIdx>=0&&dragOverIdx!==dragIdx){
+      const moved=consOrder.splice(dragIdx,1)[0];
+      const insertAt=dragOverIdx>dragIdx?dragOverIdx-1:dragOverIdx;
+      consOrder.splice(insertAt,0,moved);
+    }
+    dragIdx=-1;dragOverIdx=-1;
+    renderConsOrder();renderConsole();
+  }
+  dragOverIdx=dragIdx;
+  document.addEventListener('touchmove',onMove,{passive:false});
+  document.addEventListener('touchend',onEnd);
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onEnd);
+}
+
+// ---- Sinhronizacija vrednosti iz WebSocket ----
+function syncFxValues(fxv){
+  if(!fxv||!fixtures.length)return;
+  // Katera fixture je prikazana v kompakt pogledu?
+  const compactFxArrayIdx=(selComp.size>=1)?[...selComp][0]:-1;
+  const compactFx=compactFxArrayIdx>=0?fixtures[compactFxArrayIdx]:null;
+  const compactIdx=compactFx?compactFx.idx:-1;
+
+  for(let i=0;i<fxv.length;i++){
+    if(!fxv[i])continue;
+    const f=fixtures.find(fx=>fx.idx===i);
+    if(!f||!f.channels)continue;
+    for(let c=0;c<f.channels.length&&c<fxv[i].length;c++){
+      const newVal=fxv[i][c];
+      if(f.channels[c].currentValue!==newVal){
+        f.channels[c].currentValue=newVal;
+        // Gang tracking: posodobi lastVal za pravilen delta
+        const fIdx=fixtures.indexOf(f);
+        if(fIdx>=0)consLastVal[fIdx+'_'+c]=newVal;
+        // Konzola: posodobi tekst + slider (vedno, neodvisno)
+        const cv=document.getElementById('cv_'+i+'_'+c);
+        if(cv)cv.textContent=newVal;
+        const vs=document.getElementById('vs_'+i+'_'+c);
+        if(vs&&document.activeElement!==vs)vs.value=newVal;
+        // Kompakt: SAMO za fixture ki je dejansko prikazana
+        if(i===compactIdx){
+          const hv=document.getElementById('chv'+c);
+          if(hv)hv.textContent=newVal;
+          const hs=document.getElementById('hs_'+c);
+          if(hs&&document.activeElement!==hs)hs.value=newVal;
+        }
+      }
+    }
+  }
+}
+
+// ---- Kompakt pogled (horizontalni) — skupna kontrola vseh izbranih ----
+function renderFaders(){
+  const box=document.getElementById('faderBox');
+  if(selComp.size===0){box.style.display='none';return}
+  box.style.display='block';
+  const firstIdx=[...selComp][0];
+  const first=fixtures[firstIdx];
+  if(!first||!first.channels){box.style.display='none';return}
+  document.getElementById('faderTitle').textContent=[...selComp].map(i=>fixtures[i].name).join(', ');
+  let h='';
+  first.channels.forEach((ch,ci)=>{
+    const col=chColor(ch.type);
+    const v=ch.currentValue||0;
+    const rl=ch.ranges&&ch.ranges.length?ch.ranges.map(r=>r.from+'-'+r.to+':'+r.label).join(', '):'';
+    h+='<div class="ch-row">';
+    h+='<span class="ch-name" style="color:'+col+'">'+ch.name+'</span>';
+    // data-type hrani tip kanala za type-based matching
+    h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+'" data-type="'+ch.type+'" oninput="sendFader('+ci+',this.value)">';
+    h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v+'</span>';
+    h+='<span class="ch-range">'+rl+'</span></div>';
+  });
+  document.getElementById('faders').innerHTML=h;
+}
+// Najdi kanal po tipu v fixture-u (vrne index ali -1)
+function findChByType(fx,type){
+  if(!fx||!fx.channels)return -1;
+  for(let i=0;i<fx.channels.length;i++){if(fx.channels[i].type==type)return i;}
+  return -1;
+}
+function sendFader(ch,val){
+  document.getElementById('chv'+ch).textContent=val;
+  const firstIdx=[...selComp][0];
+  const first=fixtures[firstIdx];
+  if(!first||!first.channels||!first.channels[ch])return;
+  const chType=first.channels[ch].type;
+
+  if(selGroup>=0){
+    // Skupina: pošlji po indexu (backend upravljaj pravilno)
+    wsSend({cmd:'grch',g:selGroup,c:ch,v:+val});
+  } else {
+    selComp.forEach(f=>{
+      const fx=fixtures[f];if(!fx||!fx.channels)return;
+      // Najdi ustrezni kanal po TIPU, ne po indexu
+      let targetCh=ch; // default: isti index
+      if(f!==firstIdx){
+        const byType=findChByType(fx,chType);
+        if(byType>=0)targetCh=byType; else return; // nima tega tipa → preskoči
+      }
+      if(fx.channels[targetCh])fx.channels[targetCh].currentValue=+val;
+      wsSend({cmd:'fxch',f:fx.idx,c:targetCh,v:+val});
+    });
+  }
+}
+
+// ---- Konzola (vertikalni) — vsaka fixture ima svoje sliderje ----
+// Dvostopenjsko skrivanje:
+//   consHidden = kanali v mini stanju — klik na ime kanala
+//   consCollapsed = ali so mini kanali popolnoma skriti — klik na naslov fixture
+var consHidden={};    // {fixtureIdx: Set of channel indices v mini stanju}
+var consCollapsed={}; // {fixtureIdx: bool} ali so mini kanali skriti
+var consGang=new Set(); // Global: Set of "fi_ci" keys
+var consLastVal={}; // {"fi_ci": lastValue} za delta
+
+function toggleChVis(fxIdx,ci){
+  if(!consHidden[fxIdx])consHidden[fxIdx]=new Set();
+  if(consHidden[fxIdx].has(ci))consHidden[fxIdx].delete(ci);else consHidden[fxIdx].add(ci);
+  renderConsole();
+}
+// Klik na vrednost: pomanjsaj VSE ostale, ohrani samo ta kanal
+function soloChannel(fxIdx,ci){
+  if(!consHidden[fxIdx])consHidden[fxIdx]=new Set();
+  const f=fixtures[fxIdx];if(!f||!f.channels)return;
+  const hidden=consHidden[fxIdx];
+  const fullCount=f.channels.length-hidden.size;
+  // Ce je ta edini viden -> razsiri vse
+  if(fullCount<=1){consHidden[fxIdx]=new Set();renderConsole();return}
+  // Sicer pomanjsaj vse razen tega
+  const s=new Set();
+  f.channels.forEach((_,i)=>{if(i!==ci)s.add(i)});
+  consHidden[fxIdx]=s;
+  renderConsole();
+}
+function toggleCollapsed(fxIdx){
+  consCollapsed[fxIdx]=!consCollapsed[fxIdx];
+  renderConsole();
+}
+function toggleGang(fi,ci){
+  const key=fi+'_'+ci;
+  if(consGang.has(key))consGang.delete(key);else consGang.add(key);
+}
+function renderConsole(){
+  const grid=document.getElementById('consoleGrid');
+  if(consOrder.length===0){grid.innerHTML='<p style="color:#666;padding:20px">Izberi fixture zgoraj</p>';return}
+  let h='';
+  consOrder.forEach((fi)=>{
+    const f=fixtures[fi];if(!f||!f.channels)return;
+    const bg=fxBg(fi);
+    const lbl=fxLbl(fi);
+    const hidden=consHidden[fi]||new Set();
+    const collapsed=!!consCollapsed[fi];
+    const fullCount=f.channels.length-hidden.size;
+    const renderedCount=collapsed?fullCount:f.channels.length;
+    const hdrMax=renderedCount>0?(renderedCount*55)+'px':'60px';
+    const colIcon=hidden.size>0?(collapsed?'\u25b8':'\u25be'):'';
+
+    h+='<div class="fx-group" style="background:'+bg+'">';
+    h+='<div class="fx-group-hdr" style="color:'+lbl+';max-width:'+hdrMax+'" onclick="toggleCollapsed('+fi+')" title="Skrij/pokazi skrcene kanale">'+colIcon+' '+f.name+'</div>';
+    h+='<div class="fx-group-body">';
+    f.channels.forEach((ch,ci)=>{
+      const isMini=hidden.has(ci);
+      if(isMini&&collapsed)return;
+
+      const v=ch.currentValue||0;
+      const col=chColor(ch.type);
+      const key=fi+'_'+ci;
+      consLastVal[key]=v;
+
+      if(isMini){
+        h+='<div class="fx-col mini" style="background:'+bg+'" onclick="toggleChVis('+fi+','+ci+')">';
+        h+='<div class="ch-label" style="color:'+col+'">'+ch.name+'</div>';
+        h+='</div>';
+      }else{
+        const gKey=fi+'_'+ci;
+        const checked=consGang.has(gKey)?'checked':'';
+        h+='<div class="fx-col" style="background:'+bg+'">';
+        h+='<div class="ch-vval" style="color:'+col+'" id="cv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+')" title="Klik: pokazi samo ta">'+v+'</div>';
+        h+='<input type="range" orient="vertical" id="vs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
+        h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+')">'+ch.name+'</div>';
+        h+='<div class="gang-wrap"><input type="checkbox" '+checked+' onchange="toggleGang('+fi+','+ci+')"><div class="gang-lbl">gang</div></div>';
+        h+='</div>';
+      }
+    });
+    h+='</div>';
+    h+='<div class="fx-group-line" style="background:'+lbl+'"></div>';
+    h+='</div>';
+  });
+  grid.innerHTML=h;
+}
+function sendCGang(fxIdx,fi,ci,val){
+  val=+val;
+  const myKey=fi+'_'+ci;
+  const prev=consLastVal[myKey]!==undefined?consLastVal[myKey]:val;
+  const delta=val-prev;
+  consLastVal[myKey]=val;
+
+  const el=document.getElementById('cv_'+fxIdx+'_'+ci);
+  if(el)el.textContent=val;
+  const f=fixtures.find(x=>x.idx===fxIdx);
+  if(f&&f.channels&&f.channels[ci])f.channels[ci].currentValue=val;
+  wsSend({cmd:'fxch',f:fxIdx,c:ci,v:val});
+
+  // Gang: apliciraj delta na VSE oznacene kanale (razen tega)
+  if(consGang.has(myKey)&&consGang.size>1&&delta!==0){
+    consGang.forEach(gKey=>{
+      if(gKey===myKey)return;
+      const parts=gKey.split('_');
+      const gFi=+parts[0], gCi=+parts[1];
+      const gf=fixtures[gFi]; if(!gf||!gf.channels||!gf.channels[gCi])return;
+      const gPrev=consLastVal[gKey]!==undefined?consLastVal[gKey]:0;
+      let gNew=gPrev+delta;
+      if(gNew<0)gNew=0;if(gNew>255)gNew=255;
+      consLastVal[gKey]=gNew;
+      const gvEl=document.getElementById('cv_'+gf.idx+'_'+gCi);
+      if(gvEl)gvEl.textContent=gNew;
+      const gsEl=document.getElementById('vs_'+gf.idx+'_'+gCi);
+      if(gsEl)gsEl.value=gNew;
+      gf.channels[gCi].currentValue=gNew;
+      wsSend({cmd:'fxch',f:gf.idx,c:gCi,v:gNew});
+    });
+  }
+}
+
+function renderSnapshots(snaps){if(!snaps||!snaps.length){document.getElementById('snapList').textContent='Ni shranjenih stanj.';return}let h='';snaps.forEach((s,i)=>{const isA=s.src==='A';const col=isA?'#27ae60':'#e67e22';const lbl=isA?'A':'L';h+='<button onclick="wsSend({cmd:\'recall\',i:'+i+'})" style="margin:2px;border-left:4px solid '+col+'"><span style="color:'+col+';font-weight:bold">'+lbl+'</span> '+new Date(s.ts).toLocaleTimeString()+'</button> '});document.getElementById('snapList').innerHTML=h}
+function recallArtnet(){wsSend({cmd:'recall_artnet'})}
+
+// Scenes
+function updateFadeLabel(){const v=+document.getElementById('fadeSlider').value;document.getElementById('fadeVal').textContent=v<1000?(v+'ms'):(v/1000).toFixed(1)+'s'}
+function loadScenes(){fetch('/api/scenes').then(r=>r.json()).then(d=>{scenes=d.scenes||[];renderSceneGrid()})}
+function renderSceneGrid(){
+  let h='',has=false;
+  scenes.forEach((sc,i)=>{
+    if(!sc)return;has=true;
+    const isActive=cfTarget===sc.slot;
+    const esc=sc.name.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    h+='<button class="scn'+(isActive?' active-scene':'')+'" data-slot="'+sc.slot+'" data-name="'+esc+'">';
+    h+='<span class="slot">Slot '+(sc.slot+1)+'</span>'+sc.name;
+    if(sc.prev){
+      h+='<div class="scene-prev">';
+      sc.prev.forEach((c,fi)=>{if(!c||!fixtures[fi])return;
+        h+='<span class="scene-dot" style="background:rgb('+c[0]+','+c[1]+','+c[2]+')"></span>';
+      });
+      h+='</div>';
+    }
+    h+='</button>';
+  });
+  if(!has)h='<p style="color:#666">Ni scen.</p>';
+  document.getElementById('sceneGrid').innerHTML=h;
+  // Bind events per scene button
+  document.querySelectorAll('#sceneGrid .scn').forEach(btn=>{
+    const slot=+btn.dataset.slot, name=btn.dataset.name;
+    let lpTimer=null,didLP=false;
+    // Click = recall (only if not long-press)
+    btn.addEventListener('click',e=>{if(!didLP)recallScene(slot)});
+    // Right-click = context menu
+    btn.addEventListener('contextmenu',e=>{e.preventDefault();showSceneCtx(e,slot,name)});
+    // Long-press for mobile
+    btn.addEventListener('touchstart',e=>{didLP=false;lpTimer=setTimeout(()=>{didLP=true;showSceneCtx(e.touches[0],slot,name)},500)},{passive:true});
+    btn.addEventListener('touchend',()=>{clearTimeout(lpTimer)});
+    btn.addEventListener('touchmove',()=>{clearTimeout(lpTimer)});
+  });
+}
+function closeSceneCtx(){const el=document.getElementById('scnCtx');if(el)el.remove();const ov=document.getElementById('scnCtxOv');if(ov)ov.remove()}
+function showSceneCtx(e,slot,name){
+  closeSceneCtx();
+  // Overlay to catch outside clicks
+  const ov=document.createElement('div');ov.id='scnCtxOv';ov.className='scn-overlay';ov.onclick=closeSceneCtx;document.body.appendChild(ov);
+  // Menu
+  const menu=document.createElement('div');menu.id='scnCtx';menu.className='scn-ctx';
+  menu.innerHTML='<div class="scn-ctx-hdr">Slot '+(slot+1)+': '+name+'</div>'
+    +'<div class="scn-ctx-item" data-act="rename"><span class="ctx-icon">✏</span>Preimenuj</div>'
+    +'<div class="scn-ctx-item" data-act="overwrite"><span class="ctx-icon">💾</span>Prepiši s trenutnim</div>'
+    +'<div class="scn-ctx-item ctx-danger" data-act="delete"><span class="ctx-icon">🗑</span>Izbriši</div>';
+  document.body.appendChild(menu);
+  // Position: near click/touch point, keep on screen
+  const mx=e.clientX||e.pageX,my=e.clientY||e.pageY;
+  const mw=menu.offsetWidth,mh=menu.offsetHeight;
+  let x=mx,y=my;
+  if(x+mw>window.innerWidth)x=window.innerWidth-mw-8;
+  if(y+mh>window.innerHeight)y=window.innerHeight-mh-8;
+  if(x<4)x=4;if(y<4)y=4;
+  menu.style.left=x+'px';menu.style.top=y+'px';
+  // Actions
+  menu.querySelectorAll('.scn-ctx-item').forEach(item=>{
+    item.onclick=()=>{
+      closeSceneCtx();
+      const act=item.dataset.act;
+      if(act==='rename'){const n=prompt('Novo ime:',name);if(n)fetch('/api/scenes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'rename',slot:slot,name:n})}).then(()=>loadScenes())}
+      else if(act==='overwrite'){if(confirm('Prepisati "'+name+'" s trenutnim stanjem?'))fetch('/api/scenes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'overwrite',slot:slot,name:name})}).then(()=>loadScenes())}
+      else if(act==='delete'){if(confirm('Izbrisati sceno "'+name+'"?'))fetch('/api/scenes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',slot:slot})}).then(()=>loadScenes())}
+    };
+  });
+}
+function recallScene(slot){wsSend({cmd:'scene_recall',slot:slot,fade:+document.getElementById('fadeSlider').value})}
+function saveNewScene(){const name=prompt('Ime scene:','Scena '+(scenes.filter(Boolean).length+1));if(!name)return;fetch('/api/scenes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',name:name})}).then(r=>r.json()).then(d=>{showMsg(d.ok?'Shranjena':'Napaka',d.ok);loadScenes()})}
+
+// Sound
+var curPreset=0;
+function sendEasy(){
+  document.getElementById('easySensV').textContent=(+document.getElementById('easySens').value/100).toFixed(1);
+  document.getElementById('easyAmtV').textContent=document.getElementById('easyAmt').value+'%';
+  wsSend({cmd:'easy',en:document.getElementById('easyOn').checked?1:0,
+    sens:+document.getElementById('easySens').value/100,
+    amt:+document.getElementById('easyAmt').value/100,
+    bass:document.getElementById('eBass').checked?1:0,
+    mid:document.getElementById('eMid').checked?1:0,
+    high:document.getElementById('eHigh').checked?1:0,
+    beat:document.getElementById('eBeat').checked?1:0,
+    bsync:document.getElementById('eBeatSync').checked?1:0,
+    preset:curPreset});
+}
+function setPreset(p){
+  curPreset=p;
+  document.querySelectorAll('.preset-btns button').forEach((b,i)=>b.className=i===p?'ps-sel':'');
+  if(p===0)return; // Custom — ne spreminjaj UI
+  // Nastavi UI iz preseta
+  const presets={
+    1:{bass:1,mid:0,high:0,beat:1,amt:80,bsync:0},
+    2:{bass:0,mid:1,high:0,beat:0,amt:70,bsync:1},
+    3:{bass:0,mid:0,high:1,beat:1,amt:100,bsync:1},
+    4:{bass:1,mid:1,high:0,beat:0,amt:30,bsync:0},
+    5:{bass:1,mid:1,high:1,beat:1,amt:60,bsync:1}
+  };
+  const pr=presets[p];if(!pr)return;
+  document.getElementById('eBass').checked=!!pr.bass;
+  document.getElementById('eMid').checked=!!pr.mid;
+  document.getElementById('eHigh').checked=!!pr.high;
+  document.getElementById('eBeat').checked=!!pr.beat;
+  document.getElementById('eBeatSync').checked=!!pr.bsync;
+  document.getElementById('easyAmt').value=pr.amt;
+  document.getElementById('easyAmtV').textContent=pr.amt+'%';
+  sendEasy();
+}
+function renderZoneList(){
+  const box=document.getElementById('zoneList');
+  if(!fixtures.length){box.innerHTML='<p style="color:#555;font-size:0.8em">Najprej dodaj fixture</p>';return;}
+  const zoneNames=['Vse','Bass','Mid','High'];
+  let h='';
+  fixtures.forEach((f,i)=>{
+    if(!f.soundReactive)return;
+    h+='<div class="zone-row">';
+    h+='<span style="color:'+fxLbl(i)+'">'+f.name+'</span> → ';
+    h+='<select onchange="setZone('+i+',this.value)">';
+    zoneNames.forEach((z,zi)=>h+='<option value="'+zi+'">'+z+'</option>');
+    h+='</select></div>';
+  });
+  if(!h)h='<p style="color:#555;font-size:0.8em">Označi fixture kot "Sound reactive" v Fixtures tabu</p>';
+  box.innerHTML=h;
+}
+function setZone(fi,z){wsSend({cmd:'zone',fi:fi,z:+z})}
+function renderFxPreviewInit(){
+  const box=document.getElementById('fxPreview');
+  if(!fixtures.length){box.innerHTML='<p style="color:#555;font-size:0.8em">Ni fixture-ov</p>';return;}
+  let h='';
+  fixtures.forEach((f,i)=>{
+    if(!f.soundReactive)return;
+    h+='<div class="fx-prev-item">';
+    h+='<div class="fx-prev-dot" id="fpd'+i+'" style="border-color:'+fxLbl(i)+'"></div>';
+    h+='<span style="color:'+fxLbl(i)+'">'+f.name.substring(0,8)+'</span>';
+    h+='</div>';
+  });
+  if(!h)h='<p style="color:#555;font-size:0.8em">Ni sound-reactive fixture-ov</p>';
+  box.innerHTML=h;
+}
+function updateFxPreview(fxl){
+  fixtures.forEach((f,i)=>{
+    if(!f||!f.soundReactive)return;
+    const el=document.getElementById('fpd'+i);
+    if(!el)return;
+    const lv=fxl[i]||0;
+    const bri=Math.round(lv*2.55);
+    const col=fxLbl(i);
+    el.style.background=lv>5?col:'transparent';
+    el.style.opacity=Math.max(0.2,lv/100);
+    el.style.boxShadow=lv>30?('0 0 '+(lv/5)+'px '+col):'none';
+  });
+}
+function saveSoundCfg(){wsSend({cmd:'save_sound'});showMsg('Sound nastavitve shranjene',true)}
+function doUndo(){wsSend({cmd:'undo'})}
+function loadRules(){
+  fetch('/api/sound/rules').then(r=>r.json()).then(d=>{
+    let h='';(d.rules||[]).forEach((r,i)=>{if(!r.active)return;
+      const fn=fixtures[r.fixtureIdx];const fname=fn?fn.name:('#'+r.fixtureIdx);
+      h+='<tr><td>'+fname+'</td><td>'+r.channelIdx+'</td><td>'+r.freqLow+'-'+r.freqHigh+'Hz</td><td>'+r.outMin+'-'+r.outMax+'</td><td>'+['Lin','Exp','Log','Sq'][r.curve]+'</td><td><button class="danger" onclick="delRule('+i+')" style="padding:2px 8px">✕</button></td></tr>'});
+    document.getElementById('ruleTable').innerHTML=h||'<tr><td colspan="6" style="color:#666">Ni pravil</td></tr>'})
+}
+function addRule(){
+  const fx=prompt('Fixture idx (0-15):','0'),ch=prompt('Kanal idx:','0'),fl=prompt('Freq low Hz:','60'),fh=prompt('Freq high Hz:','250'),mn=prompt('Out min:','0'),mx=prompt('Out max:','255');
+  if(fx===null)return;
+  fetch('/api/sound/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'add',rule:{fixtureIdx:+fx,channelIdx:+ch,freqLow:+fl,freqHigh:+fh,outMin:+mn,outMax:+mx,curve:0,attackMs:5,decayMs:20}})}).then(()=>loadRules())
+}
+function delRule(i){fetch('/api/sound/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',index:i})}).then(()=>loadRules())}
+
+// Fixtures
+function loadFixtures(){fetch('/api/fixtures').then(r=>r.json()).then(d=>{fixtures=d.fixtures||[];profiles=d.profiles||[];groups=d.groups||[];
+  // Počisti consOrder/selCons za morebitne odstranjene fixture
+  consOrder=consOrder.filter(i=>i<fixtures.length);
+  selCons.forEach(i=>{if(i>=fixtures.length)selCons.delete(i)});
+  selComp.forEach(i=>{if(i>=fixtures.length)selComp.delete(i)});
+  renderPatchTable();renderProfileList();renderGroupEditor();renderFixBtns();if(viewMode===1){renderConsOrder();renderConsole()}})}
+function nextFreeDmxAddr(){
+  if(!fixtures.length)return 1;
+  let maxEnd=0;
+  fixtures.forEach(f=>{
+    const p=profiles.find(pr=>pr.id===f.profileId);
+    const ch=p?p.channelCount:1;
+    const end=f.dmxAddress+ch-1;
+    if(end>maxEnd)maxEnd=end;
+  });
+  return Math.min(maxEnd+1,512);
+}
+function renderGrpChecks(containerId,prefix,mask){
+  let h='';for(let g=0;g<8;g++){
+    const name=groups[g]||('Sk.'+(g+1));
+    h+='<label><input type="checkbox" id="'+prefix+g+'"'+(mask&(1<<g)?' checked':'')+'>'+name+'</label>';
+  }
+  document.getElementById(containerId).innerHTML=h;
+}
+function readGrpMask(prefix){
+  let mask=0;for(let g=0;g<8;g++){if(document.getElementById(prefix+g).checked)mask|=(1<<g);}
+  return mask;
+}
+function renderPatchTable(){
+  let h='';
+  fixtures.forEach((f,i)=>{
+    const p=profiles.find(pr=>pr.id===f.profileId);
+    const ch=p?p.channelCount:'?';
+    const range=p?(f.dmxAddress+'–'+(f.dmxAddress+p.channelCount-1)):f.dmxAddress;
+    const grpNames=[];for(let g=0;g<8;g++){if(f.groupMask&(1<<g)){grpNames.push(groups[g]||('Sk.'+(g+1)))}}
+    h+='<tr>';
+    h+='<td>'+(i+1)+'</td>';
+    h+='<td>'+f.name+'</td>';
+    h+='<td><span style="color:#888">'+(p?p.name:f.profileId)+'</span></td>';
+    h+='<td>'+range+'</td>';
+    h+='<td style="font-size:0.85em">'+(grpNames.length?grpNames.join(', '):'–')+'</td>';
+    h+='<td>'+(f.soundReactive?'Da':'Ne')+'</td>';
+    h+='<td style="white-space:nowrap"><button onclick="editFx('+i+')" style="padding:2px 8px">✎</button> <button class="danger" onclick="removeFx('+f.idx+')" style="padding:2px 8px">✕</button></td>';
+    h+='</tr>';
+  });
+  document.getElementById('patchTable').innerHTML=h||'<tr><td colspan="7" style="color:#666">Ni patchanih luči</td></tr>';
+}
+function renderProfileList(){
+  let h='<table><tr><th>ID</th><th>Ime</th><th>Ch</th><th></th></tr>';
+  profiles.forEach(p=>{h+='<tr><td>'+p.id+'</td><td>'+p.name+'</td><td>'+p.channelCount+'</td><td><button class="danger" onclick="delProfile(\''+p.id+'\')" style="padding:2px 8px">✕</button></td></tr>'});
+  h+='</table>';
+  document.getElementById('profileList').innerHTML=profiles.length?h:'<p style="color:#666">Ni profilov</p>';
+  document.getElementById('af_prof').innerHTML=profiles.map(p=>'<option value="'+p.id+'">'+p.name+' ('+p.channelCount+'ch)</option>').join('');
+}
+function renderGroupEditor(){
+  let h='';for(let i=0;i<8;i++)h+='<div class="row" style="margin-bottom:4px"><div style="flex:0 0 30px;color:#888">'+(i+1)+'</div><div><input value="'+(groups[i]||'')+'" onchange="saveGroupName('+i+',this.value)" placeholder="Skupina '+(i+1)+'"></div></div>';
+  document.getElementById('groupEditor').innerHTML=h;
+}
+function editFx(i){
+  const f=fixtures[i];if(!f)return;
+  document.getElementById('addFixBox').style.display='none';
+  document.getElementById('editFixBox').style.display='block';
+  document.getElementById('ef_idx').value=f.idx;  // patch slot index, ne JS array index
+  document.getElementById('ef_name').value=f.name;
+  document.getElementById('ef_addr').value=f.dmxAddress;
+  const p=profiles.find(pr=>pr.id===f.profileId);
+  document.getElementById('ef_prof_lbl').textContent=f.profileId+(p?' ('+p.channelCount+'ch)':'');
+  renderGrpChecks('ef_grps','ef_g',f.groupMask);
+  document.getElementById('ef_snd').checked=f.soundReactive;
+}
+function saveEditFx(){
+  const i=+document.getElementById('ef_idx').value;
+  fetch('/api/fixtures',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',index:i,fixture:{
+    name:document.getElementById('ef_name').value,
+    dmxAddress:+document.getElementById('ef_addr').value,
+    groupMask:readGrpMask('ef_g'),
+    soundReactive:document.getElementById('ef_snd').checked
+  }})}).then(r=>r.json()).then(d=>{showMsg(d.ok?'Shranjeno':'Napaka',d.ok);loadFixtures();document.getElementById('editFixBox').style.display='none'});
+}
+function showAddFixture(){
+  document.getElementById('editFixBox').style.display='none';
+  document.getElementById('addFixBox').style.display='block';
+  document.getElementById('af_addr').value=nextFreeDmxAddr();
+  renderGrpChecks('af_grps','af_g',0);
+}
+function updateAfAddr(){document.getElementById('af_addr').value=nextFreeDmxAddr()}
+function addFixture(){
+  fetch('/api/fixtures',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'add',fixture:{
+    name:document.getElementById('af_name').value,
+    profileId:document.getElementById('af_prof').value,
+    dmxAddress:+document.getElementById('af_addr').value,
+    groupMask:readGrpMask('af_g'),
+    soundReactive:document.getElementById('af_snd').checked
+  }})}).then(r=>r.json()).then(()=>{loadFixtures();document.getElementById('addFixBox').style.display='none'});
+}
+function removeFx(slotIdx){const f=fixtures.find(x=>x.idx===slotIdx);if(!f)return;if(!confirm('Odstraniti luč "'+f.name+'"?'))return;fetch('/api/fixtures',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'remove',index:slotIdx})}).then(()=>loadFixtures())}
+function delProfile(id){fetch('/api/profile?id='+id,{method:'DELETE'}).then(()=>loadFixtures())}
+function uploadProfile(input){if(!input.files[0])return;uploadProfileFile(input.files[0])}
+function dropProfile(e){const f=e.dataTransfer.files[0];if(!f)return;if(!f.name.endsWith('.json')){showMsg('Samo .json datoteke',false);return}uploadProfileFile(f)}
+function uploadProfileFile(file){const fd=new FormData();fd.append('file',file);fetch('/api/profile/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{showMsg(d.ok?'Naložen: '+file.name:'Napaka',d.ok);loadFixtures()})}
+function saveGroupName(i,name){fetch('/api/groups',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i,name:name})}).then(()=>loadFixtures())}
+
+// Settings
+function loadSettings(){fetch('/api/config').then(r=>r.json()).then(d=>{
+  document.getElementById('s_host').value=d.hostname||'';
+  document.getElementById('s_univ').value=d.universe||0;
+  document.getElementById('s_ch').value=d.channelCount||512;
+  document.getElementById('s_dhcp').checked=d.dhcp!==false;
+  document.getElementById('s_ip').value=d.staticIp||'';
+  document.getElementById('s_gw').value=d.staticGw||'';
+  document.getElementById('s_sn').value=d.staticSn||'';
+  document.getElementById('s_audio').value=d.audioSource||0;
+  document.getElementById('staticNet').style.display=d.dhcp!==false?'none':'block';
+  document.getElementById('s_auth').checked=!!d.authEnabled;
+  document.getElementById('s_auser').value=d.authUser||'admin';
+  document.getElementById('verInfo').textContent='FW: '+d.version+' | IP: '+d.ip+' | MAC: '+d.mac+(d.mdns?' | '+d.mdns:'');
+  // WiFi APs
+  window._wifiAPs=d.wifiAPs||[];
+  renderWifiAps();
+})}
+function saveSettings(){
+  const aps=[];
+  document.querySelectorAll('.wifi-ap-row').forEach(r=>{
+    const s=r.querySelector('.wap-ssid').value.trim();
+    if(s)aps.push({ssid:s,password:r.querySelector('.wap-pass').value});
+  });
+  const b={hostname:document.getElementById('s_host').value,universe:+document.getElementById('s_univ').value,channelCount:+document.getElementById('s_ch').value,
+    wifiAPs:aps,dhcp:document.getElementById('s_dhcp').checked,
+    staticIp:document.getElementById('s_ip').value,staticGw:document.getElementById('s_gw').value,staticSn:document.getElementById('s_sn').value,
+    audioSource:+document.getElementById('s_audio').value,
+    authEnabled:document.getElementById('s_auth').checked,authUser:document.getElementById('s_auser').value,authPass:document.getElementById('s_apass').value};
+  fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json()).then(d=>showMsg(d.ok?'Shranjeno, restartiram...':'Napaka',d.ok));
+}
+function renderWifiAps(){
+  const list=document.getElementById('wifiApList');
+  let h='';
+  (window._wifiAPs||[]).forEach((ap,i)=>{
+    h+='<div class="wifi-ap-row" style="display:flex;gap:4px;align-items:center;margin-bottom:4px">';
+    h+='<span style="color:#666;font-size:0.8em;width:18px">'+(i+1)+'.</span>';
+    h+='<input class="wap-ssid" value="'+((ap.ssid||'').replace(/"/g,'&quot;'))+'" placeholder="SSID" maxlength="32" style="flex:1">';
+    h+='<input class="wap-pass" type="password" value="'+((ap.password||'').replace(/"/g,'&quot;'))+'" placeholder="Geslo" maxlength="64" style="flex:1">';
+    h+='<button onclick="removeWifiAp('+i+')" class="danger" style="padding:2px 8px;font-size:0.85em">✕</button>';
+    h+='</div>';
+  });
+  list.innerHTML=h||'<p style="color:#666;font-size:0.85em">Ni omrežij → AP mode</p>';
+}
+function addWifiAp(){if(!window._wifiAPs)window._wifiAPs=[];if(window._wifiAPs.length>=5){showMsg('Največ 5 omrežij',false);return}window._wifiAPs.push({ssid:'',password:''});renderWifiAps()}
+function removeWifiAp(i){window._wifiAPs.splice(i,1);renderWifiAps()}
+function scanWifi(){
+  const el=document.getElementById('scanResults');
+  el.style.display='block';el.innerHTML='<p style="color:#aaa">Skeniram...</p>';
+  const poll=()=>{fetch('/api/wifiscan').then(r=>r.json()).then(d=>{
+    if(d.scanning){setTimeout(poll,1000);return}
+    if(!d.networks||!d.networks.length){el.innerHTML='<p style="color:#666">Ni najdenih omrežij.</p>';return}
+    let h='<table style="width:100%;font-size:0.85em"><tr><th>SSID</th><th>Signal</th><th>Šif.</th><th></th></tr>';
+    d.networks.forEach(n=>{
+      const bars=n.rssi>-50?'████':n.rssi>-65?'███░':n.rssi>-75?'██░░':'█░░░';
+      const enc=n.open?'Odprto':'🔒';
+      h+='<tr><td>'+n.ssid+'</td><td style="font-family:monospace;font-size:0.8em">'+bars+' '+n.rssi+'</td><td>'+enc+'</td>';
+      h+='<td><button onclick="pickWifi(\''+n.ssid.replace(/'/g,"\\'")+'\')" style="padding:1px 6px;font-size:0.85em">Izberi</button></td></tr>';
+    });
+    h+='</table>';el.innerHTML=h;
+  }).catch(()=>{el.innerHTML='<p style="color:#a33">Napaka pri skeniranju</p>'})};
+  poll();
+}
+function pickWifi(ssid){
+  if(!window._wifiAPs)window._wifiAPs=[];
+  if(window._wifiAPs.some(a=>a.ssid===ssid)){showMsg('Že dodano',false);return}
+  if(window._wifiAPs.length>=5){showMsg('Največ 5',false);return}
+  window._wifiAPs.push({ssid:ssid,password:''});renderWifiAps();
+  document.getElementById('scanResults').style.display='none';
+  // Focus password field of newly added AP
+  setTimeout(()=>{const rows=document.querySelectorAll('.wap-pass');if(rows.length)rows[rows.length-1].focus()},100);
+}
+function factoryReset(){fetch('/api/factory-reset',{method:'POST'}).then(()=>showMsg('Ponastavljeno...',true))}
+
+// ---- Konfiguracije ----
+function loadConfigs(){
+  fetch('/api/cfglist').then(r=>r.json()).then(d=>{
+    const list=document.getElementById('cfgList');
+    if(!d.configs||!d.configs.length){list.innerHTML='<p style="color:#666">Ni shranjenih konfiguracij.</p>';} else {
+      let h='<table style="width:100%"><tr><th>Ime</th><th>Datum</th><th>Vel.</th><th></th></tr>';
+      d.configs.forEach(c=>{
+        h+='<tr><td>'+c.name+'</td><td style="font-size:0.8em;color:#aaa">'+c.date+'</td><td style="font-size:0.8em;color:#aaa">'+c.size+'</td>';
+        h+='<td style="white-space:nowrap">';
+        h+='<button onclick="loadConfig(\''+c.file+'\')">Naloži</button> ';
+        h+='<a href="/api/cfgdownload?f='+encodeURIComponent(c.file)+'" download="'+c.file+'" style="display:inline-block;padding:4px 10px;background:#555;color:#fff;border-radius:4px;text-decoration:none;font-size:0.85em">Prenesi</a> ';
+        h+='<button class="danger" onclick="deleteConfig(\''+c.file+'\')">Briši</button>';
+        h+='</td></tr>';
+      });
+      h+='</table>';list.innerHTML=h;
+    }
+    // Storage info
+    const pct=d.totalBytes>0?Math.round(d.usedBytes/d.totalBytes*100):0;
+    const warn=d.freeBytes<20480;
+    document.getElementById('cfgStorage').textContent='LittleFS: '+(d.usedBytes/1024).toFixed(1)+'KB / '+(d.totalBytes/1024).toFixed(0)+'KB ('+pct+'%)';
+    const wEl=document.getElementById('cfgWarn');
+    if(warn){wEl.style.display='block';wEl.textContent='Prostora je malo! Sproščeno: '+(d.freeBytes/1024).toFixed(1)+'KB. Izbriši stare konfiguracije.';}else{wEl.style.display='none';}
+  });
+}
+function saveConfig(){
+  const name=document.getElementById('cfgName').value.trim();
+  if(!name){showMsg('Vnesi ime konfiguracije',false);return}
+  const now=new Date();
+  const date=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  fetch('/api/cfgsave',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,date:date})}).then(r=>r.json()).then(d=>{
+    showMsg(d.ok?'Konfiguracija shranjena':'Napaka: '+(d.error||'?'),d.ok);
+    if(d.ok){document.getElementById('cfgName').value='';loadConfigs()}
+  });
+}
+function loadConfig(file){
+  if(!confirm('Naložiti konfiguracijo? Trenutne nastavitve bodo prepisane.'))return;
+  fetch('/api/cfgload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:file})}).then(r=>r.json()).then(d=>{
+    if(d.ok){
+      showMsg('Konfiguracija naložena'+(d.warnings?' (opozorila: '+d.warnings+')':''),true);
+      loadFixtures();loadScenes();loadSettings();loadConfigs();
+    } else showMsg('Napaka: '+(d.error||'?'),false);
+  });
+}
+function deleteConfig(file){
+  if(!confirm('Izbrisati konfiguracijo?'))return;
+  fetch('/api/cfgdelete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:file})}).then(r=>r.json()).then(d=>{showMsg(d.ok?'Izbrisano':'Napaka',d.ok);loadConfigs()});
+}
+function uploadConfig(input){
+  if(!input.files[0])return;
+  const fd=new FormData();fd.append('file',input.files[0]);
+  fetch('/api/cfgupload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{
+    showMsg(d.ok?'Konfig naložen na ESP':'Napaka: '+(d.error||'?'),d.ok);
+    if(d.ok)loadConfigs();input.value='';
+  });
+}
+function showMsg(t,ok){const m=document.getElementById('msg');m.textContent=t;m.className=ok?'ok':'err';setTimeout(()=>m.className='',3000)}
+
+wsConnect();loadFixtures();loadSettings();loadScenes();updateFadeLabel();
+</script></body></html>

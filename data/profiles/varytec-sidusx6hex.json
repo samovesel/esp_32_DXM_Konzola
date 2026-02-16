@@ -1,0 +1,62 @@
+{
+  "name": "Sidus X6 HEX",
+  "modes": [
+    {
+      "name": "9ch",
+      "channels": [
+        {"name": "Dimmer",  "type": "intensity", "default": 0},
+        {"name": "Red",     "type": "color_r",   "default": 0},
+        {"name": "Green",   "type": "color_g",   "default": 0},
+        {"name": "Blue",    "type": "color_b",   "default": 0},
+        {"name": "White",   "type": "color_w",   "default": 0},
+        {"name": "Amber",   "type": "color_a",   "default": 0},
+        {"name": "UV",      "type": "color_uv",  "default": 0},
+        {"name": "Strobe",  "type": "strobe",    "default": 0, "ranges": [
+          {"from": 0,   "to": 9,   "label": "On"},
+          {"from": 10,  "to": 255, "label": "Slow-Fast"}
+        ]},
+        {"name": "Dim Speed", "type": "speed",   "default": 0, "ranges": [
+          {"from": 0,   "to": 49,  "label": "Curve 1"},
+          {"from": 50,  "to": 99,  "label": "Curve 2"},
+          {"from": 100, "to": 149, "label": "Curve 3"},
+          {"from": 150, "to": 255, "label": "Curve 4-5"}
+        ]}
+      ]
+    },
+    {
+      "name": "12ch",
+      "channels": [
+        {"name": "Dimmer",  "type": "intensity", "default": 0},
+        {"name": "Red",     "type": "color_r",   "default": 0},
+        {"name": "Green",   "type": "color_g",   "default": 0},
+        {"name": "Blue",    "type": "color_b",   "default": 0},
+        {"name": "White",   "type": "color_w",   "default": 0},
+        {"name": "Amber",   "type": "color_a",   "default": 0},
+        {"name": "UV",      "type": "color_uv",  "default": 0},
+        {"name": "Strobe",  "type": "strobe",    "default": 0, "ranges": [
+          {"from": 0,   "to": 9,   "label": "On"},
+          {"from": 10,  "to": 255, "label": "Slow-Fast"}
+        ]},
+        {"name": "CCT/Color", "type": "macro",   "default": 0, "ranges": [
+          {"from": 0,   "to": 9,   "label": "Off"},
+          {"from": 10,  "to": 174, "label": "Colors 1-49"},
+          {"from": 175, "to": 249, "label": "3200-10000K"},
+          {"from": 250, "to": 255, "label": "Factory"}
+        ]},
+        {"name": "Show",    "type": "preset",    "default": 0, "ranges": [
+          {"from": 0,   "to": 20,  "label": "Off"},
+          {"from": 21,  "to": 120, "label": "Auto 1-10"},
+          {"from": 121, "to": 220, "label": "Sound ctrl"},
+          {"from": 221, "to": 255, "label": "Off"}
+        ]},
+        {"name": "Show Speed", "type": "speed",  "default": 0},
+        {"name": "Dim Speed", "type": "speed",   "default": 0, "ranges": [
+          {"from": 0,   "to": 49,  "label": "Curve 1"},
+          {"from": 50,  "to": 99,  "label": "Curve 2"},
+          {"from": 100, "to": 149, "label": "Curve 3"},
+          {"from": 150, "to": 255, "label": "Curve 4-5"}
+        ]}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "CX-30 RGB WW",
+  "comment": "Stairville CX-30 RGB WW (8ch layout)",
+  "modes": [
+    {
+      "name": "8ch",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "Warm White", "type": "color_w" },
+        {
+          "name": "Pattern",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 15], "label": "Off" },
+            { "range": [16, 255], "label": "Fixed Colors" }
+          ]
+        },
+        {
+          "name": "Strobe/Speed",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 15], "label": "Open" },
+            { "range": [16, 255], "label": "Strobe/Speed" }
+          ]
+        },
+        {
+          "name": "Mode",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 31], "label": "Manual" },
+            { "range": [32, 127], "label": "Auto Fades" },
+            { "range": [128, 223], "label": "Auto/Chase" },
+            { "range": [224, 255], "label": "Sound Active" }
+          ]
+        },
+        { "name": "Dimmer", "type": "intensity" }
+      ]
+    }
+  ]
+}

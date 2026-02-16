@@ -1,0 +1,42 @@
+{
+  "name": "Hero Wash 300TW 13ch",
+  "channels": [
+    { "name": "Pan", "type": "pan", "default": 128 },
+    { "name": "Tilt", "type": "tilt", "default": 128 },
+    { "name": "P/T Speed", "type": "speed", "default": 0, "ranges": [
+      { "from": 0, "to": 0, "label": "Max speed" },
+      { "from": 1, "to": 255, "label": "Fast → Slow" }
+    ]},
+    { "name": "Zoom", "type": "zoom", "default": 0 },
+    { "name": "Dimmer", "type": "intensity", "default": 0 },
+    { "name": "Strobe", "type": "strobe", "default": 0, "ranges": [
+      { "from": 0, "to": 10, "label": "Off" },
+      { "from": 11, "to": 200, "label": "FX" },
+      { "from": 201, "to": 250, "label": "Strobe" },
+      { "from": 251, "to": 255, "label": "On" }
+    ]},
+    { "name": "Cold White", "type": "color_w", "default": 0 },
+    { "name": "Warm White", "type": "color_a", "default": 0 },
+    { "name": "Color Temp", "type": "macro", "default": 0, "ranges": [
+      { "from": 0, "to": 9, "label": "Off" },
+      { "from": 10, "to": 255, "label": "2500→6100K" }
+    ]},
+    { "name": "Segment", "type": "generic", "default": 0, "ranges": [
+      { "from": 0, "to": 5, "label": "Off" },
+      { "from": 6, "to": 65, "label": "Static 1–6" },
+      { "from": 66, "to": 75, "label": "Off" },
+      { "from": 76, "to": 255, "label": "Dynamic 7–18" }
+    ]},
+    { "name": "Segment Speed", "type": "speed", "default": 0 },
+    { "name": "Zoom Auto", "type": "preset", "default": 0, "ranges": [
+      { "from": 0, "to": 9, "label": "Off" },
+      { "from": 10, "to": 255, "label": "Prog 1–8" }
+    ]},
+    { "name": "Auto/Sound", "type": "preset", "default": 0, "ranges": [
+      { "from": 0, "to": 10, "label": "Off" },
+      { "from": 11, "to": 90, "label": "P/T prog 1–8" },
+      { "from": 91, "to": 230, "label": "Sound ctrl" },
+      { "from": 231, "to": 255, "label": "Reset/Off" }
+    ]}
+  ]
+}

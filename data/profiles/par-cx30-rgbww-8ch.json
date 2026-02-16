@@ -1,0 +1,24 @@
+{
+  "name": "CX-30 RGB WW 8ch",
+  "channels": [
+    { "name": "Red", "type": "color_r", "default": 0 },
+    { "name": "Green", "type": "color_g", "default": 0 },
+    { "name": "Blue", "type": "color_b", "default": 0 },
+    { "name": "White", "type": "color_w", "default": 0 },
+    { "name": "Fixed Color", "type": "macro", "default": 0, "ranges": [
+      { "from": 0, "to": 15, "label": "Off (manual)" },
+      { "from": 16, "to": 255, "label": "Colors 1–31" }
+    ]},
+    { "name": "Strobe", "type": "strobe", "default": 0, "ranges": [
+      { "from": 0, "to": 15, "label": "Off" },
+      { "from": 16, "to": 255, "label": "Slow → Fast" }
+    ]},
+    { "name": "Mode", "type": "preset", "default": 0, "ranges": [
+      { "from": 0, "to": 31, "label": "Manual" },
+      { "from": 32, "to": 127, "label": "Fade FX" },
+      { "from": 128, "to": 223, "label": "Auto/Chase" },
+      { "from": 224, "to": 255, "label": "Sound" }
+    ]},
+    { "name": "Dimmer", "type": "intensity", "default": 0 }
+  ]
+}

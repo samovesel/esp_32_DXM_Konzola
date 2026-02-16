@@ -1,0 +1,135 @@
+{
+  "name": "Root PAR 6",
+  "comment": "Cameo Root PAR 6 RGBWA+UV",
+  "modes": [
+    {
+      "name": "4ch",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" }
+      ]
+    },
+    {
+      "name": "5ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Open" },
+            { "range": [6, 255], "label": "Strobe Slow-Fast" }
+          ]
+        },
+        {
+          "name": "Chase",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "No Chase" },
+            { "range": [6, 127], "label": "Jump Speed" },
+            { "range": [128, 255], "label": "Fade Speed" }
+          ]
+        },
+        {
+          "name": "Color 1",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 125], "label": "Fixed Colors" },
+            { "range": [126, 255], "label": "User/UV" }
+          ]
+        },
+        {
+          "name": "Color 2",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 125], "label": "Fixed Colors" },
+            { "range": [126, 255], "label": "User/UV" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Open" },
+            { "range": [6, 255], "label": "Strobe Slow-Fast" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" }
+      ]
+    },
+    {
+      "name": "8ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Open" },
+            { "range": [6, 255], "label": "Strobe Slow-Fast" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        { "name": "Amber", "type": "color_a" },
+        { "name": "UV", "type": "color_uv" }
+      ]
+    },
+    {
+      "name": "11ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        { "name": "Dimmer Fine", "type": "generic" },
+        {
+          "name": "Strobe FX",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Open" },
+            { "range": [6, 10], "label": "Closed" },
+            { "range": [11, 127], "label": "Strobe FX" },
+            { "range": [128, 255], "label": "Strobe Hz/Open" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        { "name": "Amber", "type": "color_a" },
+        { "name": "UV", "type": "color_uv" },
+        {
+          "name": "Color/Mode",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 127], "label": "Fixed Colors" },
+            { "range": [128, 201], "label": "Jump/Fade" },
+            { "range": [202, 255], "label": "User/UV" }
+          ]
+        },
+        {
+          "name": "Sound",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 255], "label": "Sens Low-High" }
+          ]
+        }
+      ]
+    }
+  ]
+}

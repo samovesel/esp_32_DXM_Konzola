@@ -1,0 +1,45 @@
+{
+  "name": "LED PAR RGBW",
+  "modes": [
+    {
+      "name": "4ch",
+      "channels": [
+        {"name": "Red",   "type": "color_r", "default": 0},
+        {"name": "Green", "type": "color_g", "default": 0},
+        {"name": "Blue",  "type": "color_b", "default": 0},
+        {"name": "White", "type": "color_w", "default": 0}
+      ]
+    },
+    {
+      "name": "7ch",
+      "channels": [
+        {"name": "Dimmer",  "type": "intensity", "default": 0},
+        {"name": "Red",     "type": "color_r",   "default": 0},
+        {"name": "Green",   "type": "color_g",   "default": 0},
+        {"name": "Blue",    "type": "color_b",   "default": 0},
+        {"name": "White",   "type": "color_w",   "default": 0},
+        {"name": "Strobe",  "type": "strobe",    "default": 0, "ranges": [
+          {"from": 0, "to": 9, "label": "Off"},
+          {"from": 10, "to": 255, "label": "Slow-Fast"}
+        ]},
+        {"name": "Preset",  "type": "preset",    "default": 0}
+      ]
+    },
+    {
+      "name": "11ch",
+      "channels": [
+        {"name": "Dimmer",  "type": "intensity", "default": 0},
+        {"name": "Red",     "type": "color_r",   "default": 0},
+        {"name": "Green",   "type": "color_g",   "default": 0},
+        {"name": "Blue",    "type": "color_b",   "default": 0},
+        {"name": "White",   "type": "color_w",   "default": 0},
+        {"name": "Strobe",  "type": "strobe",    "default": 0},
+        {"name": "Preset",  "type": "preset",    "default": 0},
+        {"name": "Color T", "type": "generic",   "default": 0},
+        {"name": "Speed",   "type": "speed",     "default": 0},
+        {"name": "Macro",   "type": "macro",     "default": 0},
+        {"name": "ID",      "type": "generic",   "default": 0}
+      ]
+    }
+  ]
+}

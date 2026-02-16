@@ -1,0 +1,71 @@
+{
+  "name": "Hero Wash 300 TW",
+  "comment": "Varytec Hero Wash 300 TW",
+  "modes": [
+    {
+      "name": "13ch",
+      "channels": [
+        { "name": "Pan", "type": "pan" },
+        { "name": "Tilt", "type": "tilt" },
+        { "name": "PT Speed", "type": "generic" },
+        { "name": "Zoom", "type": "zoom" },
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 200], "label": "Strobe FX" },
+            { "range": [201, 250], "label": "Strobe Hz" },
+            { "range": [251, 255], "label": "On" }
+          ]
+        },
+        { "name": "Cold White", "type": "color_w" },
+        { "name": "Warm White", "type": "generic" },
+        {
+          "name": "CCT",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 9], "label": "Off" },
+            { "range": [10, 255], "label": "2500K-6100K" }
+          ]
+        },
+        {
+          "name": "Pattern",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 65], "label": "Static" },
+            { "range": [76, 255], "label": "Dynamic" }
+          ]
+        },
+        {
+          "name": "Pat Speed",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 127], "label": "Snap Speed" },
+            { "range": [128, 255], "label": "Fade Speed" }
+          ]
+        },
+        {
+          "name": "Zoom FX",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 9], "label": "Off" },
+            { "range": [10, 255], "label": "Auto Zoom" }
+          ]
+        },
+        {
+          "name": "Func",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "No function" },
+            { "range": [11, 90], "label": "Auto Pan/Tilt" },
+            { "range": [91, 230], "label": "Sound Control" },
+            { "range": [231, 240], "label": "Reset" }
+          ]
+        }
+      ]
+    }
+  ]
+}

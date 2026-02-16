@@ -1,0 +1,122 @@
+{
+  "name": "PRO 14x10W",
+  "comment": "Flash PRO 14x10W RGBW (PP1410)",
+  "modes": [
+    {
+      "name": "8ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobo",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        {
+          "name": "Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 19], "label": "Off" },
+            { "range": [20, 99], "label": "Macros" },
+            { "range": [100, 239], "label": "Fixed Colors" },
+            { "range": [240, 255], "label": "Sound Active" }
+          ]
+        },
+        {
+          "name": "Color Change",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 19], "label": "Off" },
+            { "range": [20, 255], "label": "Color Select" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12ch",
+      "channels": [
+        { "name": "S1 Dimmer", "type": "intensity" },
+        {
+          "name": "S1 Strobo",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        },
+        { "name": "S1 Red", "type": "color_r" },
+        { "name": "S1 Green", "type": "color_g" },
+        { "name": "S1 Blue", "type": "color_b" },
+        { "name": "S1 White", "type": "color_w" },
+        { "name": "S2 Dimmer", "type": "intensity" },
+        {
+          "name": "S2 Strobo",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        },
+        { "name": "S2 Red", "type": "color_r" },
+        { "name": "S2 Green", "type": "color_g" },
+        { "name": "S2 Blue", "type": "color_b" },
+        { "name": "S2 White", "type": "color_w" }
+      ]
+    },
+    {
+      "name": "14ch",
+      "channels": [
+        { "name": "S1 Dimmer", "type": "intensity" },
+        {
+          "name": "S1 Strobo",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        },
+        { "name": "S1 Red", "type": "color_r" },
+        { "name": "S1 Green", "type": "color_g" },
+        { "name": "S1 Blue", "type": "color_b" },
+        { "name": "S1 White", "type": "color_w" },
+        { "name": "S2 Dimmer", "type": "intensity" },
+        {
+          "name": "S2 Strobo",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 255], "label": "Strobe Hz" }
+          ]
+        },
+        { "name": "S2 Red", "type": "color_r" },
+        { "name": "S2 Green", "type": "color_g" },
+        { "name": "S2 Blue", "type": "color_b" },
+        { "name": "S2 White", "type": "color_w" },
+        {
+          "name": "Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 19], "label": "Off" },
+            { "range": [20, 99], "label": "Macros" },
+            { "range": [100, 239], "label": "Fixed Colors" },
+            { "range": [240, 255], "label": "Sound Active" }
+          ]
+        },
+        {
+          "name": "Color Change",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 19], "label": "Off" },
+            { "range": [20, 255], "label": "Color Select" }
+          ]
+        }
+      ]
+    }
+  ]
+}

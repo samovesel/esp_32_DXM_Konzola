@@ -1,0 +1,61 @@
+{
+  "name": "LED Studio 150",
+  "comment": "Varytec LED Studio 150 2900K/6000K",
+  "modes": [
+    {
+      "name": "1ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" }
+      ]
+    },
+    {
+      "name": "2ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 255], "label": "Strobe Slow-Fast" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Off" },
+            { "range": [6, 10], "label": "On" },
+            { "range": [11, 127], "label": "Strobe FX" },
+            { "range": [128, 255], "label": "Strobe Hz/Off" }
+          ]
+        },
+        {
+          "name": "Response",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Default" },
+            { "range": [6, 127], "label": "LED Mode" },
+            { "range": [128, 255], "label": "Halogen Mode" }
+          ]
+        },
+        {
+          "name": "Dim Curve",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 63], "label": "Def/Linear" },
+            { "range": [64, 127], "label": "Exponential" },
+            { "range": [128, 191], "label": "Logarithmic" },
+            { "range": [192, 255], "label": "S-Curve" }
+          ]
+        }
+      ]
+    }
+  ]
+}

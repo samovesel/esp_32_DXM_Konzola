@@ -1,0 +1,33 @@
+{
+  "name": "Cameo ROOT Par 6 12ch",
+  "channels": [
+    { "name": "Dimmer", "type": "intensity", "default": 0 },
+    { "name": "Dimmer fine", "type": "generic", "default": 0 },
+    { "name": "Strobe", "type": "strobe", "default": 0, "ranges": [
+      { "from": 0, "to": 5, "label": "Open" },
+      { "from": 6, "to": 10, "label": "Closed" },
+      { "from": 11, "to": 127, "label": "FX" },
+      { "from": 128, "to": 255, "label": "Strobe" }
+    ]},
+    { "name": "Red", "type": "color_r", "default": 0 },
+    { "name": "Green", "type": "color_g", "default": 0 },
+    { "name": "Blue", "type": "color_b", "default": 0 },
+    { "name": "White", "type": "color_w", "default": 0 },
+    { "name": "Amber", "type": "color_a", "default": 0 },
+    { "name": "UV", "type": "color_uv", "default": 0 },
+    { "name": "Color Macro", "type": "macro", "default": 0, "ranges": [
+      { "from": 0, "to": 5, "label": "Off" },
+      { "from": 6, "to": 125, "label": "Colors" },
+      { "from": 126, "to": 201, "label": "Jump/Fade" },
+      { "from": 202, "to": 255, "label": "User colors" }
+    ]},
+    { "name": "Sound", "type": "preset", "default": 0, "ranges": [
+      { "from": 0, "to": 5, "label": "Off" },
+      { "from": 6, "to": 255, "label": "On" }
+    ]},
+    { "name": "DMX Delay", "type": "generic", "default": 0, "ranges": [
+      { "from": 0, "to": 5, "label": "Off" },
+      { "from": 6, "to": 255, "label": "0.1→2.0s" }
+    ]}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Stairville Z100M 2ch",
+  "channels": [
+    { "name": "Dimmer", "type": "intensity", "default": 0 },
+    { "name": "Strobe", "type": "strobe", "default": 0, "ranges": [
+      { "from": 0, "to": 15, "label": "Open" },
+      { "from": 16, "to": 95, "label": "Strobe" },
+      { "from": 96, "to": 175, "label": "Flash" },
+      { "from": 176, "to": 255, "label": "Random" }
+    ]}
+  ]
+}

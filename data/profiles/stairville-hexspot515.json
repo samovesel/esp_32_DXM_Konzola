@@ -1,0 +1,63 @@
+{
+  "name": "HexSpot 515",
+  "modes": [
+    {
+      "name": "9ch",
+      "channels": [
+        {"name": "Dimmer",  "type": "intensity", "default": 0},
+        {"name": "Strobe",  "type": "strobe",    "default": 0, "ranges": [
+          {"from": 0,   "to": 5,   "label": "On"},
+          {"from": 6,   "to": 10,  "label": "Off"},
+          {"from": 11,  "to": 127, "label": "Effects"},
+          {"from": 128, "to": 250, "label": "Strobe 1-20Hz"}
+        ]},
+        {"name": "Red",     "type": "color_r",   "default": 0},
+        {"name": "Green",   "type": "color_g",   "default": 0},
+        {"name": "Blue",    "type": "color_b",   "default": 0},
+        {"name": "White",   "type": "color_w",   "default": 0},
+        {"name": "Amber",   "type": "color_a",   "default": 0},
+        {"name": "UV",      "type": "color_uv",  "default": 0},
+        {"name": "Color Macro",  "type": "macro", "default": 0, "ranges": [
+          {"from": 0,   "to": 5,   "label": "Blackout"},
+          {"from": 11,  "to": 125, "label": "Fixed colors"},
+          {"from": 126, "to": 127, "label": "Stop"},
+          {"from": 128, "to": 255, "label": "Auto cycle"}
+        ]}
+      ]
+    },
+    {
+      "name": "11ch",
+      "channels": [
+        {"name": "Dimmer",  "type": "intensity", "default": 0},
+        {"name": "Strobe",  "type": "strobe",    "default": 0, "ranges": [
+          {"from": 0,   "to": 5,   "label": "On"},
+          {"from": 6,   "to": 10,  "label": "Off"},
+          {"from": 11,  "to": 127, "label": "Effects"},
+          {"from": 128, "to": 250, "label": "Strobe 1-20Hz"}
+        ]},
+        {"name": "Red",     "type": "color_r",   "default": 0},
+        {"name": "Green",   "type": "color_g",   "default": 0},
+        {"name": "Blue",    "type": "color_b",   "default": 0},
+        {"name": "White",   "type": "color_w",   "default": 0},
+        {"name": "Amber",   "type": "color_a",   "default": 0},
+        {"name": "UV",      "type": "color_uv",  "default": 0},
+        {"name": "Color Macro",  "type": "macro", "default": 0, "ranges": [
+          {"from": 0,   "to": 5,   "label": "Blackout"},
+          {"from": 11,  "to": 125, "label": "Fixed colors"},
+          {"from": 126, "to": 127, "label": "Stop"},
+          {"from": 128, "to": 255, "label": "Auto cycle"}
+        ]},
+        {"name": "CCT",     "type": "generic",   "default": 0, "ranges": [
+          {"from": 0,   "to": 5,   "label": "Off"},
+          {"from": 6,   "to": 255, "label": "3200-7280K"}
+        ]},
+        {"name": "Dim Curve", "type": "generic",  "default": 0, "ranges": [
+          {"from": 0,   "to": 5,   "label": "Off"},
+          {"from": 6,   "to": 63,  "label": "Linear"},
+          {"from": 64,  "to": 127, "label": "Exponential"},
+          {"from": 128, "to": 255, "label": "Log / S-curve"}
+        ]}
+      ]
+    }
+  ]
+}

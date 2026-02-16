@@ -1,0 +1,18 @@
+{
+  "name": "Quad Par 5x8W RGBWW 8ch",
+  "channels": [
+    { "name": "Dimmer", "type": "intensity", "default": 0 },
+    { "name": "Red", "type": "color_r", "default": 0 },
+    { "name": "Green", "type": "color_g", "default": 0 },
+    { "name": "Blue", "type": "color_b", "default": 0 },
+    { "name": "Warm White", "type": "color_w", "default": 0 },
+    { "name": "Mode", "type": "preset", "default": 0, "ranges": [
+      { "from": 0, "to": 0, "label": "Manual RGB" },
+      { "from": 1, "to": 24, "label": "Fixed color" },
+      { "from": 25, "to": 249, "label": "Show 2–10" },
+      { "from": 250, "to": 255, "label": "Sound" }
+    ]},
+    { "name": "Color/Speed", "type": "macro", "default": 0 },
+    { "name": "Strobe", "type": "strobe", "default": 0 }
+  ]
+}

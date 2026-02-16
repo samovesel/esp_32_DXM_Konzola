@@ -1,0 +1,110 @@
+{
+  "name": "Hero Wash 340FX",
+  "comment": "Varytec Hero Wash 340FX RGBW Zoom",
+  "modes": [
+    {
+      "name": "8ch",
+      "channels": [
+        { "name": "Pan", "type": "pan" },
+        { "name": "Tilt", "type": "tilt" },
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 9], "label": "Open" },
+            { "range": [10, 250], "label": "Strobe Slow-Fast" },
+            { "range": [251, 255], "label": "Open" }
+          ]
+        },
+        {
+          "name": "Color Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 150], "label": "Fixed Colors" },
+            { "range": [151, 200], "label": "Seq Snap Speed" },
+            { "range": [201, 255], "label": "Seq Fade Speed" }
+          ]
+        },
+        { "name": "Zoom", "type": "zoom" },
+        {
+          "name": "Beam FX",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 100], "label": "Linear 0-90" },
+            { "range": [101, 133], "label": "Yo-Yo Effect" },
+            { "range": [134, 194], "label": "Rot CW Slow" },
+            { "range": [195, 255], "label": "Rot CW Fast" }
+          ]
+        },
+        {
+          "name": "Func",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "No function" },
+            { "range": [11, 90], "label": "Auto Shows" },
+            { "range": [91, 230], "label": "Sound Active" },
+            { "range": [231, 255], "label": "Reset" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "16ch",
+      "channels": [
+        { "name": "Pan", "type": "pan" },
+        { "name": "Pan Fine", "type": "pan_fine" },
+        { "name": "Tilt", "type": "tilt" },
+        { "name": "Tilt Fine", "type": "tilt_fine" },
+        { "name": "PT Speed", "type": "generic" },
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 9], "label": "Open" },
+            { "range": [10, 250], "label": "Strobe Slow-Fast" },
+            { "range": [251, 255], "label": "Open" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        { "name": "CCT", "type": "generic" },
+        {
+          "name": "Color Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 150], "label": "Fixed Colors" },
+            { "range": [151, 200], "label": "Seq Snap Speed" },
+            { "range": [201, 255], "label": "Seq Fade Speed" }
+          ]
+        },
+        { "name": "Zoom", "type": "zoom" },
+        {
+          "name": "Beam FX",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 100], "label": "Linear 0-90" },
+            { "range": [101, 133], "label": "Yo-Yo Effect" },
+            { "range": [134, 194], "label": "Rot CW Slow" },
+            { "range": [195, 255], "label": "Rot CW Fast" }
+          ]
+        },
+        {
+          "name": "Func",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "No function" },
+            { "range": [11, 90], "label": "Auto Shows" },
+            { "range": [91, 230], "label": "Sound Active" },
+            { "range": [231, 255], "label": "Reset" }
+          ]
+        }
+      ]
+    }
+  ]
+}

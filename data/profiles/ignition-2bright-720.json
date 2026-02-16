@@ -1,0 +1,86 @@
+{
+  "name": "2bright Par 720 IP",
+  "comment": "Ignition 2bright Par 720 IP (RGBLAC)",
+  "modes": [
+    {
+      "name": "9ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Open" },
+            { "range": [6, 10], "label": "Closed" },
+            { "range": [11, 127], "label": "Strobe FX" },
+            { "range": [128, 255], "label": "Strobe/Open" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "Lime", "type": "generic" },
+        { "name": "Amber", "type": "color_a" },
+        { "name": "Cyan", "type": "generic" },
+        {
+          "name": "Color Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 127], "label": "Fixed Colors" },
+            { "range": [128, 191], "label": "Auto Jump" },
+            { "range": [192, 255], "label": "Auto Fade" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11ch",
+      "channels": [
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Open" },
+            { "range": [6, 10], "label": "Closed" },
+            { "range": [11, 127], "label": "Strobe FX" },
+            { "range": [128, 255], "label": "Strobe/Open" }
+          ]
+        },
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "Lime", "type": "generic" },
+        { "name": "Amber", "type": "color_a" },
+        { "name": "Cyan", "type": "generic" },
+        {
+          "name": "Color Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 10], "label": "Off" },
+            { "range": [11, 127], "label": "Fixed Colors" },
+            { "range": [128, 191], "label": "Auto Jump" },
+            { "range": [192, 255], "label": "Auto Fade" }
+          ]
+        },
+        {
+          "name": "CCT",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "No function" },
+            { "range": [6, 255], "label": "2700K-7500K" }
+          ]
+        },
+        {
+          "name": "Dim Curve",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 5], "label": "Default" },
+            { "range": [6, 255], "label": "Curve Select" }
+          ]
+        }
+      ]
+    }
+  ]
+}

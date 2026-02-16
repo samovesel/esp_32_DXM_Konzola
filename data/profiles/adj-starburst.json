@@ -1,0 +1,65 @@
+{
+  "name": "Starburst",
+  "comment": "ADJ Starburst (RGBW + Yellow + Purple)",
+  "modes": [
+    {
+      "name": "12ch",
+      "channels": [
+        { "name": "Red", "type": "color_r" },
+        { "name": "Green", "type": "color_g" },
+        { "name": "Blue", "type": "color_b" },
+        { "name": "White", "type": "color_w" },
+        { "name": "Yellow", "type": "generic" },
+        { "name": "Purple", "type": "generic" },
+        {
+          "name": "Strobe",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 7], "label": "Closed" },
+            { "range": [8, 15], "label": "Open" },
+            { "range": [16, 131], "label": "Strobe Slow-Fast" },
+            { "range": [132, 255], "label": "Strobe FX/Open" }
+          ]
+        },
+        { "name": "Dimmer", "type": "intensity" },
+        {
+          "name": "Rotation",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 30], "label": "Stop" },
+            { "range": [31, 140], "label": "CW Rotation" },
+            { "range": [141, 145], "label": "Stop" },
+            { "range": [146, 255], "label": "CCW Rotation" }
+          ]
+        },
+        {
+          "name": "Color Macro",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 25], "label": "Off" },
+            { "range": [26, 205], "label": "Macros" },
+            { "range": [206, 255], "label": "Auto Fade" }
+          ]
+        },
+        {
+          "name": "Programs",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 55], "label": "Off" },
+            { "range": [56, 75], "label": "Sound Active" },
+            { "range": [76, 255], "label": "Auto/FX" }
+          ]
+        },
+        {
+          "name": "Reset",
+          "type": "generic",
+          "ranges": [
+            { "range": [0, 69], "label": "No Function" },
+            { "range": [70, 85], "label": "Reset" },
+            { "range": [86, 255], "label": "No Function" }
+          ]
+        }
+      ]
+    }
+  ]
+}
