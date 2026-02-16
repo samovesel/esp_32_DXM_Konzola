@@ -1663,6 +1663,7 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
     Serial.printf("[WEB] GET / od %s (heap: %d)\n", req->client()->remoteIP().toString().c_str(), esp_get_free_heap_size());
     AsyncWebServerResponse* resp = req->beginResponse_P(200, "text/html", HTML_PAGE_GZ, HTML_PAGE_GZ_LEN);
     resp->addHeader("Content-Encoding", "gzip");
+    resp->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     req->send(resp);
   });
   server->on("/api/config",HTTP_GET,[](AsyncWebServerRequest* req){if(!checkAuth(req))return;apiGetConfig(req);});
