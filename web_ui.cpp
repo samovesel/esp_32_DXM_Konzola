@@ -976,6 +976,26 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   else if (strcmp(cmd, "save_sound") == 0 && _snd) {
     _snd->saveConfig();
   }
+  // Manual beat commands
+  else if (strcmp(cmd, "tap") == 0 && _snd) {
+    _snd->tapBeat();
+  }
+  else if (strcmp(cmd, "mb_bpm") == 0 && _snd) {
+    _snd->setManualBpm(doc["v"] | 120.0f);
+  }
+  else if (strcmp(cmd, "mb_cfg") == 0 && _snd) {
+    ManualBeatConfig& mb = _snd->getManualBeatConfig();
+    mb.enabled      = (doc["en"]|0) != 0;
+    mb.source       = doc["src"]  | (uint8_t)BSRC_MANUAL;
+    mb.bpm          = doc["bpm"]  | 120.0f;
+    mb.program      = doc["prog"] | (uint8_t)MBPROG_PULSE;
+    mb.subdiv       = doc["sub"]  | (uint8_t)SUBDIV_NORMAL;
+    mb.intensity    = doc["int"]  | 0.8f;
+    mb.colorEnabled = (doc["col"]|1) != 0;
+    mb.buildBeats   = doc["bb"]   | 8;
+    if (mb.bpm < 30) mb.bpm = 30;
+    if (mb.bpm > 300) mb.bpm = 300;
+  }
 
   _mix->unlock();
 }
@@ -1697,6 +1717,25 @@ void webLoop() {
     fft["peak"]=_aud->getPeakLevel(); fft["sr"]=_aud->getSampleRate();
     // Fixture sound levels za preview
     if(_snd->isActive()){
+      JsonArray fxl=doc["fxl"].to<JsonArray>();
+      for(int i=0;i<MAX_FIXTURES;i++) fxl.add((int)(_snd->getFixtureLevel(i)*100));
+    }
+  }
+
+  // Manual beat
+  if(_snd){
+    JsonObject mb=doc["mb"].to<JsonObject>();
+    const ManualBeatConfig& mbc=_snd->getManualBeatConfig();
+    mb["en"]=mbc.enabled;
+    mb["bpm"]=mbc.bpm;
+    mb["prog"]=mbc.program;
+    mb["sub"]=mbc.subdiv;
+    mb["src"]=mbc.source;
+    mb["phase"]=_snd->getBeatPhase();
+    mb["active"]=_snd->isManualBeatActive();
+    mb["taps"]=_snd->getTapCount();
+    // Fixture sound levels za preview (tudi iz manual beat)
+    if(_snd->isActive()&&!doc.containsKey("fxl")){
       JsonArray fxl=doc["fxl"].to<JsonArray>();
       for(int i=0;i<MAX_FIXTURES;i++) fxl.add((int)(_snd->getFixtureLevel(i)*100));
     }

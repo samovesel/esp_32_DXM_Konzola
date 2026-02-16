@@ -147,6 +147,27 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .fs-fx-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:4px}
 .fs-color-dot{width:18px;height:18px;border-radius:50%;border:2px solid #555;flex-shrink:0;transition:background 0.1s,box-shadow 0.1s}
 .ch-fine-input{width:42px;font-size:0.75em;text-align:center;padding:2px;background:#0f3460;color:#0ff;border:1px solid #0af;border-radius:3px;outline:none}
+/* Manual beat row v fullscreen konzoli */
+.fs-beat-row{display:flex;gap:4px;overflow-x:auto;padding:3px 0;-webkit-overflow-scrolling:touch;align-items:center;flex-wrap:nowrap}
+.fs-beat-row .fs-lbl{color:#888;font-size:0.7em;white-space:nowrap;flex-shrink:0;margin-right:4px}
+.fs-tap-btn{flex-shrink:0;padding:8px 16px;font-size:0.85em;font-weight:bold;background:#c0392b;color:#fff;border:2px solid #e74c3c;border-radius:6px;white-space:nowrap;cursor:pointer;user-select:none;touch-action:manipulation;transition:background 0.05s,box-shadow 0.05s}
+.fs-tap-btn:active,.fs-tap-btn.tap-flash{background:#e74c3c;box-shadow:0 0 12px rgba(231,76,60,0.6)}
+.fs-beat-bpm{color:#e74c3c;font-size:0.9em;font-weight:bold;white-space:nowrap;flex-shrink:0;min-width:70px;text-align:center}
+.fs-beat-phase{width:60px;height:6px;background:#222;border-radius:3px;overflow:hidden;flex-shrink:0}
+.fs-beat-phase-fill{height:100%;background:linear-gradient(90deg,#e74c3c,#f39c12);width:0%;transition:width 0.05s linear}
+.fs-beat-toggle{padding:4px 8px;font-size:0.75em;background:#222;color:#aaa;border:1px solid #444;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.fs-beat-toggle.active{background:#c0392b;color:#fff;border-color:#e74c3c}
+.fs-beat-prog{padding:4px 8px;font-size:0.7em;background:#222;color:#aaa;border:1px solid #444;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.fs-beat-prog.ps-sel{background:#e74c3c;color:#fff;border-color:#e74c3c}
+.fs-beat-sel{background:#1a1a2e;color:#e74c3c;border:1px solid #444;border-radius:4px;padding:3px 6px;font-size:0.75em;flex-shrink:0}
+/* Manual beat card v sound tabu */
+.mb-card .tap-big{width:100%;padding:16px;background:#c0392b;color:#fff;font-size:1.2em;font-weight:bold;border:none;border-radius:6px;cursor:pointer;user-select:none;touch-action:manipulation}
+.mb-card .tap-big:active{background:#e74c3c;box-shadow:0 0 16px rgba(231,76,60,0.5)}
+.mb-card .mb-prog-grid{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.mb-card .mb-prog-grid button{padding:4px 10px;font-size:0.8em;background:#222;border:1px solid #444;border-radius:4px;color:#aaa;cursor:pointer}
+.mb-card .mb-prog-grid button.ps-sel{background:#e74c3c;color:#fff;border-color:#e74c3c}
+.mb-phase-bar{height:8px;background:#222;border-radius:4px;overflow:hidden;margin:6px 0}
+.mb-phase-fill{height:100%;background:linear-gradient(90deg,#e74c3c,#f39c12);border-radius:4px;transition:width 0.05s linear}
 
 </style></head><body>
 
@@ -244,6 +265,49 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     <div class="toggle"><input type="checkbox" id="eHigh" checked onchange="sendEasy()"><label>High → Strobe</label></div>
     <div class="toggle"><input type="checkbox" id="eBeat" checked onchange="sendEasy()"><label>Beat → Bump</label></div>
     <div class="toggle"><input type="checkbox" id="eBeatSync" onchange="sendEasy()"><label>Beat Sync (efekti sinhroni z BPM)</label></div>
+    <button onclick="saveSoundCfg()" style="margin-top:8px;background:#555">Shrani nastavitve</button>
+  </div>
+
+  <div class="card mb-card">
+    <h3>Manual Beat</h3>
+    <p style="font-size:0.7em;color:#888;margin:0 0 6px">Ritmični efekti brez zvočnega vira — tap tempo ali ročni BPM</p>
+    <div class="toggle"><input type="checkbox" id="mbOn" onchange="sendMbCfg()"><label for="mbOn">Vklopljeno</label></div>
+    <button class="tap-big" id="mbTapBtn" onpointerdown="doTap()">TAP TEMPO</button>
+    <div class="mb-phase-bar"><div class="mb-phase-fill" id="mbPhaseBar"></div></div>
+    <div class="stl-stat" style="margin:6px 0">BPM: <span id="mbBpmDisp" style="color:#e74c3c;font-weight:bold">120</span> | Tap: <span id="mbTapDisp" style="color:#e74c3c">0/4</span> | <span id="mbActiveDisp" style="color:#666">neaktiven</span></div>
+    <div class="fade-row"><label>BPM:</label><input type="range" min="30" max="300" step="1" value="120" id="mbBpmSlider" oninput="onMbBpmSlider()"><span class="val" id="mbBpmVal" style="color:#e74c3c">120</span></div>
+    <p style="font-size:0.7em;color:#888;margin:6px 0">Vir beata:</p>
+    <div class="preset-btns" id="mbSrcBtns">
+      <button onclick="setMbSrc(1)" class="ps-sel">Manual</button>
+      <button onclick="setMbSrc(2)">Auto (fallback)</button>
+      <button onclick="setMbSrc(0)">Samo avdio</button>
+    </div>
+    <p style="font-size:0.7em;color:#888;margin:8px 0 4px">Program:</p>
+    <div class="mb-prog-grid" id="mbProgBtns">
+      <button onclick="setMbProg(0)" class="ps-sel">Pulse</button>
+      <button onclick="setMbProg(1)">Chase</button>
+      <button onclick="setMbProg(2)">Sine</button>
+      <button onclick="setMbProg(3)">Strobe</button>
+      <button onclick="setMbProg(4)">Rainbow</button>
+      <button onclick="setMbProg(5)">Build</button>
+      <button onclick="setMbProg(6)">Random</button>
+      <button onclick="setMbProg(7)">Alternate</button>
+      <button onclick="setMbProg(8)">Wave</button>
+      <button onclick="setMbProg(9)">Stack</button>
+      <button onclick="setMbProg(10)">Sparkle</button>
+      <button onclick="setMbProg(11)">Scanner</button>
+    </div>
+    <p style="font-size:0.7em;color:#888;margin:8px 0 4px">Subdivizija:</p>
+    <div class="preset-btns" id="mbSubBtns">
+      <button onclick="setMbSub(0)">1/4x</button>
+      <button onclick="setMbSub(1)">1/2x</button>
+      <button onclick="setMbSub(2)" class="ps-sel">1x</button>
+      <button onclick="setMbSub(3)">2x</button>
+      <button onclick="setMbSub(4)">4x</button>
+    </div>
+    <div class="fade-row"><label>Jakost:</label><input type="range" min="0" max="100" step="5" value="80" id="mbIntSlider" oninput="sendMbCfg()"><span class="val" id="mbIntVal" style="color:#e74c3c">80%</span></div>
+    <div class="toggle"><input type="checkbox" id="mbColor" checked onchange="sendMbCfg()"><label>Barvni efekti</label></div>
+    <div class="fade-row" id="mbBuildRow"><label>Build beatov:</label><input type="range" min="4" max="32" step="1" value="8" id="mbBuildSlider" oninput="sendMbCfg()"><span class="val" id="mbBuildVal" style="color:#e74c3c">8</span></div>
     <button onclick="saveSoundCfg()" style="margin-top:8px;background:#555">Shrani nastavitve</button>
   </div>
 
@@ -355,6 +419,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   </div>
   <div class="fs-bottom">
     <div class="fs-cf-bar"><div class="fs-cf-fill" id="fsCfBar"></div></div>
+    <div class="fs-beat-row" id="fsBeatRow"></div>
     <div class="fs-scene-row" id="fsSceneRow"></div>
     <div class="fs-grp-row" id="fsGrpRow"></div>
   </div>
@@ -412,6 +477,8 @@ function handleWs(d){
     }
     // Fixture sound preview
     if(d.fxl)updateFxPreview(d.fxl);
+    // Manual beat status
+    if(d.mb)updateMbStatus(d.mb);
     // Undo visibility
     document.getElementById('undoBtn').style.display=d.undo?'inline-block':'none';
     document.getElementById('fsUndoBtn').style.display=d.undo?'inline-block':'none';
@@ -747,7 +814,7 @@ function enterFullConsole(){
   document.getElementById('fsMasterSlider').value=document.getElementById('masterSlider').value;
   document.getElementById('fsMasterVal').textContent=document.getElementById('masterVal').textContent;
   document.getElementById('fsBoBtn').style.background=boState?'#f33':'#555';
-  renderFsConsole();renderFsScenes();renderFsGroups();
+  renderFsConsole();renderFsScenes();renderFsGroups();renderFsBeatRow();
 }
 function exitFullConsole(){
   fsActive=false;
@@ -1222,6 +1289,108 @@ function updateFxPreview(fxl){
   });
 }
 function saveSoundCfg(){wsSend({cmd:'save_sound'});showMsg('Sound nastavitve shranjene',true)}
+
+// ============ MANUAL BEAT ============
+var mbProg=0,mbSub=2,mbSrc=1;
+function doTap(){
+  wsSend({cmd:'tap'});
+  var btn=document.getElementById('mbTapBtn');
+  btn.classList.add('tap-flash');setTimeout(()=>btn.classList.remove('tap-flash'),100);
+  var fb=document.getElementById('fsTapBtn');
+  if(fb){fb.classList.add('tap-flash');setTimeout(()=>fb.classList.remove('tap-flash'),100)}
+}
+function sendMbCfg(){
+  document.getElementById('mbIntVal').textContent=document.getElementById('mbIntSlider').value+'%';
+  document.getElementById('mbBuildVal').textContent=document.getElementById('mbBuildSlider').value;
+  // Prikaži/skrij build row
+  document.getElementById('mbBuildRow').style.display=(mbProg===5)?'flex':'none';
+  wsSend({cmd:'mb_cfg',
+    en:document.getElementById('mbOn').checked?1:0,
+    src:mbSrc, bpm:+document.getElementById('mbBpmSlider').value,
+    prog:mbProg, sub:mbSub,
+    'int':+document.getElementById('mbIntSlider').value/100,
+    col:document.getElementById('mbColor').checked?1:0,
+    bb:+document.getElementById('mbBuildSlider').value
+  });
+}
+function onMbBpmSlider(){
+  var v=+document.getElementById('mbBpmSlider').value;
+  document.getElementById('mbBpmVal').textContent=v;
+  wsSend({cmd:'mb_bpm',v:v});
+}
+function setMbProg(p){
+  mbProg=p;
+  document.querySelectorAll('#mbProgBtns button').forEach((b,i)=>b.className=i===p?'ps-sel':'');
+  // Posodobi tudi FS prog gumbe
+  document.querySelectorAll('#fsProgBtns button').forEach((b,i)=>b.className=i===p?'fs-beat-prog ps-sel':'fs-beat-prog');
+  sendMbCfg();
+}
+function setMbSub(s){
+  mbSub=s;
+  document.querySelectorAll('#mbSubBtns button').forEach((b,i)=>b.className=i===s?'ps-sel':'');
+  document.querySelectorAll('#fsSubBtns button').forEach((b,i)=>b.className=i===s?'fs-beat-prog ps-sel':'fs-beat-prog');
+  sendMbCfg();
+}
+function setMbSrc(s){
+  mbSrc=s;
+  var btns=document.querySelectorAll('#mbSrcBtns button');
+  // src mapping: button 0=Manual(1), button 1=Auto(2), button 2=Audio(0)
+  var map=[1,2,0];
+  btns.forEach((b,i)=>b.className=map[i]===s?'ps-sel':'');
+  sendMbCfg();
+}
+function updateMbStatus(mb){
+  if(!mb)return;
+  var bpmEl=document.getElementById('mbBpmDisp');
+  if(bpmEl)bpmEl.textContent=mb.bpm?mb.bpm.toFixed(0):'--';
+  var tapEl=document.getElementById('mbTapDisp');
+  if(tapEl)tapEl.textContent=Math.min(mb.taps||0,4)+'/4';
+  var actEl=document.getElementById('mbActiveDisp');
+  if(actEl){actEl.textContent=mb.active?'AKTIVEN':'neaktiven';actEl.style.color=mb.active?'#0f0':'#666'}
+  // Phase bar
+  var ph=mb.phase||0;
+  var pBar=document.getElementById('mbPhaseBar');
+  if(pBar)pBar.style.width=(ph*100)+'%';
+  // FS phase bar
+  var fpBar=document.getElementById('fsBeatPhaseBar');
+  if(fpBar)fpBar.style.width=(ph*100)+'%';
+  // FS BPM display
+  var fbpm=document.getElementById('fsBeatBpm');
+  if(fbpm)fbpm.textContent=(mb.bpm?mb.bpm.toFixed(0):'--')+' BPM';
+  // FS active indicator
+  var fAct=document.getElementById('fsBeatActive');
+  if(fAct){fAct.textContent=mb.active?'ON':'OFF';fAct.style.color=mb.active?'#0f0':'#666'}
+}
+
+// FS beat row rendering
+var progNames=['Pulse','Chase','Sine','Strobe','Rainbow','Build','Random','Alternate','Wave','Stack','Sparkle','Scanner'];
+var subNames=['1/4x','1/2x','1x','2x','4x'];
+function renderFsBeatRow(){
+  if(!fsActive)return;
+  var row=document.getElementById('fsBeatRow');
+  var h='<span class="fs-lbl">Beat:</span>';
+  h+='<button class="fs-tap-btn" id="fsTapBtn" onpointerdown="doTap()">TAP</button>';
+  h+='<span class="fs-beat-bpm" id="fsBeatBpm">120 BPM</span>';
+  h+='<div class="fs-beat-phase"><div class="fs-beat-phase-fill" id="fsBeatPhaseBar"></div></div>';
+  h+='<button class="fs-beat-toggle'+(document.getElementById('mbOn')&&document.getElementById('mbOn').checked?' active':'')+'" id="fsMbToggle" onclick="toggleFsMb()">MB</button>';
+  h+='<span class="fs-lbl" style="margin-left:4px">Prog:</span>';
+  h+='<span id="fsProgBtns">';
+  progNames.forEach((n,i)=>{h+='<button class="fs-beat-prog'+(i===mbProg?' ps-sel':'')+'" onclick="setMbProg('+i+')">'+n+'</button>'});
+  h+='</span>';
+  h+='<span class="fs-lbl" style="margin-left:4px">Sub:</span>';
+  h+='<span id="fsSubBtns">';
+  subNames.forEach((n,i)=>{h+='<button class="fs-beat-prog'+(i===mbSub?' ps-sel':'')+'" onclick="setMbSub('+i+')">'+n+'</button>'});
+  h+='</span>';
+  h+='<span class="fs-lbl" id="fsBeatActive" style="margin-left:4px;color:#666">OFF</span>';
+  row.innerHTML=h;
+}
+function toggleFsMb(){
+  var el=document.getElementById('mbOn');
+  if(el){el.checked=!el.checked;sendMbCfg()}
+  var btn=document.getElementById('fsMbToggle');
+  if(btn)btn.className='fs-beat-toggle'+(el&&el.checked?' active':'');
+}
+
 function doUndo(){wsSend({cmd:'undo'})}
 function loadRules(){
   fetch('/api/sound/rules').then(r=>r.json()).then(d=>{

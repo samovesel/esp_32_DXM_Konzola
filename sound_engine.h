@@ -21,6 +21,16 @@ public:
   void setEasyConfig(const STLEasyConfig& cfg) { _easy = cfg; }
   void applyPreset(uint8_t preset);
 
+  // --- Manual beat mode ---
+  ManualBeatConfig& getManualBeatConfig() { return _mbCfg; }
+  void setManualBeatConfig(const ManualBeatConfig& cfg) { _mbCfg = cfg; }
+  void tapBeat();                   // Tap tempo — kliči ob pritisku TAP gumba
+  void setManualBpm(float bpm);     // Ročni vpis BPM
+  bool isManualBeatActive() const;  // Ali manual beat poganja efekte
+  float getManualBpm() const { return _mbCfg.bpm; }
+  int   getTapCount() const { return _tapCount; }
+  float getEffectiveBpm() const;    // Dejanski BPM (z subdivizijo)
+
   // --- Pro mode ---
   const STLRule* getRule(int idx) const;
   bool setRule(int idx, const STLRule& rule);
@@ -58,6 +68,9 @@ private:
   // Easy mode
   STLEasyConfig _easy;
 
+  // Manual beat config
+  ManualBeatConfig _mbCfg;
+
   // Pro mode
   STLRule _rules[STL_MAX_RULES];
 
@@ -91,15 +104,35 @@ private:
   // Rainbow HUE
   float _hueAngle = 0;
 
+  // Manual beat state
+  unsigned long _tapTimes[4];       // Časi zadnjih 4 tapov
+  int           _tapCount = 0;      // Koliko tapov v trenutni seriji
+  unsigned long _lastTapMs = 0;     // Čas zadnjega tapa
+  float         _mbPhase = 0;       // Manual beat faza (0.0-1.0)
+  unsigned long _mbLastBeatMs = 0;  // Čas zadnjega manual beata
+  int           _mbBeatCount = 0;   // Skupni beat counter (za build/stack)
+  float         _mbSmoothBeat = 0;  // Smooth beat za manual mode
+  int           _mbChaseIdx = 0;    // Trenutni fixture v chase sekvenci
+  int           _mbStackCount = 0;  // Koliko luči je prižganih (stack)
+  int           _mbScanDir = 1;     // Smer skeniranja (+1/-1)
+  int           _mbScanIdx = 0;     // Trenutni fixture v scanner
+  float         _mbRandomHues[MAX_FIXTURES]; // Naključne barve za RANDOM program
+  float         _mbTransition = 0;  // Crossfade med audio in manual (0=audio, 1=manual)
+  bool          _mbAudioPresent = false; // Ali je avdio signal prisoten
+
   void processFFT();
   void extractBands(float dt);
   void detectBeat(float dt);
   void updateBeatSync(float dt);
+  void updateManualBeat(float dt);  // Posodobi manual beat fazo in state
   void applyEasyMode(const uint8_t* manualValues, uint8_t* dmxOut, float dt);
+  void applyManualBeatProgram(const uint8_t* manualValues, uint8_t* dmxOut, float dt);
   void applyProMode(const uint8_t* manualValues, uint8_t* dmxOut, float dt);
   float getZoneEnergy(SoundZone zone) const;
   float applyResponseCurve(float input, ResponseCurve curve);
   float smoothValue(float current, float target, float attackMs, float decayMs, float dt);
+  float getSubdivMultiplier() const;
+  int   countSoundReactiveFixtures() const;
 };
 
 #endif
