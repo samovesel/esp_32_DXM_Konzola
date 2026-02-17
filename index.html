@@ -871,8 +871,16 @@ function updateSliderHeight(){
   var top=document.querySelector('.fs-top');
   var bot=document.querySelector('.fs-bottom');
   if(!top||!bot)return;
-  var avail=window.innerHeight-top.offsetHeight-bot.offsetHeight-150;
-  avail=Math.max(100,Math.min(avail,500));
+  // Dinamično izmeri overhead: fs-mid padding + fs-fx-hdr + fx-group-body padding + ne-sliderski del fx-col + fx-group-line
+  var overhead=185; // varnostni fallback
+  var fxHdr=document.querySelector('.fs-fx-hdr');
+  var fxCol=document.querySelector('.fx-col:not(.mini)');
+  var fxSlider=fxCol?fxCol.querySelector('input[type=range]'):null;
+  if(fxHdr&&fxCol&&fxSlider&&fxSlider.offsetHeight>0){
+    overhead=12+fxHdr.offsetHeight+2+(fxCol.offsetHeight-fxSlider.offsetHeight)+3+5;
+  }
+  var avail=window.innerHeight-top.offsetHeight-bot.offsetHeight-overhead;
+  avail=Math.max(80,Math.min(avail,500));
   document.documentElement.style.setProperty('--fs-slider-h',avail+'px');
 }
 window.addEventListener('resize',function(){if(fsActive){updateSliderHeight();var el=document.getElementById('fsConsole');if(isPhoneDevice())el.classList.add('fs-phone');else el.classList.remove('fs-phone')}});
