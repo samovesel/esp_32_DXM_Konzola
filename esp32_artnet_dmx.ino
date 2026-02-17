@@ -21,13 +21,24 @@
 //  - AsyncTCP (mathieucarbou fork)
 //  - ArduinoJson 7.x
 //  - arduinoFFT by Enrique Condes
+//  - Adafruit_NeoPixel (samo za ESP32-S3 — vgrajena WS2812 LED)
 //  - LittleFS (vgrajen v ESP32 core)
 //
 //  Arduino IDE nastavitve:
+//
+//  ESP32-S3 N16R8:
+//  - Board: ESP32S3 Dev Module
+//  - USB CDC On Boot: Enabled
+//  - Flash Size: 16MB (128Mb)
+//  - Flash Mode: QIO 80MHz
+//  - PSRAM: OPI PSRAM
+//  - Partition Scheme: 16M Flash (3MB APP/9.9MB FATFS)
+//  - CPU Frequency: 240MHz
+//
+//  ESP32 DevKit V1:
 //  - Board: ESP32 Dev Module
 //  - Partition Scheme: "No OTA (2MB APP/2MB SPIFFS)" ali "Huge APP"
-//  - POMEMBNO: Če imaš opcijo, IZKLOPI Bluetooth (Tools → BT: Disabled)
-//    BT sam po sebi porabi ~70KB DRAM, mi ga ne potrebujemo.
+//  - POMEMBNO: IZKLOPI Bluetooth (prihranek ~70KB DRAM)
 // ============================================================================
 
 #include <WiFi.h>
@@ -330,14 +341,30 @@ void installDefaultProfiles() {
 // ============================================================================
 
 void setup() {
-  // Sprosti BT pomnilnik (~64KB DRAM) — ne rabimo Bluetooth-a
-  esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
+  // Sprosti BT pomnilnik — ne rabimo Bluetooth-a
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+  esp_bt_controller_mem_release(ESP_BT_MODE_BLE);     // S3 ima samo BLE
+#else
+  esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);    // ESP32: BT+BLE (~64KB DRAM)
+#endif
 
   Serial.begin(115200);
   delay(200);
   Serial.println("\n====================================");
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+  Serial.println("  ESP32-S3 ArtNet/DMX Node " FW_VERSION);
+#else
   Serial.println("  ESP32 ArtNet/DMX Node " FW_VERSION);
+#endif
   Serial.println("====================================\n");
+
+#if HAS_PSRAM
+  if (psramFound()) {
+    Serial.printf("[SYS] PSRAM: %d KB\n", ESP.getPsramSize() / 1024);
+  } else {
+    Serial.println("[SYS] OPOZORILO: PSRAM ni zaznan!");
+  }
+#endif
 
   // --- Watchdog: preveri razlog zadnjega reseta ---
   esp_reset_reason_t reason = esp_reset_reason();
@@ -434,7 +461,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     auxTask,       // Funkcija
     "AUX",         // Ime
-    4096,          // Stack (4KB — samo sound FFT + LED)
+    HAS_PSRAM ? 8192 : 4096,  // Stack (8KB s PSRAM, 4KB brez)
     NULL,          // Parameter
     2,             // Prioriteta (nižja od loopTask ki je 1... hmm)
     NULL,          // Handle
