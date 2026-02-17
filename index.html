@@ -144,8 +144,9 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .fs-cf-fill{height:100%;background:linear-gradient(90deg,#0af,#0f0);width:0%;transition:width 0.08s linear}
 .fs-close{background:#555;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;flex-shrink:0}
 .fs-close:hover{background:#777}
-.fs-fx-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:4px}
-.fs-color-dot{width:18px;height:18px;border-radius:50%;border:2px solid #555;flex-shrink:0;transition:background 0.1s,box-shadow 0.1s}
+.fs-fx-hdr{display:flex;flex-direction:column;align-items:center;padding:2px 4px;gap:2px}
+.fs-color-dot{width:22px;height:22px;border-radius:50%;border:2px solid #555;flex-shrink:0;transition:background 0.1s,box-shadow 0.1s,opacity 0.1s;cursor:pointer}
+.fx-addr{color:#666;font-size:0.5em;white-space:nowrap}
 .ch-fine-input{width:42px;font-size:0.75em;text-align:center;padding:2px;background:#0f3460;color:#0ff;border:1px solid #0af;border-radius:3px;outline:none}
 /* Manual beat row v fullscreen konzoli */
 .fs-beat-row{display:flex;gap:4px;overflow-x:auto;padding:3px 0;-webkit-overflow-scrolling:touch;align-items:center;flex-wrap:nowrap}
@@ -169,6 +170,11 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .mb-phase-bar{height:8px;background:#222;border-radius:4px;overflow:hidden;margin:6px 0}
 .mb-phase-fill{height:100%;background:linear-gradient(90deg,#e74c3c,#f39c12);border-radius:4px;transition:width 0.05s linear}
 
+.phone-hide{}
+.phone-only{display:none!important}
+@media(max-width:600px){.phone-hide{display:none!important}.phone-only{display:inline-block!important}.fs-color-dot{width:28px;height:28px}}
+@media(min-width:768px){input[orient=vertical]{height:260px}}
+@media(min-width:1200px){input[orient=vertical]{height:340px}}
 </style></head><body>
 
 <header>
@@ -308,6 +314,20 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     <div class="fade-row"><label>Jakost:</label><input type="range" min="0" max="100" step="5" value="80" id="mbIntSlider" oninput="sendMbCfg()"><span class="val" id="mbIntVal" style="color:#e74c3c">80%</span></div>
     <div class="toggle"><input type="checkbox" id="mbColor" checked onchange="sendMbCfg()"><label>Barvni efekti</label></div>
     <div class="fade-row" id="mbBuildRow"><label>Build beatov:</label><input type="range" min="4" max="32" step="1" value="8" id="mbBuildSlider" oninput="sendMbCfg()"><span class="val" id="mbBuildVal" style="color:#e74c3c">8</span></div>
+    <div class="fade-row"><label>Krivulja:</label><select id="mbDimCurve" onchange="sendMbCfg()" style="background:#1a1a2e;color:#ddd;border:1px solid #444;border-radius:4px;padding:2px 4px"><option value="0">Linear</option><option value="1">Exponential</option><option value="2">Logarithmic</option></select></div>
+    <div class="fade-row"><label>Attack:</label><input type="range" min="0" max="500" step="10" value="0" id="mbAttack" oninput="document.getElementById('mbAtkVal').textContent=this.value+'ms';sendMbCfg()"><span class="val" id="mbAtkVal" style="color:#e74c3c">0ms</span></div>
+    <div class="fade-row"><label>Decay:</label><input type="range" min="0" max="2000" step="50" value="0" id="mbDecay" oninput="document.getElementById('mbDcyVal').textContent=this.value+'ms';sendMbCfg()"><span class="val" id="mbDcyVal" style="color:#e74c3c">0ms</span></div>
+    <div class="fade-row"><label>Paleta:</label><div id="mbPalBtns" style="display:flex;flex-wrap:wrap;gap:3px"></div></div>
+    <div id="mbCustomPal" style="display:none">
+      <div class="fade-row"><label>Barva 1:</label><input type="range" min="0" max="360" value="0" id="mbCH0" oninput="sendMbCfg()" style="accent-color:hsl(0,100%,50%)"><span class="val" id="mbCHV0">0°</span></div>
+      <div class="fade-row"><label>Barva 2:</label><input type="range" min="0" max="360" value="90" id="mbCH1" oninput="sendMbCfg()" style="accent-color:hsl(90,100%,50%)"><span class="val" id="mbCHV1">90°</span></div>
+      <div class="fade-row"><label>Barva 3:</label><input type="range" min="0" max="360" value="180" id="mbCH2" oninput="sendMbCfg()" style="accent-color:hsl(180,100%,50%)"><span class="val" id="mbCHV2">180°</span></div>
+      <div class="fade-row"><label>Barva 4:</label><input type="range" min="0" max="360" value="270" id="mbCH3" oninput="sendMbCfg()" style="accent-color:hsl(270,100%,50%)"><span class="val" id="mbCHV3">270°</span></div>
+    </div>
+    <h4 style="margin:8px 0 4px;color:#e74c3c;font-size:0.8em">Program Chain (Playlist)</h4>
+    <div class="toggle"><input type="checkbox" id="mbChainOn" onchange="sendChainCfg()"><label for="mbChainOn">Chain aktiven</label></div>
+    <div id="mbChainList" style="margin:4px 0"></div>
+    <button onclick="addChainEntry()" style="font-size:0.7em;padding:3px 8px">+ Dodaj</button>
     <button onclick="saveSoundCfg()" style="margin-top:8px;background:#555">Shrani nastavitve</button>
   </div>
 
@@ -427,7 +447,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0;
-var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={};
+var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null;
 
 function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>setTimeout(wsConnect,2000)}
 function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
@@ -476,7 +496,7 @@ function handleWs(d){
       document.getElementById('sSr').textContent=d.fft.sr>0?(d.fft.sr/1000).toFixed(1)+'kHz':'--';
     }
     // Fixture sound preview
-    if(d.fxl)updateFxPreview(d.fxl);
+    if(d.fxl){lastFxl=d.fxl;updateFxPreview(d.fxl);if(fsActive)updateFsColorDots()}
     // Manual beat status
     if(d.mb)updateMbStatus(d.mb);
     // Undo visibility
@@ -485,7 +505,7 @@ function handleWs(d){
   }
 }
 
-function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1)loadScenes();if(n===2){loadRules();renderZoneList();renderFxPreviewInit()}if(n===5)loadConfigs()}
+function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1)loadScenes();if(n===2){loadRules();renderZoneList();renderFxPreviewInit();renderPalBtns();renderChainList()}if(n===5)loadConfigs()}
 function toggleMode(){wsSend({cmd:'mode',v:document.getElementById('modeText').textContent.includes('ARTNET')?'local':'artnet'})}
 function toggleBlackout(){wsSend({cmd:'blackout',v:boState?0:1})}
 function sendMaster(v){document.getElementById('masterVal').textContent=v;wsSend({cmd:'master',v:+v})}
@@ -883,7 +903,15 @@ function updateFsColorDots(){
     if(!el)return;
     const c=getFxColor(f);
     el.style.background=c.css;
-    el.style.boxShadow=c.bri>60?'0 0 8px '+c.css:'none';
+    const lv=lastFxl?lastFxl[fi]||0:0;
+    if(lv>5){
+      const glow=Math.max(4,lv/5);
+      el.style.boxShadow='0 0 '+glow+'px '+c.css;
+      el.style.opacity=Math.max(0.3,lv/100).toFixed(2);
+    }else{
+      el.style.boxShadow=c.bri>60?'0 0 8px '+c.css:'none';
+      el.style.opacity='1';
+    }
   });
 }
 function renderFsConsole(){
@@ -904,9 +932,10 @@ function renderFsConsole(){
     h+='<div class="fx-group" style="background:'+bg+'">';
     h+='<div class="fs-fx-hdr">';
     const fxCol=getFxColor(f);
-    h+='<div class="fs-color-dot" id="fcd_'+f.idx+'" style="background:'+fxCol.css+';'+(fxCol.bri>60?'box-shadow:0 0 8px '+fxCol.css:'')+'"></div>';
+    h+='<div class="fs-color-dot" id="fcd_'+f.idx+'" data-fi="'+fi+'" style="background:'+fxCol.css+';'+(fxCol.bri>60?'box-shadow:0 0 8px '+fxCol.css:'')+'"></div>';
+    h+='<div class="fx-addr">'+f.dmxAddress+'</div>';
     h+='<div class="fx-group-hdr" style="color:'+lbl+';max-width:'+hdrMax+'" onclick="toggleCollapsed('+fi+');renderFsConsole()" title="Skrij/pokazi skrcene kanale">'+colIcon+' '+f.name+'</div>';
-    h+='<button class="fullon-btn" data-fi="'+fi+'">FULL ON</button>';
+    h+='<button class="fullon-btn phone-hide" data-fi="'+fi+'">FULL ON</button>';
     h+='</div>';
     h+='<div class="fx-group-body">';
     f.channels.forEach((ch,ci)=>{
@@ -947,6 +976,18 @@ function renderFsConsole(){
     btn.addEventListener('touchend',e=>{e.preventDefault();release()});
     btn.addEventListener('touchcancel',release);
   });
+  // Phone: long-press na color-dot sproži FULL ON
+  if(window.innerWidth<=600){
+    grid.querySelectorAll('.fs-color-dot').forEach(dot=>{
+      const fi=+dot.dataset.fi;
+      let lpTimer=null;
+      const press=()=>{lpTimer=setTimeout(()=>{fsFullOn(fi,true);dot.style.border='2px solid #f39c12'},300)};
+      const release=()=>{clearTimeout(lpTimer);if(fsFullOnState[fi]){fsFullOn(fi,false);dot.style.border='2px solid #555'}};
+      dot.addEventListener('touchstart',e=>{e.preventDefault();press()},{passive:false});
+      dot.addEventListener('touchend',e=>{e.preventDefault();release()});
+      dot.addEventListener('touchcancel',release);
+    });
+  }
 }
 function fsFullOn(fi,press){
   const f=fixtures[fi];if(!f||!f.channels)return;
@@ -1006,6 +1047,12 @@ function renderFsGroups(){
     h+='<button class="fs-grp-bo" data-gi="'+i+'">BO</button>';
     h+='<button class="fs-grp-fo" data-gi="'+i+'">FO</button>';
     h+='<button class="fs-grp-solo" data-gi="'+i+'">SOLO</button>';
+    // Per-group program selector
+    var grpProg=mbGrpOverrides[i]?mbGrpOverrides[i].p:255;
+    h+='<select class="fs-grp-prog" data-gi="'+i+'" onchange="setGrpProg('+i+',+this.value)" style="background:#1a1a2e;color:#e74c3c;border:1px solid #444;border-radius:3px;padding:1px 3px;font-size:0.6em">';
+    h+='<option value="255"'+(grpProg===255?' selected':'')+'>--</option>';
+    progNames.forEach((n,pi)=>{h+='<option value="'+pi+'"'+(pi===grpProg?' selected':'')+'>'+n+'</option>'});
+    h+='</select>';
     h+='</div>';
   });
   if(!has)h+='<span style="color:#555;font-size:0.8em;margin-left:6px">Ni skupin</span>';
@@ -1055,6 +1102,11 @@ function fsToggleGroup(gi){
   if(fsActiveGroups.has(gi))fsActiveGroups.delete(gi);
   else fsActiveGroups.add(gi);
   renderFsGroups();renderFsConsole();
+}
+function setGrpProg(gi,val){
+  if(!mbGrpOverrides[gi])mbGrpOverrides[gi]={p:255,s:255,i:255};
+  mbGrpOverrides[gi].p=val;
+  sendMbCfg();
 }
 function fsGrpFullOn(gi,press){
   if(press){
@@ -1291,7 +1343,9 @@ function updateFxPreview(fxl){
 function saveSoundCfg(){wsSend({cmd:'save_sound'});showMsg('Sound nastavitve shranjene',true)}
 
 // ============ MANUAL BEAT ============
-var mbProg=0,mbSub=2,mbSrc=1;
+var mbProg=0,mbSub=2,mbSrc=1,mbPal=0,mbGrpOverrides=[];
+var mbChainEntries=[];
+var palNames=['Rainbow','Warm','Cool','Fire','Ocean','Party','Custom'];
 function doTap(){
   wsSend({cmd:'tap'});
   var btn=document.getElementById('mbTapBtn');
@@ -1310,7 +1364,54 @@ function sendMbCfg(){
     prog:mbProg, sub:mbSub,
     'int':+document.getElementById('mbIntSlider').value/100,
     col:document.getElementById('mbColor').checked?1:0,
-    bb:+document.getElementById('mbBuildSlider').value
+    bb:+document.getElementById('mbBuildSlider').value,
+    dc:+document.getElementById('mbDimCurve').value,
+    atk:+document.getElementById('mbAttack').value,
+    dcy:+document.getElementById('mbDecay').value,
+    pal:mbPal,
+    cpal:[+document.getElementById('mbCH0').value,+document.getElementById('mbCH1').value,
+          +document.getElementById('mbCH2').value,+document.getElementById('mbCH3').value],
+    grp:mbGrpOverrides
+  });
+  // Posodobi custom palette UI
+  for(var i=0;i<4;i++){
+    var v=+document.getElementById('mbCH'+i).value;
+    document.getElementById('mbCHV'+i).textContent=v+'\u00b0';
+    document.getElementById('mbCH'+i).style.accentColor='hsl('+v+',100%,50%)';
+  }
+  document.getElementById('mbCustomPal').style.display=mbPal===6?'block':'none';
+}
+function renderPalBtns(){
+  var el=document.getElementById('mbPalBtns');
+  if(!el)return;
+  var h='';
+  palNames.forEach((n,i)=>{h+='<button class="'+(i===mbPal?'ps-sel':'')+'" onclick="mbPal='+i+';renderPalBtns();sendMbCfg()" style="font-size:0.7em;padding:2px 6px;border-radius:3px;border:1px solid #444;background:'+(i===mbPal?'#e74c3c':'#222')+';color:'+(i===mbPal?'#fff':'#aaa')+';cursor:pointer">'+n+'</button>'});
+  el.innerHTML=h;
+}
+function renderChainList(){
+  var el=document.getElementById('mbChainList');
+  if(!el)return;
+  var h='';
+  mbChainEntries.forEach((e,i)=>{
+    h+='<div style="display:flex;gap:4px;align-items:center;margin:2px 0">';
+    h+='<select onchange="mbChainEntries['+i+'].p=+this.value;sendChainCfg()" style="background:#1a1a2e;color:#ddd;border:1px solid #444;border-radius:3px;padding:1px;font-size:0.7em">';
+    progNames.forEach((n,pi)=>{h+='<option value="'+pi+'"'+(pi===e.p?' selected':'')+'>'+n+'</option>'});
+    h+='</select>';
+    h+='<input type="number" min="1" max="64" value="'+e.d+'" onchange="mbChainEntries['+i+'].d=+this.value;sendChainCfg()" style="width:40px;background:#1a1a2e;color:#ddd;border:1px solid #444;border-radius:3px;padding:1px;font-size:0.7em">';
+    h+='<span style="font-size:0.6em;color:#666">beatov</span>';
+    h+='<button onclick="mbChainEntries.splice('+i+',1);renderChainList();sendChainCfg()" style="font-size:0.6em;padding:1px 4px;background:#c0392b;color:#fff;border:none;border-radius:2px;cursor:pointer">\u2715</button>';
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+function addChainEntry(){
+  if(mbChainEntries.length>=8)return;
+  mbChainEntries.push({p:0,d:8});
+  renderChainList();sendChainCfg();
+}
+function sendChainCfg(){
+  wsSend({cmd:'mb_chain',en:document.getElementById('mbChainOn').checked?1:0,
+    entries:mbChainEntries.map(e=>({p:e.p,d:e.d}))
   });
 }
 function onMbBpmSlider(){
@@ -1351,15 +1452,43 @@ function updateMbStatus(mb){
   var ph=mb.phase||0;
   var pBar=document.getElementById('mbPhaseBar');
   if(pBar)pBar.style.width=(ph*100)+'%';
-  // FS phase bar
-  var fpBar=document.getElementById('fsBeatPhaseBar');
-  if(fpBar)fpBar.style.width=(ph*100)+'%';
   // FS BPM display
   var fbpm=document.getElementById('fsBeatBpm');
   if(fbpm)fbpm.textContent=(mb.bpm?mb.bpm.toFixed(0):'--')+' BPM';
+  // FS TAP button pulses with beat phase
+  var fsTap=document.getElementById('fsTapBtn');
+  if(fsTap){
+    if(mb.active){
+      var bright=0.3+0.7*(1-ph);
+      fsTap.style.background='rgba(231,76,60,'+bright.toFixed(2)+')';
+      fsTap.style.boxShadow=ph<0.3?'0 0 '+(16*(1-ph)).toFixed(0)+'px rgba(231,76,60,0.7)':'none';
+    }else{
+      fsTap.style.background='';fsTap.style.boxShadow='';
+    }
+  }
   // FS active indicator
   var fAct=document.getElementById('fsBeatActive');
   if(fAct){fAct.textContent=mb.active?'ON':'OFF';fAct.style.color=mb.active?'#0f0':'#666'}
+  // Sync prog/pal/dc iz servra
+  if(mb.prog!==undefined&&mb.prog!==mbProg){mbProg=mb.prog;document.querySelectorAll('#mbProgBtns button').forEach((b,i)=>b.className=i===mbProg?'ps-sel':'')}
+  if(mb.pal!==undefined&&mb.pal!==mbPal){mbPal=mb.pal;renderPalBtns()}
+  if(mb.dc!==undefined){var dce=document.getElementById('mbDimCurve');if(dce&&+dce.value!==mb.dc)dce.value=mb.dc}
+  if(mb.chain){
+    var ci=document.querySelector('#mbChainList .chain-active');
+    if(ci)ci.classList.remove('chain-active');
+    // vizualni marker za trenutni chain entry
+  }
+  // Sync per-group overrides from server
+  if(mb.grp&&Array.isArray(mb.grp)){
+    mbGrpOverrides=mb.grp;
+    // Update group program selectors if Console is open
+    if(fsActive){
+      mb.grp.forEach((g,i)=>{
+        var sel=document.querySelector('.fs-grp-prog[data-gi="'+i+'"]');
+        if(sel&&+sel.value!==g.p)sel.value=g.p;
+      });
+    }
+  }
 }
 
 // FS beat row rendering
@@ -1368,11 +1497,15 @@ var subNames=['1/4x','1/2x','1x','2x','4x'];
 function renderFsBeatRow(){
   if(!fsActive)return;
   var row=document.getElementById('fsBeatRow');
+  var mbOn=document.getElementById('mbOn');
   var h='<span class="fs-lbl">Beat:</span>';
   h+='<button class="fs-tap-btn" id="fsTapBtn" onpointerdown="doTap()">TAP</button>';
   h+='<span class="fs-beat-bpm" id="fsBeatBpm">120 BPM</span>';
-  h+='<div class="fs-beat-phase"><div class="fs-beat-phase-fill" id="fsBeatPhaseBar"></div></div>';
-  h+='<button class="fs-beat-toggle'+(document.getElementById('mbOn')&&document.getElementById('mbOn').checked?' active':'')+'" id="fsMbToggle" onclick="toggleFsMb()">MB</button>';
+  h+='<button class="fs-beat-toggle'+(mbOn&&mbOn.checked?' active':'')+'" id="fsMbToggle" onclick="toggleFsMb()">MB</button>';
+  // Phone: menu gumb za programe
+  h+='<button class="fs-beat-menu phone-only" onclick="openBeatMenu()" style="background:#333;color:#ddd;border:1px solid #555;padding:4px 10px;border-radius:4px;font-size:1em;cursor:pointer">\u2630</button>';
+  // Desktop: inline prog/sub gumbi
+  h+='<span class="phone-hide">';
   h+='<span class="fs-lbl" style="margin-left:4px">Prog:</span>';
   h+='<span id="fsProgBtns">';
   progNames.forEach((n,i)=>{h+='<button class="fs-beat-prog'+(i===mbProg?' ps-sel':'')+'" onclick="setMbProg('+i+')">'+n+'</button>'});
@@ -1381,9 +1514,31 @@ function renderFsBeatRow(){
   h+='<span id="fsSubBtns">';
   subNames.forEach((n,i)=>{h+='<button class="fs-beat-prog'+(i===mbSub?' ps-sel':'')+'" onclick="setMbSub('+i+')">'+n+'</button>'});
   h+='</span>';
+  h+='</span>';
   h+='<span class="fs-lbl" id="fsBeatActive" style="margin-left:4px;color:#666">OFF</span>';
   row.innerHTML=h;
 }
+// Phone beat popup
+function openBeatMenu(){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center';
+  var pop=document.createElement('div');
+  pop.style.cssText='background:#1a1a2e;border:1px solid #e74c3c;border-radius:8px;padding:12px;max-width:320px;width:90%';
+  var h='<div style="margin-bottom:6px;color:#888;font-size:0.8em">Program:</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:4px">';
+  progNames.forEach((n,i)=>{h+='<button class="fs-beat-prog'+(i===mbProg?' ps-sel':'')+'" onclick="setMbProg('+i+');closeBeatMenu()">'+n+'</button>'});
+  h+='</div>';
+  h+='<div style="margin:8px 0 4px;color:#888;font-size:0.8em">Subdivizija:</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:4px">';
+  subNames.forEach((n,i)=>{h+='<button class="fs-beat-prog'+(i===mbSub?' ps-sel':'')+'" onclick="setMbSub('+i+');closeBeatMenu()">'+n+'</button>'});
+  h+='</div>';
+  pop.innerHTML=h;
+  ov.appendChild(pop);
+  ov.addEventListener('click',e=>{if(e.target===ov)closeBeatMenu()});
+  document.body.appendChild(ov);
+  window._beatPopup=ov;
+}
+function closeBeatMenu(){if(window._beatPopup){window._beatPopup.remove();window._beatPopup=null}}
 function toggleFsMb(){
   var el=document.getElementById('mbOn');
   if(el){el.checked=!el.checked;sendMbCfg()}
