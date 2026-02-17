@@ -39,6 +39,7 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   else if (strcmp(cmd, "fxch") == 0) _mix->setFixtureChannel(doc["f"]|0, doc["c"]|0, doc["v"]|0);
   else if (strcmp(cmd, "grch") == 0) _mix->setGroupChannel(doc["g"]|0, doc["c"]|0, doc["v"]|0);
   else if (strcmp(cmd, "master") == 0) _mix->setMasterDimmer(doc["v"]|255);
+  else if (strcmp(cmd, "grpdim") == 0) _mix->setGroupDimmer(doc["g"]|0, doc["v"]|255);
   else if (strcmp(cmd, "blackout") == 0) { if(doc["v"]|0) _mix->blackout(); else _mix->unBlackout(); }
   else if (strcmp(cmd, "mode") == 0) { const char* m=doc["v"]; if(m&&strcmp(m,"local")==0) _mix->switchToLocal(); else if(m&&strcmp(m,"artnet")==0) _mix->switchToArtNet(); }
   else if (strcmp(cmd, "recall") == 0) _mix->recallSnapshot(doc["i"]|0);
@@ -833,6 +834,10 @@ void webLoop() {
   JsonDocument doc;
   doc["t"]="status"; doc["mode"]=(int)_mix->getMode(); doc["fps"]=_mix->getArtNetFps();
   doc["pkts"]=_mix->getArtNetPackets(); doc["master"]=_mix->getMasterDimmer(); doc["bo"]=_mix->isBlackout();
+
+  // Group dimmers
+  JsonArray gd=doc["gd"].to<JsonArray>();
+  for(int g=0;g<MAX_GROUPS;g++) gd.add(_mix->getGroupDimmer(g));
 
   // Crossfade
   JsonObject cf=doc["cf"].to<JsonObject>();
