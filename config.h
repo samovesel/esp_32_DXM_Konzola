@@ -243,6 +243,47 @@ enum BeatSubdiv : uint8_t {
   SUBDIV_QUAD    = 4   // 4x — hitreje
 };
 
+// Dimmer krivulje za beat programe
+enum DimmerCurve : uint8_t {
+  DIM_LINEAR      = 0,  // Brez spremembe
+  DIM_EXPONENTIAL = 1,  // dimMod^2.5 — bolj dramatično
+  DIM_LOGARITHMIC = 2   // sqrt(dimMod) — mehkejše
+};
+
+// Barvne palete
+enum ColorPalette : uint8_t {
+  PAL_RAINBOW = 0,  // Polna HSV rotacija (privzeto)
+  PAL_WARM    = 1,  // Rdeča/oranžna/rumena
+  PAL_COOL    = 2,  // Modra/vijolična/cyan
+  PAL_FIRE    = 3,  // Rdeča/oranžna/bela
+  PAL_OCEAN   = 4,  // Cyan/modra/teal
+  PAL_PARTY   = 5,  // Magenta/rumena/cyan
+  PAL_CUSTOM  = 6,  // Uporabniške 4 barve
+  PAL_COUNT   = 7
+};
+
+// Program chain (playlist)
+#define MAX_CHAIN_ENTRIES 8
+struct ProgramChainEntry {
+  uint8_t program;        // ManualBeatProgram
+  uint8_t durationBeats;  // Koliko beatov pred naslednjim (1-255)
+};
+
+struct ProgramChain {
+  bool    active;
+  uint8_t count;          // 0-MAX_CHAIN_ENTRIES
+  ProgramChainEntry entries[MAX_CHAIN_ENTRIES];
+};
+
+// Per-group beat override
+#define GROUP_BEAT_INHERIT 0xFF
+
+struct GroupBeatOverride {
+  uint8_t program;    // ManualBeatProgram ali GROUP_BEAT_INHERIT
+  uint8_t subdiv;     // BeatSubdiv ali GROUP_BEAT_INHERIT
+  uint8_t intensity;  // 0-100 (%) ali GROUP_BEAT_INHERIT za globalni
+};
+
 // Nastavitve manual beat
 struct ManualBeatConfig {
   bool     enabled;           // Manual beat aktiven
@@ -253,6 +294,15 @@ struct ManualBeatConfig {
   float    intensity;         // Jakost programa 0.0-1.0
   bool     colorEnabled;      // Program vpliva na barve
   uint8_t  buildBeats;        // Koliko beatov za BUILD program (4-32)
+  // --- Faza 3: krivulje + envelope ---
+  uint8_t  dimCurve;          // DimmerCurve
+  uint16_t attackMs;          // Envelope attack (0=instant, do 500ms)
+  uint16_t decayMs;           // Envelope decay (0=programski default, do 2000ms)
+  // --- Faza 4: barvne palete ---
+  uint8_t  palette;           // ColorPalette
+  uint16_t customHues[4];     // Custom paleta (0-360°)
+  // --- Faza 6: per-group override ---
+  GroupBeatOverride groupOverrides[MAX_GROUPS];
 };
 
 static const ManualBeatConfig MANUAL_BEAT_DEFAULTS = {
@@ -263,7 +313,20 @@ static const ManualBeatConfig MANUAL_BEAT_DEFAULTS = {
   SUBDIV_NORMAL,  // subdiv
   0.8f,           // intensity
   true,           // colorEnabled
-  8               // buildBeats
+  8,              // buildBeats
+  DIM_LINEAR,     // dimCurve
+  0,              // attackMs
+  0,              // decayMs
+  PAL_RAINBOW,    // palette
+  {0,90,180,270}, // customHues
+  {{GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
+   {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
+   {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
+   {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
+   {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
+   {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
+   {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
+   {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT}}
 };
 
 // Easy mode nastavitve

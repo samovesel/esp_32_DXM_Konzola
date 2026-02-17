@@ -120,11 +120,32 @@ private:
   float         _mbTransition = 0;  // Crossfade med audio in manual (0=audio, 1=manual)
   bool          _mbAudioPresent = false; // Ali je avdio signal prisoten
 
+  // Intensity envelope (Faza 3)
+  float _mbEnvelope[MAX_FIXTURES];
+
+  // Program chain (Faza 5)
+  ProgramChain _chain;
+  int   _chainIdx = 0;
+  int   _chainBeatCount = 0;
+
+  // Per-group beat state (Faza 6)
+  struct GroupBeatState {
+    float phase = 0;
+    int   chaseIdx = 0;
+    int   stackCount = 0;
+    int   scanIdx = 0;
+    int   scanDir = 1;
+    int   beatCount = 0;
+    float smoothBeat = 0;
+    unsigned long lastBeatMs = 0;
+  };
+  GroupBeatState _grpState[MAX_GROUPS];
+
   void processFFT();
   void extractBands(float dt);
   void detectBeat(float dt);
   void updateBeatSync(float dt);
-  void updateManualBeat(float dt);  // Posodobi manual beat fazo in state
+  void updateManualBeat(float dt);
   void applyEasyMode(const uint8_t* manualValues, uint8_t* dmxOut, float dt);
   void applyManualBeatProgram(const uint8_t* manualValues, uint8_t* dmxOut, float dt);
   void applyProMode(const uint8_t* manualValues, uint8_t* dmxOut, float dt);
@@ -132,7 +153,19 @@ private:
   float applyResponseCurve(float input, ResponseCurve curve);
   float smoothValue(float current, float target, float attackMs, float decayMs, float dt);
   float getSubdivMultiplier() const;
+  float getSubdivMultiplierFor(uint8_t subdiv) const;
   int   countSoundReactiveFixtures() const;
+  int   countSrFixturesInGroup(int groupBit) const;
+  int   getSiInGroup(int fixtureIdx, int groupBit) const;
+  float paletteHue(float t) const;
+
+public:
+  // Chain access (Faza 5)
+  ProgramChain& getChain() { return _chain; }
+  int getChainIdx() const { return _chainIdx; }
+
+  // Per-group phase access (Faza 6)
+  float getGroupPhase(int g) const { return (g>=0&&g<MAX_GROUPS)?_grpState[g].phase:0; }
 };
 
 #endif

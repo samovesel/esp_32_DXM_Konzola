@@ -86,8 +86,48 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     mb.intensity    = doc["int"]  | 0.8f;
     mb.colorEnabled = (doc["col"]|1) != 0;
     mb.buildBeats   = doc["bb"]   | 8;
+    // Faza 3: krivulje + envelope
+    mb.dimCurve     = doc["dc"]   | (uint8_t)DIM_LINEAR;
+    mb.attackMs     = doc["atk"]  | (uint16_t)0;
+    mb.decayMs      = doc["dcy"]  | (uint16_t)0;
+    // Faza 4: paleta
+    mb.palette      = doc["pal"]  | (uint8_t)PAL_RAINBOW;
+    if (doc["cpal"].is<JsonArray>()) {
+      JsonArray arr = doc["cpal"].as<JsonArray>();
+      for (int i = 0; i < 4 && i < (int)arr.size(); i++)
+        mb.customHues[i] = arr[i] | (uint16_t)0;
+    }
+    // Faza 6: per-group overrides
+    if (doc["grp"].is<JsonArray>()) {
+      // Reset all to inherit first
+      for (int i = 0; i < MAX_GROUPS; i++) {
+        mb.groupOverrides[i] = {GROUP_BEAT_INHERIT, GROUP_BEAT_INHERIT, GROUP_BEAT_INHERIT};
+      }
+      JsonArray ga = doc["grp"].as<JsonArray>();
+      for (int i = 0; i < MAX_GROUPS && i < (int)ga.size(); i++) {
+        JsonObject go = ga[i];
+        mb.groupOverrides[i].program   = go["p"] | GROUP_BEAT_INHERIT;
+        mb.groupOverrides[i].subdiv    = go["s"] | GROUP_BEAT_INHERIT;
+        mb.groupOverrides[i].intensity = go["i"] | GROUP_BEAT_INHERIT;
+      }
+    }
     if (mb.bpm < 30) mb.bpm = 30;
     if (mb.bpm > 300) mb.bpm = 300;
+  }
+  // Faza 5: program chain
+  else if (strcmp(cmd, "mb_chain") == 0 && _snd) {
+    ProgramChain& ch = _snd->getChain();
+    ch.active = (doc["en"]|0) != 0;
+    ch.count = 0;
+    if (doc["entries"].is<JsonArray>()) {
+      JsonArray arr = doc["entries"].as<JsonArray>();
+      for (JsonObject e : arr) {
+        if (ch.count >= MAX_CHAIN_ENTRIES) break;
+        ch.entries[ch.count].program = e["p"] | 0;
+        ch.entries[ch.count].durationBeats = e["d"] | 8;
+        ch.count++;
+      }
+    }
   }
 
   _mix->unlock();
@@ -828,6 +868,31 @@ void webLoop() {
     mb["phase"]=_snd->getBeatPhase();
     mb["active"]=_snd->isManualBeatActive();
     mb["taps"]=_snd->getTapCount();
+    // Faza 3: krivulje + envelope
+    mb["dc"]=mbc.dimCurve;
+    mb["atk"]=mbc.attackMs;
+    mb["dcy"]=mbc.decayMs;
+    // Faza 4: paleta
+    mb["pal"]=mbc.palette;
+    // Faza 5: chain status
+    if(_snd->getChain().active){
+      JsonObject ch=mb["chain"].to<JsonObject>();
+      ch["idx"]=_snd->getChainIdx();
+      ch["cnt"]=_snd->getChain().count;
+    }
+    // Faza 6: per-group overrides (samo aktivne)
+    bool hasGrpOv=false;
+    for(int g=0;g<MAX_GROUPS;g++){
+      if(mbc.groupOverrides[g].program!=GROUP_BEAT_INHERIT){hasGrpOv=true;break;}
+    }
+    if(hasGrpOv){
+      JsonArray ga=mb["grp"].to<JsonArray>();
+      for(int g=0;g<MAX_GROUPS;g++){
+        const GroupBeatOverride& ov=mbc.groupOverrides[g];
+        JsonObject go=ga.add<JsonObject>();
+        go["p"]=ov.program;go["s"]=ov.subdiv;go["i"]=ov.intensity;
+      }
+    }
     // Fixture sound levels za preview (tudi iz manual beat)
     if(_snd->isActive()&&!doc.containsKey("fxl")){
       JsonArray fxl=doc["fxl"].to<JsonArray>();
