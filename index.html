@@ -178,11 +178,19 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 @media(min-width:768px){input[orient=vertical]{height:260px}}
 @media(min-width:1200px){input[orient=vertical]{height:340px}}
 .fs-console input[orient=vertical]{height:var(--fs-slider-h,200px)}
-.fs-gdim-cluster{display:flex;gap:2px;padding:0 4px 0 0;border-right:2px solid #333;margin-right:4px;flex-shrink:0}
-.fs-gdim{display:flex;flex-direction:column;align-items:center;min-width:40px;padding:4px 2px 2px;border-radius:6px}
-.fs-gdim-lbl{font-size:0.5em;white-space:nowrap;writing-mode:vertical-lr;text-orientation:mixed;max-height:60px;overflow:hidden;margin-top:4px;opacity:0.8}
-.fs-gdim-val{font-size:0.7em;font-weight:bold;margin-bottom:2px}
-.fs-gdim input[orient=vertical]{height:calc(var(--fs-slider-h,200px) - 20px);min-height:70px}
+/* Submaster cluster - inverted color scheme (light bg, dark text) */
+.fs-gdim-cluster{display:flex;flex-direction:column;background:#c8cdd2;border-radius:6px;border-right:2px solid #333;margin-right:4px;flex-shrink:0;overflow:hidden}
+.fs-gdim-hdr{display:flex;flex-direction:column;align-items:center;padding:2px 4px;gap:2px}
+.fs-gdim-dot-spacer{width:22px;height:22px;border-radius:50%;border:2px solid transparent;flex-shrink:0}
+.fs-gdim-addr-spacer{font-size:0.5em;color:transparent;user-select:none}
+.fs-gdim-title{font-size:0.65em;font-weight:bold;color:#333;white-space:nowrap;padding:1px 4px}
+.fs-gdim-body{display:flex;gap:1px;padding:2px 2px 0 2px}
+.fs-gdim{display:flex;flex-direction:column;align-items:center;min-width:44px;padding:4px 2px 2px}
+.fs-gdim-val{font-size:0.75em;font-weight:bold;margin-bottom:2px;height:1.2em;text-align:center;color:#222}
+.fs-gdim input[orient=vertical]{height:var(--fs-slider-h,200px);min-height:70px}
+.fs-gdim-lbl{font-size:0.55em;white-space:nowrap;margin-top:3px;max-width:50px;overflow:hidden;text-align:center;color:#333}
+.fs-gdim .gang-wrap .gang-lbl{color:#555}
+.fs-gdim-line{height:3px;background:#888;border-radius:0 0 6px 6px}
 .fx-group.dragging{opacity:0.35;transform:scale(0.96)}
 .fx-group{transition:transform 0.15s,opacity 0.15s}
 </style></head><body>
@@ -1070,20 +1078,27 @@ function renderFsConsole(){
   });
   if(activeGrps.length>0){
     h+='<div class="fs-gdim-cluster">';
+    h+='<div class="fs-gdim-hdr">';
+    h+='<div class="fs-gdim-dot-spacer"></div>';
+    h+='<div class="fs-gdim-addr-spacer">&nbsp;</div>';
+    h+='<div class="fs-gdim-title">Submaster</div>';
+    h+='</div>';
+    h+='<div class="fs-gdim-body">';
     activeGrps.forEach(function(gi){
       var gName=groups[gi]||'?';
-      var col=FX_LABEL[gi%FX_LABEL.length];
-      var gbg=FX_BG[gi%FX_BG.length];
       var v=fsGroupDimmers[gi]!==undefined?fsGroupDimmers[gi]:255;
       grpLastVal[gi]=v;
       var gChecked=grpGang.has(gi)?'checked':'';
-      h+='<div class="fs-gdim" style="background:'+gbg+'">';
-      h+='<div class="fs-gdim-val" id="fsGrpDimV_'+gi+'" style="color:'+col+'">'+v+'</div>';
-      h+='<input type="range" orient="vertical" id="fsGrpDim_'+gi+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendGrpDim('+gi+',this.value)">';
-      h+='<div class="fs-gdim-lbl" style="color:'+col+'">'+gName+'</div>';
+      h+='<div class="fs-gdim">';
+      h+='<button class="fullon-btn fs-gdim-fo" data-gi="'+gi+'">FULL ON</button>';
+      h+='<div class="fs-gdim-val" id="fsGrpDimV_'+gi+'">'+v+'</div>';
+      h+='<input type="range" orient="vertical" id="fsGrpDim_'+gi+'" min="0" max="255" value="'+v+'" oninput="sendGrpDim('+gi+',this.value)">';
+      h+='<div class="fs-gdim-lbl">'+gName+'</div>';
       h+='<div class="gang-wrap"><input type="checkbox" '+gChecked+' onchange="toggleGrpGang('+gi+')"><div class="gang-lbl">gang</div></div>';
       h+='</div>';
     });
+    h+='</div>';
+    h+='<div class="fs-gdim-line"></div>';
     h+='</div>';
   }
   // Fixture-i posamezno
@@ -1132,10 +1147,22 @@ function renderFsConsole(){
   });
   grid.innerHTML=h;
   // Bind Full On gumbov (press & hold)
-  grid.querySelectorAll('.fullon-btn').forEach(btn=>{
+  grid.querySelectorAll('.fullon-btn[data-fi]').forEach(btn=>{
     const fi=+btn.dataset.fi;
     const press=()=>fsFullOn(fi,true);
     const release=()=>{if(fsFullOnState[fi])fsFullOn(fi,false)};
+    btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
+    btn.addEventListener('mouseup',release);
+    btn.addEventListener('mouseleave',release);
+    btn.addEventListener('touchstart',e=>{e.preventDefault();press()},{passive:false});
+    btn.addEventListener('touchend',e=>{e.preventDefault();release()});
+    btn.addEventListener('touchcancel',release);
+  });
+  // Bind Group FULL ON buttons (press & hold)
+  grid.querySelectorAll('.fs-gdim-fo').forEach(btn=>{
+    const gi=+btn.dataset.gi;
+    const press=()=>fsGrpFullOn(gi,true);
+    const release=()=>{if(fsGrpFOState[gi]!==undefined)fsGrpFullOn(gi,false)};
     btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
     btn.addEventListener('mouseup',release);
     btn.addEventListener('mouseleave',release);
@@ -1252,6 +1279,23 @@ function fsFullOn(fi,press){
       wsSend({cmd:'fxch',f:f.idx,c:+ci,v:val});
     });
     delete fsFullOnState[fi];
+  }
+}
+var fsGrpFOState={};
+function fsGrpFullOn(gi,press){
+  if(press){
+    fsGrpFOState[gi]=fsGroupDimmers[gi]!==undefined?fsGroupDimmers[gi]:255;
+    fsGroupDimmers[gi]=255;grpLastVal[gi]=255;
+    var vEl=document.getElementById('fsGrpDimV_'+gi);if(vEl)vEl.textContent=255;
+    var sl=document.getElementById('fsGrpDim_'+gi);if(sl)sl.value=255;
+    wsSend({cmd:'grpdim',g:gi,v:255});
+  }else{
+    var prev=fsGrpFOState[gi];if(prev===undefined)return;
+    fsGroupDimmers[gi]=prev;grpLastVal[gi]=prev;
+    var vEl=document.getElementById('fsGrpDimV_'+gi);if(vEl)vEl.textContent=prev;
+    var sl=document.getElementById('fsGrpDim_'+gi);if(sl)sl.value=prev;
+    wsSend({cmd:'grpdim',g:gi,v:prev});
+    delete fsGrpFOState[gi];
   }
 }
 function renderFsScenes(){
