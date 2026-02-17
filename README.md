@@ -16,6 +16,17 @@
 - **Beat detection** z BPM izračunom
 - **Živi FFT spekter** v spletnem vmesniku
 - **Blackout** gumb
+- **Celozaslonska konzola** — optimiziran pogled za upravljanje v živo:
+  - Vertikalni sliderji za vse kanale z drag & drop prerazvrščanjem fixture-ov
+  - Barvne pike za vizualno stanje fixture-a (long-press = FULL ON na telefonu)
+  - Gang checkboxi za skupno premikanje kanalov ali skupinskih dimmerjev
+  - Solo kanal (klik na vrednost), fine-tune (dvojni klik za natančno vrednost)
+  - Undo/redo, shranjevanje scen z nastavljivo crossfade hitrostjo
+  - Skrivanje/razširjanje posameznih kanalov ali celih fixture-ov
+- **Skupinski master dimmerji** — neodvisen intensity slider za vsako skupino + gang, BO, FO, solo na ravni skupine
+- **Beat sistem** — 12 programov (Pulse, Chase, Sine, Strobe, Rainbow, Build, Random, Alternate, Wave, Stack, Sparkle, Scanner), subdivizije (1/4x–4x), per-group programi, dimmer krivulje, barvne palete, chaining
+- **Manual beat** — tap tempo ali ročni BPM brez zvočnega vira
+- **Pametna detekcija telefona** — samodejno prilagodi UI (skrije beat gumbe, prikaže ☰ meni) z JS detekcijo touch naprave
 - **Zgodovina stanj** (5 avtomatskih snapshot-ov ob preklopu)
 - **RGB status LED** (zelena=ArtNet, cyan=lokalno/auto, vijolična=lokalno/ročno)
 - **Factory reset** (drži GPIO14 ob zagonu 3s)
@@ -162,13 +173,11 @@ esp32_artnet_dmx/
 ├── audio_input.h/.cpp     — Audio vhod (ADC / I2S), jedro 0
 ├── sound_engine.h/.cpp    — FFT, pasovi, beat detect, easy/pro mode
 ├── led_status.h           — RGB LED
-├── web_ui.h/.cpp          — Web server, API, vgrajen HTML (5 zavihkov)
+├── web_ui.h/.cpp          — Web server, API, servira gzipan HTML
+├── web_ui_gz.h            — Gzipan index.html (generiran iz index.html)
+├── index.html             — Spletni vmesnik (5 zavihkov + celozaslonska konzola)
 └── data/
-    ├── profiles/          — Fixture profili (JSON)
-    │   ├── par-rgbw-7ch.json
-    │   ├── par-rgblac-12ch.json
-    │   └── mh-16ch.json
-    └── scenes/            — Scene (binarni, 536B/scena)
+    └── profiles/          — Fixture profili (JSON)
 ```
 
 ## Scene
@@ -205,6 +214,69 @@ Uporabniška pravila: izberi fixture, kanal, frekvenčni pas, DMX razpon, krivul
 
 ### Beat detection
 Primerja trenutno bass energijo s tekočim povprečjem zadnjih 32 vzorcev. Beat = presežek 1.5× povprečja z minimalnim intervalom 200ms. BPM iz povprečja intervalov.
+
+## Celozaslonska konzola
+
+Optimiziran pogled za živo upravljanje luči (telefon, tablica ali desktop).
+
+### Fixture upravljanje
+- Vertikalni sliderji za vse kanale vsakega fixture-a
+- **Drag & drop** prerazvrščanje fixture-ov
+- **Solo kanal** — klik na vrednost skrije vse ostale kanale fixture-a
+- **Fine-tune** — dvojni klik na vrednost za vnos natačnega števila
+- **FULL ON** — drži gumb (ali long-press na barvno piko na telefonu)
+- **Gang** — označi checkboxe na več kanalih/skupinah, premik enega premakne vse
+
+### Skupine
+- Skupinski master dimmerji z gang podporo
+- Per-group **Blackout**, **Full On**, **Solo**
+- Per-group izbira beat programa in subdivizije (desktop)
+
+### Beat programi (12)
+
+| Program | Opis |
+|---------|------|
+| Pulse | Dimmer pulziranje |
+| Chase | Zaporedna aktivacija fixture-ov |
+| Sine | Gladko sinusno valovanje |
+| Strobe | Hitro utripanje |
+| Rainbow | Barvni cikel |
+| Build | Postopna gradnja intenzitete |
+| Random | Naključni vzorci |
+| Alternate | Izmenično preklapljanje |
+| Wave | Šireči se val |
+| Stack | Postopno dodajanje fixture-ov |
+| Sparkle | Naključno iskričenje |
+| Scanner | Efekt premikajočega žarka |
+
+- **Subdivizije**: 1/4x, 1/2x, 1x, 2x, 4x
+- **Dimmer krivulje**: linearna, eksponentna, logaritmična
+- **Barvne palete**: Rainbow, Warm, Cool, Fire, Ocean, Party, Custom
+- **Chaining**: zaporedno predvajanje več programov
+- **Manual beat**: tap tempo ali ročni BPM brez zvočnega vira
+
+### Telefon
+- Beat programi se prikažejo v ☰ popup meniju (namesto inline gumbov)
+- Long-press na barvno piko sproži FULL ON
+- Detekcija telefona z JS (`hover: none` + `pointer: coarse` + velikost zaslona)
+
+## Posodabljanje spletnega vmesnika
+
+Po urejanju `index.html` je potrebno regenerirati `web_ui_gz.h`:
+
+```bash
+python3 -c "
+import gzip
+with open('index.html','rb') as f: data=gzip.compress(f.read(),9)
+lines=['#ifndef HTML_PAGE_GZ_H','#define HTML_PAGE_GZ_H','','#include <pgmspace.h>','','const uint8_t HTML_PAGE_GZ[] PROGMEM = {']
+for i in range(0,len(data),16):
+  chunk=data[i:i+16]; h=', '.join('0x{:02x}'.format(b) for b in chunk)
+  lines.append('  '+h+(',' if i+16<len(data) else ''))
+lines+=['};\n','const size_t HTML_PAGE_GZ_LEN = '+str(len(data))+';','','#endif','']
+with open('web_ui_gz.h','w') as f: f.write('\n'.join(lines))
+print(f'{len(data)} bytes')
+"
+```
 
 ## RAM poraba (ocena)
 
