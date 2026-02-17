@@ -888,9 +888,9 @@ function updateSliderHeight(){
 }
 window.addEventListener('resize',function(){if(fsActive){updateSliderHeight();var el=document.getElementById('fsConsole');if(isPhoneDevice())el.classList.add('fs-phone');else el.classList.remove('fs-phone')}});
 // bindFsSliderTouch: fader nacin za vse vertikalne sliderje (miska + dotik + pisalo)
-// - pointerdown preventDefault → blokira native skok ob kliku/dotiku kjerkoli na tirnici
 // - horizontalni poteg → skrola fs-mid levo/desno (vrednost se ne spremeni)
 // - vertikalni poteg   → menja vrednost relativno od zacetne (fader, brez skoka)
+// Dualni handler: touchstart (iOS Safari) + pointerdown samo za misko (desktop)
 function bindFsSliderTouch(container){
   function scrollableParent(el){
     while(el=el.parentElement){
@@ -902,33 +902,43 @@ function bindFsSliderTouch(container){
   container.querySelectorAll('input[type=range][orient=vertical]').forEach(function(sl){
     sl.style.touchAction='none';
     var sx,sy,sv,intent,scrollEl,sx0,active=false;
-    sl.addEventListener('pointerdown',function(e){
-      e.preventDefault(); // kriticno: prepreci native skok vrednosti (miska IN dotik)
-      sl.setPointerCapture(e.pointerId);
-      sx=e.clientX; sy=e.clientY;
-      sv=+sl.value; intent=null; active=true;
-      scrollEl=scrollableParent(sl);
-      sx0=scrollEl?scrollEl.scrollLeft:0;
-    },{passive:false});
-    sl.addEventListener('pointermove',function(e){
-      if(!active)return;
-      var dx=e.clientX-sx, dy=e.clientY-sy;
+    function onMove(cx,cy){
+      var dx=cx-sx, dy=cy-sy;
       var adx=Math.abs(dx), ady=Math.abs(dy);
       if(!intent){
-        if(adx<8&&ady<8)return; // dead zone
+        if(adx<8&&ady<8)return;
         intent=adx>ady?'scroll':'slide';
       }
-      if(intent==='scroll'){
-        if(scrollEl)scrollEl.scrollLeft=sx0-dx;
-        return;
-      }
-      // slide: relativna sprememba glede na zacetno vrednost (fader, brez skoka)
+      if(intent==='scroll'){if(scrollEl)scrollEl.scrollLeft=sx0-dx;return;}
       var nv=Math.round(sv+(-dy/sl.offsetHeight)*(+sl.max-+sl.min));
       nv=Math.max(+sl.min,Math.min(+sl.max,nv));
       if(nv!==+sl.value){sl.value=nv;sl.dispatchEvent(new Event('input',{bubbles:true}));}
+    }
+    // TOUCH path — iOS Safari prozge touchstart pred pointerdown; preventDefault tukaj
+    // ustavi native skok vrednosti preden ga iOS range handler sploh vidi
+    sl.addEventListener('touchstart',function(e){
+      e.preventDefault();
+      var t=e.touches[0];
+      sx=t.clientX;sy=t.clientY;sv=+sl.value;intent=null;active=true;
+      scrollEl=scrollableParent(sl);sx0=scrollEl?scrollEl.scrollLeft:0;
+    },{passive:false});
+    sl.addEventListener('touchmove',function(e){
+      if(!active)return;onMove(e.touches[0].clientX,e.touches[0].clientY);
+    },{passive:true});
+    sl.addEventListener('touchend',function(){active=false;intent=null;});
+    sl.addEventListener('touchcancel',function(){active=false;intent=null;});
+    // POINTER path — samo za misko (touch je ze obdelan zgoraj)
+    sl.addEventListener('pointerdown',function(e){
+      if(e.pointerType!=='mouse')return;
+      e.preventDefault();sl.setPointerCapture(e.pointerId);
+      sx=e.clientX;sy=e.clientY;sv=+sl.value;intent=null;active=true;
+      scrollEl=scrollableParent(sl);sx0=scrollEl?scrollEl.scrollLeft:0;
+    },{passive:false});
+    sl.addEventListener('pointermove',function(e){
+      if(!active||e.pointerType!=='mouse')return;onMove(e.clientX,e.clientY);
     });
-    sl.addEventListener('pointerup',function(){active=false;intent=null;});
-    sl.addEventListener('pointercancel',function(){active=false;intent=null;});
+    sl.addEventListener('pointerup',function(e){if(e.pointerType==='mouse'){active=false;intent=null;}});
+    sl.addEventListener('pointercancel',function(e){if(e.pointerType==='mouse'){active=false;intent=null;}});
   });
 }
 function renderFsGrpMasters(){/* Dimmers so zdaj inline v renderFsConsole */}
