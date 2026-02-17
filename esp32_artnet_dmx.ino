@@ -32,7 +32,7 @@
 //  - Flash Size: 16MB (128Mb)
 //  - Flash Mode: QIO 80MHz
 //  - PSRAM: OPI PSRAM
-//  - Partition Scheme: 16M Flash (3MB APP/9.9MB FATFS)
+//  - Partition Scheme: Custom (partitions.csv v mapi sketcha)
 //  - CPU Frequency: 240MHz
 //
 //  ESP32 DevKit V1:
