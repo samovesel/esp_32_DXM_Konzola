@@ -18,6 +18,7 @@ void MixerEngine::begin(FixtureEngine* fixtures, SceneEngine* scenes) {
   _manualOverride = false;
   _blackout = false;
   _masterDimmer = 255;
+  memset(_groupDimmers, 255, sizeof(_groupDimmers));
   _lastArtNetPacket = 0;
   _artnetPackets = 0;
   _snapshotHead = 0;
@@ -158,6 +159,17 @@ void MixerEngine::setMasterDimmer(uint8_t value) {
   markDirty();
 }
 
+void MixerEngine::setGroupDimmer(int group, uint8_t value) {
+  if (group < 0 || group >= MAX_GROUPS) return;
+  _groupDimmers[group] = value;
+  markDirty();
+}
+
+uint8_t MixerEngine::getGroupDimmer(int group) const {
+  if (group < 0 || group >= MAX_GROUPS) return 255;
+  return _groupDimmers[group];
+}
+
 void MixerEngine::blackout() {
   _blackout = true;
 }
@@ -172,22 +184,43 @@ void MixerEngine::unBlackout() {
 // ============================================================================
 
 void MixerEngine::applyMasterDimmer() {
-  if (!_fixtures || _masterDimmer == 255) return;  // 255 = brez vpliva
+  if (!_fixtures) return;
+
+  // Hitri izhod če so vsi dimerji na max
+  bool allMax = (_masterDimmer == 255);
+  if (allMax) {
+    for (int g = 0; g < MAX_GROUPS; g++) {
+      if (_groupDimmers[g] < 255) { allMax = false; break; }
+    }
+    if (allMax) return;
+  }
 
   for (int i = 0; i < MAX_FIXTURES; i++) {
     const PatchEntry* fx = _fixtures->getFixture(i);
     if (!fx || !fx->active || fx->profileIndex < 0) continue;
+
+    // Najnižji group dimmer za ta fixture
+    uint8_t grpDim = 255;
+    for (int g = 0; g < MAX_GROUPS; g++) {
+      if ((fx->groupMask & (1 << g)) && _groupDimmers[g] < grpDim) {
+        grpDim = _groupDimmers[g];
+      }
+    }
+
+    if (grpDim == 255 && _masterDimmer == 255) continue;
 
     uint8_t chCount = _fixtures->fixtureChannelCount(i);
     for (int ch = 0; ch < chCount; ch++) {
       const ChannelDef* def = _fixtures->fixtureChannel(i, ch);
       if (!def) continue;
 
-      // Master dimmer vpliva SAMO na dimmer (intensity) kanale
       if (def->type == CH_INTENSITY) {
         uint16_t addr = fx->dmxAddress + ch - 1;
         if (addr < DMX_MAX_CHANNELS) {
-          _dmxOut[addr] = ((uint16_t)_dmxOut[addr] * _masterDimmer) / 255;
+          uint16_t val = _dmxOut[addr];
+          if (grpDim < 255) val = (val * grpDim) / 255;
+          if (_masterDimmer < 255) val = (val * _masterDimmer) / 255;
+          _dmxOut[addr] = (uint8_t)val;
         }
       }
     }
@@ -451,11 +484,12 @@ void MixerEngine::checkAutoSave() {
 }
 
 void MixerEngine::saveStateNow() {
-  // --- Mixer stanje (masterDimmer + manualValues) ---
+  // --- Mixer stanje (masterDimmer + groupDimmers + manualValues) ---
   File f = LittleFS.open(MIXER_STATE_FILE, "w");
   if (f) {
-    uint8_t header[2] = { 0xAD, _masterDimmer };  // Magic byte + master
+    uint8_t header[2] = { 0xAE, _masterDimmer };  // Magic V2 + master
     f.write(header, 2);
+    f.write(_groupDimmers, MAX_GROUPS);
     f.write(_manualValues, DMX_MAX_CHANNELS);
     f.close();
   }
@@ -488,12 +522,18 @@ void MixerEngine::loadState() {
   if (f && f.size() >= (2 + DMX_MAX_CHANNELS)) {
     uint8_t header[2];
     f.read(header, 2);
-    if (header[0] == 0xAD) {  // Magic byte preverba
+    if (header[0] == 0xAE) {  // V2: z group dimmers
       _masterDimmer = header[1];
+      f.read(_groupDimmers, MAX_GROUPS);
       f.read(_manualValues, DMX_MAX_CHANNELS);
-      // Kopiraj v izhod za takojšen efekt
       memcpy(_dmxOut, _manualValues, DMX_MAX_CHANNELS);
-      Serial.printf("[MIX] Stanje naloženo (master=%d)\n", _masterDimmer);
+      Serial.printf("[MIX] Stanje V2 naloženo (master=%d)\n", _masterDimmer);
+    } else if (header[0] == 0xAD) {  // V1: brez group dimmers
+      _masterDimmer = header[1];
+      memset(_groupDimmers, 255, sizeof(_groupDimmers));
+      f.read(_manualValues, DMX_MAX_CHANNELS);
+      memcpy(_dmxOut, _manualValues, DMX_MAX_CHANNELS);
+      Serial.printf("[MIX] Stanje V1 naloženo (master=%d)\n", _masterDimmer);
     }
     f.close();
   } else {

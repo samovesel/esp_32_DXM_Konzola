@@ -33,6 +33,8 @@ public:
   void setGroupChannel(int groupBit, int ch, uint8_t value);          // Skupina: isti kanal na vseh
   void setMasterDimmer(uint8_t value);
   uint8_t getMasterDimmer() const { return _masterDimmer; }
+  void setGroupDimmer(int group, uint8_t value);
+  uint8_t getGroupDimmer(int group) const;
   void blackout();
   void unBlackout();
   bool isBlackout() const { return _blackout; }
@@ -89,6 +91,7 @@ private:
   bool _manualOverride = false;
   bool _blackout = false;
   uint8_t _masterDimmer = 255;
+  uint8_t _groupDimmers[MAX_GROUPS];
 
   // ArtNet timing
   unsigned long _lastArtNetPacket = 0;

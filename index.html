@@ -172,9 +172,21 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 
 .phone-hide{}
 .phone-only{display:none!important}
-@media(max-width:600px){.phone-hide{display:none!important}.phone-only{display:inline-block!important}.fs-color-dot{width:28px;height:28px}}
+@media(max-width:600px){.phone-hide{display:none!important}.phone-only{display:inline-block!important}.fs-color-dot{width:28px;height:28px}.fs-bottom{max-height:28vh;overflow-y:auto}.fs-grp-row{flex-wrap:wrap}.fs-grp-item{padding:2px 4px;font-size:0.85em}.fs-grp-bo,.fs-grp-fo,.fs-grp-solo{padding:2px 4px;font-size:0.6em}.fs-beat-row,.fs-scene-row,.fs-grp-row{padding:1px 0}}
 @media(min-width:768px){input[orient=vertical]{height:260px}}
 @media(min-width:1200px){input[orient=vertical]{height:340px}}
+.fs-console input[orient=vertical]{height:var(--fs-slider-h,200px)}
+.fs-grp-order{display:flex;gap:4px;padding:4px 6px;margin-bottom:4px;background:#0a0a1a;border-radius:4px;min-height:24px;flex-wrap:wrap;align-items:center}
+.fs-go-item{display:flex;align-items:center;gap:2px;background:#1a1530;border:2px solid #666;border-radius:4px;padding:2px 8px;cursor:grab;touch-action:none;user-select:none;font-size:0.75em;transition:transform 0.15s,opacity 0.15s}
+.fs-go-item.dragging{opacity:0.4;transform:scale(0.95)}
+.fs-grp-masters{flex-shrink:0;padding:4px 6px;border-bottom:1px solid #333}
+.fs-gm-hdr{color:#888;font-size:0.75em;cursor:pointer;padding:2px 4px;user-select:none}
+.fs-gm-hdr:hover{color:#0af}
+.fs-gm-body{display:flex;gap:4px;padding:4px 0;overflow-x:auto;align-items:flex-end}
+.fs-gm-col{display:flex;flex-direction:column;align-items:center;min-width:44px}
+.fs-gm-val{font-size:0.7em;font-weight:bold;margin-bottom:2px}
+.fs-gm-col input[orient=vertical]{height:80px}
+.fs-gm-lbl{font-size:0.55em;white-space:nowrap;margin-top:2px}
 </style></head><body>
 
 <header>
@@ -435,6 +447,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     </div>
   </div>
   <div class="fs-mid">
+    <div class="fs-grp-masters" id="fsGrpMasters"></div>
     <div class="console" id="fsConsoleGrid"></div>
   </div>
   <div class="fs-bottom">
@@ -447,7 +460,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0;
-var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null;
+var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,fsGroupOrder=null,fsGroupDimmers={},fsGrpDimVisible=true;
 
 function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>setTimeout(wsConnect,2000)}
 function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
@@ -464,6 +477,16 @@ function handleWs(d){
     document.getElementById('statsText').textContent=d.fps.toFixed(1)+' fps | '+d.pkts+' paketov';
     boState=!!d.bo;document.getElementById('boBtn').style.background=boState?'#f33':'#555';
     document.getElementById('masterSlider').value=d.master;document.getElementById('masterVal').textContent=d.master;
+    // Group dimmers sync
+    if(d.gd){d.gd.forEach(function(v,gi){
+      fsGroupDimmers[gi]=v;
+      if(fsActive){
+        var sl=document.getElementById('fsGrpDim_'+gi);
+        if(sl&&document.activeElement!==sl)sl.value=v;
+        var vE=document.getElementById('fsGrpDimV_'+gi);
+        if(vE)vE.textContent=v;
+      }
+    })}
     // Celozaslonska sinhronizacija
     if(fsActive){
       document.getElementById('fsBoBtn').style.background=boState?'#f33':'#555';
@@ -513,6 +536,7 @@ function sendMaster(v){document.getElementById('masterVal').textContent=v;wsSend
 // Mixer
 // Barve krogcev sliderjev po tipu kanala
 var CH_COLORS={1:'#0af',2:'#ff2020',3:'#20ff20',4:'#2060ff',5:'#ffffff',6:'#ffaa00',7:'#cc00ff',19:'#ffff00',14:'#ffff00',8:'#999',9:'#999',10:'#999',11:'#999',12:'#777',13:'#cc8800',0:'#0af',21:'#aaff00',22:'#00ffcc',23:'#ffd070',24:'#ffe0a0'};
+var CH_LIGHT_TYPES=new Set([1,2,3,4,5,6,7,21,22,24]); // intensity + vsi barvni kanali
 function chColor(t){return CH_COLORS[t]||'#0af'}
 // Podlage fixture-ov
 var FX_BG=['#1a1a2e','#1e2a1a','#2a1a2a','#2a261a','#1a2a2a','#2a1a1a','#1e1e30','#2a1e1a'];
@@ -828,13 +852,57 @@ function sendCGang(fxIdx,fi,ci,val){
 }
 
 // ---- Celozaslonska konzola ----
+function updateSliderHeight(){
+  if(!fsActive)return;
+  var top=document.querySelector('.fs-top');
+  var bot=document.querySelector('.fs-bottom');
+  if(!top||!bot)return;
+  var avail=window.innerHeight-top.offsetHeight-bot.offsetHeight-120;
+  avail=Math.max(100,Math.min(avail,500));
+  document.documentElement.style.setProperty('--fs-slider-h',avail+'px');
+}
+window.addEventListener('resize',function(){if(fsActive)updateSliderHeight()});
+function renderFsGrpMasters(){
+  if(!fsActive)return;
+  var el=document.getElementById('fsGrpMasters');
+  if(!el)return;
+  var hasGroups=false;
+  groups.forEach(function(g){if(g)hasGroups=true});
+  if(!hasGroups){el.innerHTML='';return}
+  var h='<div class="fs-gm-hdr" onclick="fsGrpDimVisible=!fsGrpDimVisible;renderFsGrpMasters()">';
+  h+=(fsGrpDimVisible?'\u25be':'\u25b8')+' Group Dimmers</div>';
+  if(fsGrpDimVisible){
+    h+='<div class="fs-gm-body">';
+    groups.forEach(function(g,gi){
+      if(!g)return;
+      var v=fsGroupDimmers[gi]!==undefined?fsGroupDimmers[gi]:255;
+      var col=FX_LABEL[gi%FX_LABEL.length];
+      h+='<div class="fs-gm-col">';
+      h+='<div class="fs-gm-val" id="fsGrpDimV_'+gi+'" style="color:'+col+'">'+v+'</div>';
+      h+='<input type="range" orient="vertical" id="fsGrpDim_'+gi+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendGrpDim('+gi+',this.value)">';
+      h+='<div class="fs-gm-lbl" style="color:'+col+'">'+g+'</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+function sendGrpDim(gi,v){
+  v=+v;
+  fsGroupDimmers[gi]=v;
+  var vEl=document.getElementById('fsGrpDimV_'+gi);
+  if(vEl)vEl.textContent=v;
+  wsSend({cmd:'grpdim',g:gi,v:v});
+}
 function enterFullConsole(){
   fsActive=true;
+  initFsGroupOrder();
   document.getElementById('fsConsole').classList.add('active');
   document.getElementById('fsMasterSlider').value=document.getElementById('masterSlider').value;
   document.getElementById('fsMasterVal').textContent=document.getElementById('masterVal').textContent;
   document.getElementById('fsBoBtn').style.background=boState?'#f33':'#555';
-  renderFsConsole();renderFsScenes();renderFsGroups();renderFsBeatRow();
+  renderFsGrpMasters();renderFsConsole();renderFsScenes();renderFsGroups();renderFsBeatRow();
+  updateSliderHeight();
 }
 function exitFullConsole(){
   fsActive=false;
@@ -842,13 +910,33 @@ function exitFullConsole(){
   // Osveži navadni pogled
   if(viewMode===1){renderConsOrder();renderConsole()}
 }
+function initFsGroupOrder(){
+  var active=[];
+  groups.forEach(function(g,i){if(g)active.push(i)});
+  if(fsGroupOrder){
+    var ordered=fsGroupOrder.filter(function(gi){return active.indexOf(gi)>=0});
+    active.forEach(function(gi){if(ordered.indexOf(gi)<0)ordered.push(gi)});
+    fsGroupOrder=ordered;
+  }else{
+    fsGroupOrder=active;
+  }
+}
 function getFsFixtures(){
-  if(fsActiveGroups.size===0)return fixtures.map((_,i)=>i);
-  return fixtures.map((_,i)=>i).filter(i=>{
-    const f=fixtures[i];
-    for(const g of fsActiveGroups){if(f.groupMask&(1<<g))return true}
-    return false;
+  if(!fsGroupOrder)initFsGroupOrder();
+  var result=[],seen=new Set();
+  var order=fsGroupOrder||[];
+  // Filtriranje po aktivnih skupinah
+  var useGroups=fsActiveGroups.size>0?order.filter(function(gi){return fsActiveGroups.has(gi)}):order;
+  useGroups.forEach(function(gi){
+    fixtures.forEach(function(f,i){
+      if(!seen.has(i)&&(f.groupMask&(1<<gi))){result.push(i);seen.add(i)}
+    });
   });
+  // Ungrouped fixtures na konec (samo če ni filtra)
+  if(fsActiveGroups.size===0){
+    fixtures.forEach(function(f,i){if(!seen.has(i))result.push(i)});
+  }
+  return result;
 }
 // Double-click na vrednost = fine-tune input polje
 function startFineTune(el,fxIdx,fi,ci){
@@ -896,19 +984,47 @@ function getFxColor(f){
   const bri=Math.round((r+g+b)/3*100/255);
   return{css:'rgb('+r+','+g+','+b+')',bri:bri};
 }
+// Barva brez dimmer skaliranja (za beat dot prikaz ko je dimmer na 0)
+function getFxColorNoDim(f){
+  if(!f||!f.channels)return{css:'#222',bri:0};
+  let r=0,g=0,b=0;
+  f.channels.forEach(ch=>{
+    const v=ch.currentValue||0;
+    switch(ch.type){
+      case 2:r=Math.max(r,v);break;case 3:g=Math.max(g,v);break;case 4:b=Math.max(b,v);break;
+      case 5:r=Math.max(r,v);g=Math.max(g,v);b=Math.max(b,v);break;
+      case 6:r=Math.max(r,v);g=Math.max(g,Math.round(v*0.65));break;
+      case 7:r=Math.max(r,Math.round(v*0.5));b=Math.max(b,v);break;
+      case 21:g=Math.max(g,v);b=Math.max(b,Math.round(v*0.5));break;
+      case 22:g=Math.max(g,v);b=Math.max(b,v);break;
+    }
+  });
+  const bri=Math.round((r+g+b)/3*100/255);
+  return{css:'rgb('+r+','+g+','+b+')',bri:bri};
+}
 function updateFsColorDots(){
   if(!fsActive)return;
   fixtures.forEach((f,fi)=>{
     const el=document.getElementById('fcd_'+f.idx);
     if(!el)return;
-    const c=getFxColor(f);
-    el.style.background=c.css;
     const lv=lastFxl?lastFxl[fi]||0:0;
     if(lv>5){
-      const glow=Math.max(4,lv/5);
-      el.style.boxShadow='0 0 '+glow+'px '+c.css;
-      el.style.opacity=Math.max(0.3,lv/100).toFixed(2);
+      // Beat aktiven: pokaži barvo brez dimmer skaliranja
+      const c=getFxColorNoDim(f);
+      const lvF=lv/100;
+      if(c.bri===0){
+        // Fixture brez barvnih kanalov: topla oranžna
+        const fb=Math.round(lvF*200);
+        el.style.background='rgb('+fb+','+Math.round(fb*0.7)+','+Math.round(fb*0.3)+')';
+        el.style.boxShadow='0 0 '+Math.max(4,lv/5)+'px rgb('+fb+','+Math.round(fb*0.5)+',0)';
+      }else{
+        el.style.background=c.css;
+        el.style.boxShadow='0 0 '+Math.max(4,lv/5)+'px '+c.css;
+      }
+      el.style.opacity=Math.max(0.3,lvF).toFixed(2);
     }else{
+      const c=getFxColor(f);
+      el.style.background=c.css;
       el.style.boxShadow=c.bri>60?'0 0 8px '+c.css:'none';
       el.style.opacity='1';
     }
@@ -916,10 +1032,23 @@ function updateFsColorDots(){
 }
 function renderFsConsole(){
   if(!fsActive)return;
+  if(!fsGroupOrder)initFsGroupOrder();
   const grid=document.getElementById('fsConsoleGrid');
   const visibleFx=getFsFixtures();
   if(visibleFx.length===0){grid.innerHTML='<p style="color:#666;padding:20px">Ni luči za prikaz. Izberi skupino ali dodaj fixture.</p>';return}
   let h='';
+  // Group order bar za drag & drop prerazporejanje skupin
+  if(fsGroupOrder&&fsGroupOrder.length>1){
+    h+='<div class="fs-grp-order" id="fsGrpOrder">';
+    var useGrps=fsActiveGroups.size>0?fsGroupOrder.filter(function(gi){return fsActiveGroups.has(gi)}):fsGroupOrder;
+    useGrps.forEach(function(gi,pos){
+      var g=groups[gi];if(!g)return;
+      var col=FX_LABEL[gi%FX_LABEL.length];
+      h+='<div class="fs-go-item" data-pos="'+pos+'" data-gi="'+gi+'" style="border-color:'+col+';color:'+col+'">';
+      h+='<span class="grip">\u2630</span> '+g+'</div>';
+    });
+    h+='</div>';
+  }
   visibleFx.forEach(fi=>{
     const f=fixtures[fi];if(!f||!f.channels)return;
     const bg=fxBg(fi);const lbl=fxLbl(fi);
@@ -988,16 +1117,86 @@ function renderFsConsole(){
       dot.addEventListener('touchcancel',release);
     });
   }
+  // Bind group order drag & drop
+  bindFsGroupDrag();
+}
+var fsDragGi=-1,fsDragOverGi=-1;
+function bindFsGroupDrag(){
+  var box=document.getElementById('fsGrpOrder');
+  if(!box)return;
+  box.querySelectorAll('.fs-go-item').forEach(function(el){
+    el.addEventListener('touchstart',fsGoStart,{passive:false});
+    el.addEventListener('mousedown',fsGoStart);
+  });
+}
+function fsGoStart(e){
+  e.preventDefault();
+  var el=e.currentTarget;
+  fsDragGi=+el.dataset.pos;
+  el.classList.add('dragging');
+  var box=document.getElementById('fsGrpOrder');
+  var items=[].slice.call(box.querySelectorAll('.fs-go-item'));
+  var rects=items.map(function(it){return it.getBoundingClientRect()});
+  function getPos(ev){var t=ev.touches?ev.touches[0]:ev;return{x:t.clientX,y:t.clientY}}
+  function findTarget(p){
+    for(var i=0;i<rects.length;i++){
+      if(p.x<rects[i].left+rects[i].width/2)return i;
+    }
+    return rects.length;
+  }
+  function onMove(ev){
+    ev.preventDefault();
+    var p=getPos(ev);
+    var newOver=findTarget(p);
+    if(newOver!==fsDragOverGi){
+      fsDragOverGi=newOver;
+      items.forEach(function(it,i){
+        if(i===fsDragGi){it.style.opacity='0.4';return}
+        var shift=0;
+        if(fsDragGi<fsDragOverGi&&i>fsDragGi&&i<fsDragOverGi)shift=-1;
+        else if(fsDragGi>fsDragOverGi&&i>=fsDragOverGi&&i<fsDragGi)shift=1;
+        it.style.transform=shift?'translateX('+(shift*50)+'px)':'';
+      });
+    }
+  }
+  function onEnd(){
+    document.removeEventListener('touchmove',onMove);
+    document.removeEventListener('touchend',onEnd);
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onEnd);
+    items.forEach(function(it){it.style.transform='';it.style.opacity=''});
+    el.classList.remove('dragging');
+    if(fsDragOverGi>=0&&fsDragOverGi!==fsDragGi){
+      // Premakni v fsGroupOrder
+      var visGrps=fsActiveGroups.size>0?fsGroupOrder.filter(function(gi){return fsActiveGroups.has(gi)}):fsGroupOrder.slice();
+      var movedGi=visGrps[fsDragGi];
+      // Najdi pozicijo v fsGroupOrder in premakni
+      var fromIdx=fsGroupOrder.indexOf(movedGi);
+      var insertGi=fsDragOverGi<visGrps.length?visGrps[fsDragOverGi>fsDragGi?fsDragOverGi:fsDragOverGi]:null;
+      fsGroupOrder.splice(fromIdx,1);
+      if(insertGi!==null){
+        var toIdx=fsGroupOrder.indexOf(insertGi);
+        fsGroupOrder.splice(toIdx,0,movedGi);
+      }else{
+        fsGroupOrder.push(movedGi);
+      }
+    }
+    fsDragGi=-1;fsDragOverGi=-1;
+    renderFsConsole();
+  }
+  fsDragOverGi=fsDragGi;
+  document.addEventListener('touchmove',onMove,{passive:false});
+  document.addEventListener('touchend',onEnd);
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onEnd);
 }
 function fsFullOn(fi,press){
   const f=fixtures[fi];if(!f||!f.channels)return;
   if(press){
     fsFullOnState[fi]={};
     f.channels.forEach((ch,ci)=>{
-      if(ch.type===1){// CH_INTENSITY
-        fsFullOnState[fi][ci]=ch.currentValue||0;
-        wsSend({cmd:'fxch',f:f.idx,c:ci,v:255});
-      }
+      fsFullOnState[fi][ci]=ch.currentValue||0;
+      wsSend({cmd:'fxch',f:f.idx,c:ci,v:CH_LIGHT_TYPES.has(ch.type)?255:0});
     });
   }else{
     if(!fsFullOnState[fi])return;
@@ -1047,12 +1246,19 @@ function renderFsGroups(){
     h+='<button class="fs-grp-bo" data-gi="'+i+'">BO</button>';
     h+='<button class="fs-grp-fo" data-gi="'+i+'">FO</button>';
     h+='<button class="fs-grp-solo" data-gi="'+i+'">SOLO</button>';
-    // Per-group program selector
+    // Per-group program + subdivision selectors (skriti na telefonu)
+    h+='<span class="phone-hide">';
     var grpProg=mbGrpOverrides[i]?mbGrpOverrides[i].p:255;
-    h+='<select class="fs-grp-prog" data-gi="'+i+'" onchange="setGrpProg('+i+',+this.value)" style="background:#1a1a2e;color:#e74c3c;border:1px solid #444;border-radius:3px;padding:1px 3px;font-size:0.6em">';
+    h+='<select class="fs-grp-prog" data-gi="'+i+'" data-type="prog" onchange="setGrpProg('+i+',+this.value)" style="background:#1a1a2e;color:#e74c3c;border:1px solid #444;border-radius:3px;padding:1px 3px;font-size:0.6em">';
     h+='<option value="255"'+(grpProg===255?' selected':'')+'>--</option>';
     progNames.forEach((n,pi)=>{h+='<option value="'+pi+'"'+(pi===grpProg?' selected':'')+'>'+n+'</option>'});
     h+='</select>';
+    var grpSub=mbGrpOverrides[i]?mbGrpOverrides[i].s:255;
+    h+='<select class="fs-grp-prog" data-gi="'+i+'" data-type="sub" onchange="setGrpSub('+i+',+this.value)" style="background:#1a1a2e;color:#f39c12;border:1px solid #444;border-radius:3px;padding:1px 3px;font-size:0.6em">';
+    h+='<option value="255"'+(grpSub===255?' selected':'')+'>--</option>';
+    subNames.forEach((n,si)=>{h+='<option value="'+si+'"'+(si===grpSub?' selected':'')+'>'+n+'</option>'});
+    h+='</select>';
+    h+='</span>';
     h+='</div>';
   });
   if(!has)h+='<span style="color:#555;font-size:0.8em;margin-left:6px">Ni skupin</span>';
@@ -1108,6 +1314,11 @@ function setGrpProg(gi,val){
   mbGrpOverrides[gi].p=val;
   sendMbCfg();
 }
+function setGrpSub(gi,val){
+  if(!mbGrpOverrides[gi])mbGrpOverrides[gi]={p:255,s:255,i:255};
+  mbGrpOverrides[gi].s=val;
+  sendMbCfg();
+}
 function fsGrpFullOn(gi,press){
   if(press){
     fsGrpFullOnState[gi]={};
@@ -1116,10 +1327,8 @@ function fsGrpFullOn(gi,press){
       if(!f.channels)return;
       fsGrpFullOnState[gi][i]={};
       f.channels.forEach((ch,ci)=>{
-        if(ch.type===1){
-          fsGrpFullOnState[gi][i][ci]=ch.currentValue||0;
-          wsSend({cmd:'fxch',f:f.idx,c:ci,v:255});
-        }
+        fsGrpFullOnState[gi][i][ci]=ch.currentValue||0;
+        wsSend({cmd:'fxch',f:f.idx,c:ci,v:CH_LIGHT_TYPES.has(ch.type)?255:0});
       });
     });
   }else{
@@ -1481,11 +1690,12 @@ function updateMbStatus(mb){
   // Sync per-group overrides from server
   if(mb.grp&&Array.isArray(mb.grp)){
     mbGrpOverrides=mb.grp;
-    // Update group program selectors if Console is open
     if(fsActive){
       mb.grp.forEach((g,i)=>{
-        var sel=document.querySelector('.fs-grp-prog[data-gi="'+i+'"]');
-        if(sel&&+sel.value!==g.p)sel.value=g.p;
+        var ps=document.querySelector('.fs-grp-prog[data-gi="'+i+'"][data-type="prog"]');
+        if(ps&&+ps.value!==g.p)ps.value=g.p;
+        var ss=document.querySelector('.fs-grp-prog[data-gi="'+i+'"][data-type="sub"]');
+        if(ss&&+ss.value!==g.s)ss.value=g.s;
       });
     }
   }
