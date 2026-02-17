@@ -110,6 +110,14 @@ void FixtureEngine::loadChannelDef(ChannelDef& ch, const JsonObject& chObj) {
     ChannelRange& r = ch.ranges[ch.rangeCount];
     r.from = rObj["from"] | 0;
     r.to   = rObj["to"]   | 255;
+    // Podpora za stari format: "range": [from, to]
+    if (rObj["range"].is<JsonArray>()) {
+      JsonArray rng = rObj["range"].as<JsonArray>();
+      if (rng.size() >= 2) {
+        r.from = rng[0] | 0;
+        r.to   = rng[1] | 255;
+      }
+    }
     strlcpy(r.label, rObj["label"] | "", sizeof(r.label));
     ch.rangeCount++;
   }
