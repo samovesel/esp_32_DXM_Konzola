@@ -176,17 +176,12 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 @media(min-width:768px){input[orient=vertical]{height:260px}}
 @media(min-width:1200px){input[orient=vertical]{height:340px}}
 .fs-console input[orient=vertical]{height:var(--fs-slider-h,200px)}
-.fs-grp-order{display:flex;gap:4px;padding:4px 6px;margin-bottom:4px;background:#0a0a1a;border-radius:4px;min-height:24px;flex-wrap:wrap;align-items:center}
-.fs-go-item{display:flex;align-items:center;gap:2px;background:#1a1530;border:2px solid #666;border-radius:4px;padding:2px 8px;cursor:grab;touch-action:none;user-select:none;font-size:0.75em;transition:transform 0.15s,opacity 0.15s}
-.fs-go-item.dragging{opacity:0.4;transform:scale(0.95)}
-.fs-grp-masters{flex-shrink:0;padding:4px 6px;border-bottom:1px solid #333}
-.fs-gm-hdr{color:#888;font-size:0.75em;cursor:pointer;padding:2px 4px;user-select:none}
-.fs-gm-hdr:hover{color:#0af}
-.fs-gm-body{display:flex;gap:4px;padding:4px 0;overflow-x:auto;align-items:flex-end}
-.fs-gm-col{display:flex;flex-direction:column;align-items:center;min-width:44px}
-.fs-gm-val{font-size:0.7em;font-weight:bold;margin-bottom:2px}
-.fs-gm-col input[orient=vertical]{height:80px}
-.fs-gm-lbl{font-size:0.55em;white-space:nowrap;margin-top:2px}
+.fs-grp-wrap{display:flex;gap:2px;border-radius:8px;padding:2px;transition:transform 0.15s,opacity 0.15s}
+.fs-grp-wrap.dragging{opacity:0.4;transform:scale(0.97)}
+.fs-gdim{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:40px;padding:4px 2px 2px;border-radius:6px;cursor:grab;touch-action:none;user-select:none}
+.fs-gdim-lbl{font-size:0.5em;white-space:nowrap;writing-mode:vertical-lr;text-orientation:mixed;max-height:60px;overflow:hidden;margin-bottom:4px;opacity:0.8}
+.fs-gdim-val{font-size:0.7em;font-weight:bold;margin-bottom:2px}
+.fs-gdim input[orient=vertical]{height:calc(var(--fs-slider-h,200px) - 30px);min-height:60px}
 </style></head><body>
 
 <header>
@@ -447,7 +442,6 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     </div>
   </div>
   <div class="fs-mid">
-    <div class="fs-grp-masters" id="fsGrpMasters"></div>
     <div class="console" id="fsConsoleGrid"></div>
   </div>
   <div class="fs-bottom">
@@ -460,7 +454,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0;
-var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,fsGroupOrder=null,fsGroupDimmers={},fsGrpDimVisible=true;
+var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,fsGroupOrder=null,fsGroupDimmers={};
 
 function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>setTimeout(wsConnect,2000)}
 function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
@@ -863,31 +857,7 @@ function updateSliderHeight(){
   document.documentElement.style.setProperty('--fs-slider-h',avail+'px');
 }
 window.addEventListener('resize',function(){if(fsActive)updateSliderHeight()});
-function renderFsGrpMasters(){
-  if(!fsActive)return;
-  var el=document.getElementById('fsGrpMasters');
-  if(!el)return;
-  var hasGroups=false;
-  groups.forEach(function(g){if(g)hasGroups=true});
-  if(!hasGroups){el.innerHTML='';return}
-  var h='<div class="fs-gm-hdr" onclick="fsGrpDimVisible=!fsGrpDimVisible;renderFsGrpMasters()">';
-  h+=(fsGrpDimVisible?'\u25be':'\u25b8')+' Group Dimmers</div>';
-  if(fsGrpDimVisible){
-    h+='<div class="fs-gm-body">';
-    groups.forEach(function(g,gi){
-      if(!g)return;
-      var v=fsGroupDimmers[gi]!==undefined?fsGroupDimmers[gi]:255;
-      var col=FX_LABEL[gi%FX_LABEL.length];
-      h+='<div class="fs-gm-col">';
-      h+='<div class="fs-gm-val" id="fsGrpDimV_'+gi+'" style="color:'+col+'">'+v+'</div>';
-      h+='<input type="range" orient="vertical" id="fsGrpDim_'+gi+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendGrpDim('+gi+',this.value)">';
-      h+='<div class="fs-gm-lbl" style="color:'+col+'">'+g+'</div>';
-      h+='</div>';
-    });
-    h+='</div>';
-  }
-  el.innerHTML=h;
-}
+function renderFsGrpMasters(){/* Dimmers so zdaj inline v renderFsConsole */}
 function sendGrpDim(gi,v){
   v=+v;
   fsGroupDimmers[gi]=v;
@@ -1037,20 +1007,19 @@ function renderFsConsole(){
   const grid=document.getElementById('fsConsoleGrid');
   const visibleFx=getFsFixtures();
   if(visibleFx.length===0){grid.innerHTML='<p style="color:#666;padding:20px">Ni luči za prikaz. Izberi skupino ali dodaj fixture.</p>';return}
-  let h='';
-  // Group order bar za drag & drop prerazporejanje skupin
-  if(fsGroupOrder&&fsGroupOrder.length>1){
-    h+='<div class="fs-grp-order" id="fsGrpOrder">';
-    var useGrps=fsActiveGroups.size>0?fsGroupOrder.filter(function(gi){return fsActiveGroups.has(gi)}):fsGroupOrder;
-    useGrps.forEach(function(gi,pos){
-      var g=groups[gi];if(!g)return;
-      var col=FX_LABEL[gi%FX_LABEL.length];
-      h+='<div class="fs-go-item" data-pos="'+pos+'" data-gi="'+gi+'" style="border-color:'+col+';color:'+col+'">';
-      h+='<span class="grip">\u2630</span> '+g+'</div>';
+  // Zberi fixture-e po skupinah
+  var useOrder=fsActiveGroups.size>0?fsGroupOrder.filter(function(gi){return fsActiveGroups.has(gi)}):fsGroupOrder;
+  var grpFx={},ungrouped=[];
+  var seen=new Set();
+  useOrder.forEach(function(gi){
+    grpFx[gi]=[];
+    fixtures.forEach(function(f,i){
+      if(!seen.has(i)&&f&&f.channels&&(f.groupMask&(1<<gi))){grpFx[gi].push(i);seen.add(i)}
     });
-    h+='</div>';
-  }
-  visibleFx.forEach(fi=>{
+  });
+  if(fsActiveGroups.size===0){fixtures.forEach(function(f,i){if(!seen.has(i)&&f&&f.channels)ungrouped.push(i)})}
+  let h='';
+  function renderFixture(fi){
     const f=fixtures[fi];if(!f||!f.channels)return;
     const bg=fxBg(fi);const lbl=fxLbl(fi);
     const hidden=consHidden[fi]||new Set();
@@ -1092,7 +1061,26 @@ function renderFsConsole(){
     h+='</div>';
     h+='<div class="fx-group-line" style="background:'+lbl+'"></div>';
     h+='</div>';
+  }
+  // Izriši skupine z inline group dimmerji
+  useOrder.forEach(function(gi,pos){
+    var fxList=grpFx[gi];if(!fxList||fxList.length===0)return;
+    var gName=groups[gi]||'?';
+    var col=FX_LABEL[gi%FX_LABEL.length];
+    var gbg=FX_BG[gi%FX_BG.length];
+    var v=fsGroupDimmers[gi]!==undefined?fsGroupDimmers[gi]:255;
+    h+='<div class="fs-grp-wrap" data-gi="'+gi+'" data-pos="'+pos+'" style="background:'+gbg+'">';
+    // Group dimmer slider na levi
+    h+='<div class="fs-gdim" style="background:'+gbg+'">';
+    h+='<div class="fs-gdim-lbl" style="color:'+col+'">'+gName+'</div>';
+    h+='<div class="fs-gdim-val" id="fsGrpDimV_'+gi+'" style="color:'+col+'">'+v+'</div>';
+    h+='<input type="range" orient="vertical" id="fsGrpDim_'+gi+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendGrpDim('+gi+',this.value)">';
+    h+='</div>';
+    fxList.forEach(renderFixture);
+    h+='</div>';
   });
+  // Ungrouped fixtures brez wrapperja
+  ungrouped.forEach(renderFixture);
   grid.innerHTML=h;
   // Bind Full On gumbov (press & hold)
   grid.querySelectorAll('.fullon-btn').forEach(btn=>{
@@ -1118,45 +1106,66 @@ function renderFsConsole(){
       dot.addEventListener('touchcancel',release);
     });
   }
-  // Bind group order drag & drop
+  // Bind group drag & drop na wrapperjih
   bindFsGroupDrag();
 }
-var fsDragGi=-1,fsDragOverGi=-1;
 function bindFsGroupDrag(){
-  var box=document.getElementById('fsGrpOrder');
-  if(!box)return;
-  box.querySelectorAll('.fs-go-item').forEach(function(el){
-    el.addEventListener('touchstart',fsGoStart,{passive:false});
-    el.addEventListener('mousedown',fsGoStart);
+  var grid=document.getElementById('fsConsoleGrid');
+  if(!grid)return;
+  grid.querySelectorAll('.fs-grp-wrap').forEach(function(el){
+    // Drag samo iz fs-gdim (group dimmer stolpec) ali ozadja wrapperja
+    el.addEventListener('mousedown',function(e){if(fsCanDrag(e))fsGrpDragStart(e,el)});
+    el.addEventListener('touchstart',function(e){if(fsCanDrag(e))fsGrpDragStart(e,el)},{passive:false});
   });
 }
-function fsGoStart(e){
+function fsCanDrag(e){
+  // Dovoli drag samo iz ozadja ali fs-gdim elementov, ne iz sliderjev/gumbov
+  var t=e.target;
+  if(t.tagName==='INPUT'||t.tagName==='BUTTON'||t.tagName==='SELECT')return false;
+  // Dovoli iz fs-gdim, fs-gdim-lbl, fs-gdim-val, ali fs-grp-wrap ozadja
+  var cl=t.className||'';
+  if(cl.indexOf('fs-gdim')>=0||cl.indexOf('fs-grp-wrap')>=0)return true;
+  // Preveri starše
+  var p=t.parentElement;
+  while(p){
+    if(p.classList&&p.classList.contains('fs-gdim'))return true;
+    if(p.classList&&p.classList.contains('fs-grp-wrap')){
+      // Klik na ozadje wrapperja (ne na fixture elemente)
+      if(t.classList&&(t.classList.contains('fx-group')||t.classList.contains('fx-group-body')||t.classList.contains('fs-fx-hdr')))return false;
+      return false;
+    }
+    p=p.parentElement;
+  }
+  return false;
+}
+function fsGrpDragStart(e,el){
   e.preventDefault();
-  var el=e.currentTarget;
-  fsDragGi=+el.dataset.pos;
+  var grid=document.getElementById('fsConsoleGrid');
+  var wraps=[].slice.call(grid.querySelectorAll('.fs-grp-wrap'));
+  if(wraps.length<2)return;
+  var dragPos=wraps.indexOf(el);
+  if(dragPos<0)return;
   el.classList.add('dragging');
-  var box=document.getElementById('fsGrpOrder');
-  var items=[].slice.call(box.querySelectorAll('.fs-go-item'));
-  var rects=items.map(function(it){return it.getBoundingClientRect()});
-  function getPos(ev){var t=ev.touches?ev.touches[0]:ev;return{x:t.clientX,y:t.clientY}}
-  function findTarget(p){
+  var rects=wraps.map(function(w){return w.getBoundingClientRect()});
+  var overPos=dragPos;
+  function getX(ev){var t=ev.touches?ev.touches[0]:ev;return t.clientX}
+  function findTarget(x){
     for(var i=0;i<rects.length;i++){
-      if(p.x<rects[i].left+rects[i].width/2)return i;
+      if(x<rects[i].left+rects[i].width/2)return i;
     }
     return rects.length;
   }
   function onMove(ev){
     ev.preventDefault();
-    var p=getPos(ev);
-    var newOver=findTarget(p);
-    if(newOver!==fsDragOverGi){
-      fsDragOverGi=newOver;
-      items.forEach(function(it,i){
-        if(i===fsDragGi){it.style.opacity='0.4';return}
+    var newOver=findTarget(getX(ev));
+    if(newOver!==overPos){
+      overPos=newOver;
+      wraps.forEach(function(w,i){
+        if(i===dragPos){return}
         var shift=0;
-        if(fsDragGi<fsDragOverGi&&i>fsDragGi&&i<fsDragOverGi)shift=-1;
-        else if(fsDragGi>fsDragOverGi&&i>=fsDragOverGi&&i<fsDragGi)shift=1;
-        it.style.transform=shift?'translateX('+(shift*50)+'px)':'';
+        if(dragPos<overPos&&i>dragPos&&i<overPos)shift=-1;
+        else if(dragPos>overPos&&i>=overPos&&i<dragPos)shift=1;
+        w.style.transform=shift?'translateX('+(shift*50)+'px)':'';
       });
     }
   }
@@ -1165,27 +1174,23 @@ function fsGoStart(e){
     document.removeEventListener('touchend',onEnd);
     document.removeEventListener('mousemove',onMove);
     document.removeEventListener('mouseup',onEnd);
-    items.forEach(function(it){it.style.transform='';it.style.opacity=''});
+    wraps.forEach(function(w){w.style.transform='';w.style.opacity=''});
     el.classList.remove('dragging');
-    if(fsDragOverGi>=0&&fsDragOverGi!==fsDragGi){
-      // Premakni v fsGroupOrder
-      var visGrps=fsActiveGroups.size>0?fsGroupOrder.filter(function(gi){return fsActiveGroups.has(gi)}):fsGroupOrder.slice();
-      var movedGi=visGrps[fsDragGi];
-      // Najdi pozicijo v fsGroupOrder in premakni
+    if(overPos>=0&&overPos!==dragPos){
+      var visGrps=wraps.map(function(w){return +w.dataset.gi});
+      var movedGi=visGrps[dragPos];
       var fromIdx=fsGroupOrder.indexOf(movedGi);
-      var insertGi=fsDragOverGi<visGrps.length?visGrps[fsDragOverGi>fsDragGi?fsDragOverGi:fsDragOverGi]:null;
+      var targetGi=overPos<visGrps.length?visGrps[overPos>dragPos?overPos:overPos]:null;
       fsGroupOrder.splice(fromIdx,1);
-      if(insertGi!==null){
-        var toIdx=fsGroupOrder.indexOf(insertGi);
+      if(targetGi!==null){
+        var toIdx=fsGroupOrder.indexOf(targetGi);
         fsGroupOrder.splice(toIdx,0,movedGi);
       }else{
         fsGroupOrder.push(movedGi);
       }
     }
-    fsDragGi=-1;fsDragOverGi=-1;
     renderFsConsole();
   }
-  fsDragOverGi=fsDragGi;
   document.addEventListener('touchmove',onMove,{passive:false});
   document.addEventListener('touchend',onEnd);
   document.addEventListener('mousemove',onMove);
