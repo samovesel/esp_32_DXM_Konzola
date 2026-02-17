@@ -125,7 +125,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .fs-scene-row .fs-lbl{color:#888;font-size:0.7em;white-space:nowrap;flex-shrink:0;margin-right:4px}
 .fs-scene-row button.fs-scn{flex-shrink:0;padding:6px 12px;font-size:0.8em;background:#222;color:#aaa;border:1px solid #333;border-radius:4px;white-space:nowrap}
 .fs-scene-row button.fs-scn.active-scene{border-color:#0f0;color:#0f0;box-shadow:0 0 6px rgba(0,255,0,0.3)}
-.fs-scene-row select.fs-fade{background:#1a1a2e;color:#f90;border:1px solid #333;border-radius:4px;padding:4px 6px;font-size:0.8em;flex-shrink:0}
+.fs-scene-row select.fs-fade{background:#1a1a2e;color:#f90;border:1px solid #333;border-radius:4px;padding:4px 6px;font-size:0.8em;flex-shrink:0;width:auto;margin-left:auto}
 .fs-grp-row{display:flex;gap:4px;overflow-x:auto;padding:3px 0;-webkit-overflow-scrolling:touch;align-items:center}
 .fs-grp-row .fs-lbl{color:#888;font-size:0.7em;white-space:nowrap;flex-shrink:0;margin-right:4px}
 .fs-grp-item{display:flex;align-items:center;gap:3px;flex-shrink:0;background:#1a2030;border:1px solid #333;border-radius:4px;padding:3px 6px}
@@ -871,7 +871,7 @@ function updateSliderHeight(){
   var top=document.querySelector('.fs-top');
   var bot=document.querySelector('.fs-bottom');
   if(!top||!bot)return;
-  var avail=window.innerHeight-top.offsetHeight-bot.offsetHeight-120;
+  var avail=window.innerHeight-top.offsetHeight-bot.offsetHeight-150;
   avail=Math.max(100,Math.min(avail,500));
   document.documentElement.style.setProperty('--fs-slider-h',avail+'px');
 }
@@ -1200,7 +1200,7 @@ function fxCanDrag(e){
   if(t.tagName==='INPUT'||t.tagName==='BUTTON'||t.tagName==='SELECT')return false;
   // Dovoli iz headerja (ime, naslov, pika), ozadja fx-group, fx-group-line
   var cl=t.className||'';
-  if(cl.indexOf('fs-fx-hdr')>=0||cl.indexOf('fx-group-hdr')>=0||cl.indexOf('fx-addr')>=0||cl.indexOf('fx-group-line')>=0)return true;
+  if(cl.indexOf('fs-fx-hdr')>=0||cl.indexOf('fx-addr')>=0||cl.indexOf('fx-group-line')>=0)return true;
   if(cl.indexOf('fs-color-dot')>=0)return false; // pika ima svoj handler
   // Klik na fx-group ozadje ali fx-group-body ozadje (gap med stolpci)
   if(t.classList&&(t.classList.contains('fx-group')||t.classList.contains('fx-group-body')))return true;
@@ -1286,7 +1286,6 @@ function renderFsScenes(){
   if(!fsActive)return;
   const row=document.getElementById('fsSceneRow');
   let h='<span class="fs-lbl">Scene:</span>';
-  h+='<select class="fs-fade" id="fsFadeSel" title="Fade čas"><option value="0">0s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="1500" selected>1.5s</option><option value="2000">2s</option><option value="3000">3s</option><option value="5000">5s</option></select>';
   let has=false;
   scenes.forEach(sc=>{
     if(!sc)return;has=true;
@@ -1294,6 +1293,7 @@ function renderFsScenes(){
     h+='<button class="fs-scn'+(isActive?' active-scene':'')+'" onclick="fsRecallScene('+sc.slot+')">'+sc.name+'</button>';
   });
   if(!has)h+='<span style="color:#555;font-size:0.8em;margin-left:6px">Ni scen</span>';
+  h+='<select class="fs-fade" id="fsFadeSel" title="Fade čas"><option value="0">0s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="1500" selected>1.5s</option><option value="2000">2s</option><option value="3000">3s</option><option value="5000">5s</option></select>';
   row.innerHTML=h;
 }
 function fsRecallScene(slot){
