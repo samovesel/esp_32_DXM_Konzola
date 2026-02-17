@@ -887,9 +887,10 @@ function updateSliderHeight(){
   document.documentElement.style.setProperty('--fs-slider-h',avail+'px');
 }
 window.addEventListener('resize',function(){if(fsActive){updateSliderHeight();var el=document.getElementById('fsConsole');if(isPhoneDevice())el.classList.add('fs-phone');else el.classList.remove('fs-phone')}});
-// bindFsSliderTouch: touch-friendly sliderji v celozaslonski mešalki
-// - horizontalni poteg → skrola fs-mid (vrednost se ne spremeni)
-// - vertikalni poteg   → fader/pickup način — vrednost se menja relativno od dotika, brez skoka
+// bindFsSliderTouch: fader nacin za vse vertikalne sliderje (miska + dotik + pisalo)
+// - pointerdown preventDefault → blokira native skok ob kliku/dotiku kjerkoli na tirnici
+// - horizontalni poteg → skrola fs-mid levo/desno (vrednost se ne spremeni)
+// - vertikalni poteg   → menja vrednost relativno od zacetne (fader, brez skoka)
 function bindFsSliderTouch(container){
   function scrollableParent(el){
     while(el=el.parentElement){
@@ -899,16 +900,19 @@ function bindFsSliderTouch(container){
     return null;
   }
   container.querySelectorAll('input[type=range][orient=vertical]').forEach(function(sl){
-    sl.style.touchAction='none'; // prepreči native skok vrednosti ob dotiku
-    var sx,sy,sv,intent,scrollEl,sx0;
-    sl.addEventListener('touchstart',function(e){
-      sx=e.touches[0].clientX; sy=e.touches[0].clientY;
-      sv=+sl.value; intent=null;
+    sl.style.touchAction='none';
+    var sx,sy,sv,intent,scrollEl,sx0,active=false;
+    sl.addEventListener('pointerdown',function(e){
+      e.preventDefault(); // kriticno: prepreci native skok vrednosti (miska IN dotik)
+      sl.setPointerCapture(e.pointerId);
+      sx=e.clientX; sy=e.clientY;
+      sv=+sl.value; intent=null; active=true;
       scrollEl=scrollableParent(sl);
       sx0=scrollEl?scrollEl.scrollLeft:0;
-    },{passive:true});
-    sl.addEventListener('touchmove',function(e){
-      var dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+    },{passive:false});
+    sl.addEventListener('pointermove',function(e){
+      if(!active)return;
+      var dx=e.clientX-sx, dy=e.clientY-sy;
       var adx=Math.abs(dx), ady=Math.abs(dy);
       if(!intent){
         if(adx<8&&ady<8)return; // dead zone
@@ -918,11 +922,13 @@ function bindFsSliderTouch(container){
         if(scrollEl)scrollEl.scrollLeft=sx0-dx;
         return;
       }
-      // slide: relativna sprememba glede na začetno vrednost (fader, brez skoka)
+      // slide: relativna sprememba glede na zacetno vrednost (fader, brez skoka)
       var nv=Math.round(sv+(-dy/sl.offsetHeight)*(+sl.max-+sl.min));
       nv=Math.max(+sl.min,Math.min(+sl.max,nv));
       if(nv!==+sl.value){sl.value=nv;sl.dispatchEvent(new Event('input',{bubbles:true}));}
-    },{passive:true}); // passive — touch-action:none nadomesti preventDefault
+    });
+    sl.addEventListener('pointerup',function(){active=false;intent=null;});
+    sl.addEventListener('pointercancel',function(){active=false;intent=null;});
   });
 }
 function renderFsGrpMasters(){/* Dimmers so zdaj inline v renderFsConsole */}
