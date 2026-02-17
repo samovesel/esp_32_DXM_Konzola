@@ -172,13 +172,15 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 
 .phone-hide{}
 .phone-only{display:none!important}
-@media(max-width:600px){.phone-hide{display:none!important}.phone-only{display:inline-block!important}.fs-color-dot{width:28px;height:28px}.fs-bottom{max-height:28vh;overflow-y:auto}.fs-grp-row{flex-wrap:wrap}.fs-grp-item{padding:2px 4px;font-size:0.85em}.fs-grp-bo,.fs-grp-fo,.fs-grp-solo{padding:2px 4px;font-size:0.6em}.fs-beat-row,.fs-scene-row,.fs-grp-row{padding:1px 0}}
+.fs-phone .phone-hide{display:none!important}
+.fs-phone .phone-only{display:inline-block!important}
+@media(max-width:600px){.fs-color-dot{width:28px;height:28px}.fs-bottom{max-height:28vh;overflow-y:auto}.fs-grp-row{flex-wrap:wrap}.fs-grp-item{padding:2px 4px;font-size:0.85em}.fs-grp-bo,.fs-grp-fo,.fs-grp-solo{padding:2px 4px;font-size:0.6em}.fs-beat-row,.fs-scene-row,.fs-grp-row{padding:1px 0}}
 @media(min-width:768px){input[orient=vertical]{height:260px}}
 @media(min-width:1200px){input[orient=vertical]{height:340px}}
 .fs-console input[orient=vertical]{height:var(--fs-slider-h,200px)}
 .fs-gdim-cluster{display:flex;gap:2px;padding:0 4px 0 0;border-right:2px solid #333;margin-right:4px;flex-shrink:0}
-.fs-gdim{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:40px;padding:4px 2px 2px;border-radius:6px}
-.fs-gdim-lbl{font-size:0.5em;white-space:nowrap;writing-mode:vertical-lr;text-orientation:mixed;max-height:60px;overflow:hidden;margin-bottom:4px;opacity:0.8}
+.fs-gdim{display:flex;flex-direction:column;align-items:center;min-width:40px;padding:4px 2px 2px;border-radius:6px}
+.fs-gdim-lbl{font-size:0.5em;white-space:nowrap;writing-mode:vertical-lr;text-orientation:mixed;max-height:60px;overflow:hidden;margin-top:4px;opacity:0.8}
 .fs-gdim-val{font-size:0.7em;font-weight:bold;margin-bottom:2px}
 .fs-gdim input[orient=vertical]{height:calc(var(--fs-slider-h,200px) - 20px);min-height:70px}
 .fx-group.dragging{opacity:0.35;transform:scale(0.96)}
@@ -456,6 +458,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0;
 var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,fsGroupOrder=null,fsGroupDimmers={};
+function isPhoneDevice(){var touch=window.matchMedia('(hover: none) and (pointer: coarse)').matches;var smallScreen=Math.min(screen.width,screen.height)<=500;return touch&&smallScreen}
 
 function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>setTimeout(wsConnect,2000)}
 function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
@@ -475,6 +478,7 @@ function handleWs(d){
     // Group dimmers sync
     if(d.gd){d.gd.forEach(function(v,gi){
       fsGroupDimmers[gi]=v;
+      grpLastVal[gi]=v;
       if(fsActive){
         var sl=document.getElementById('fsGrpDim_'+gi);
         if(sl&&document.activeElement!==sl)sl.value=v;
@@ -739,6 +743,8 @@ var consHidden={};    // {fixtureIdx: Set of channel indices v mini stanju}
 var consCollapsed={}; // {fixtureIdx: bool} ali so mini kanali skriti
 var consGang=new Set(); // Global: Set of "fi_ci" keys
 var consLastVal={}; // {"fi_ci": lastValue} za delta
+var grpGang=new Set(); // Gang set za skupinske dimmerje
+var grpLastVal={}; // {gi: lastValue} za group gang delta
 
 function toggleChVis(fxIdx,ci){
   if(!consHidden[fxIdx])consHidden[fxIdx]=new Set();
@@ -766,6 +772,9 @@ function toggleCollapsed(fxIdx){
 function toggleGang(fi,ci){
   const key=fi+'_'+ci;
   if(consGang.has(key))consGang.delete(key);else consGang.add(key);
+}
+function toggleGrpGang(gi){
+  if(grpGang.has(gi))grpGang.delete(gi);else grpGang.add(gi);
 }
 function renderConsole(){
   const grid=document.getElementById('consoleGrid');
@@ -857,19 +866,38 @@ function updateSliderHeight(){
   avail=Math.max(100,Math.min(avail,500));
   document.documentElement.style.setProperty('--fs-slider-h',avail+'px');
 }
-window.addEventListener('resize',function(){if(fsActive)updateSliderHeight()});
+window.addEventListener('resize',function(){if(fsActive){updateSliderHeight();var el=document.getElementById('fsConsole');if(isPhoneDevice())el.classList.add('fs-phone');else el.classList.remove('fs-phone')}});
 function renderFsGrpMasters(){/* Dimmers so zdaj inline v renderFsConsole */}
 function sendGrpDim(gi,v){
   v=+v;
+  var prev=grpLastVal[gi]!==undefined?grpLastVal[gi]:v;
+  var delta=v-prev;
   fsGroupDimmers[gi]=v;
+  grpLastVal[gi]=v;
   var vEl=document.getElementById('fsGrpDimV_'+gi);
   if(vEl)vEl.textContent=v;
   wsSend({cmd:'grpdim',g:gi,v:v});
+  if(grpGang.has(gi)&&grpGang.size>1&&delta!==0){
+    grpGang.forEach(function(ggi){
+      if(ggi===gi)return;
+      var gPrev=grpLastVal[ggi]!==undefined?grpLastVal[ggi]:0;
+      var gNew=Math.max(0,Math.min(255,gPrev+delta));
+      grpLastVal[ggi]=gNew;
+      fsGroupDimmers[ggi]=gNew;
+      var vE=document.getElementById('fsGrpDimV_'+ggi);
+      if(vE)vE.textContent=gNew;
+      var sl=document.getElementById('fsGrpDim_'+ggi);
+      if(sl)sl.value=gNew;
+      wsSend({cmd:'grpdim',g:ggi,v:gNew});
+    });
+  }
 }
 function enterFullConsole(){
   fsActive=true;
   initFsGroupOrder();
-  document.getElementById('fsConsole').classList.add('active');
+  var fsCon=document.getElementById('fsConsole');
+  fsCon.classList.add('active');
+  if(isPhoneDevice())fsCon.classList.add('fs-phone');else fsCon.classList.remove('fs-phone');
   document.getElementById('fsMasterSlider').value=document.getElementById('masterSlider').value;
   document.getElementById('fsMasterVal').textContent=document.getElementById('masterVal').textContent;
   document.getElementById('fsBoBtn').style.background=boState?'#f33':'#555';
@@ -1047,10 +1075,13 @@ function renderFsConsole(){
       var col=FX_LABEL[gi%FX_LABEL.length];
       var gbg=FX_BG[gi%FX_BG.length];
       var v=fsGroupDimmers[gi]!==undefined?fsGroupDimmers[gi]:255;
+      grpLastVal[gi]=v;
+      var gChecked=grpGang.has(gi)?'checked':'';
       h+='<div class="fs-gdim" style="background:'+gbg+'">';
-      h+='<div class="fs-gdim-lbl" style="color:'+col+'">'+gName+'</div>';
       h+='<div class="fs-gdim-val" id="fsGrpDimV_'+gi+'" style="color:'+col+'">'+v+'</div>';
       h+='<input type="range" orient="vertical" id="fsGrpDim_'+gi+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendGrpDim('+gi+',this.value)">';
+      h+='<div class="fs-gdim-lbl" style="color:'+col+'">'+gName+'</div>';
+      h+='<div class="gang-wrap"><input type="checkbox" '+gChecked+' onchange="toggleGrpGang('+gi+')"><div class="gang-lbl">gang</div></div>';
       h+='</div>';
     });
     h+='</div>';
@@ -1113,7 +1144,7 @@ function renderFsConsole(){
     btn.addEventListener('touchcancel',release);
   });
   // Phone: long-press na color-dot sproži FULL ON
-  if(window.innerWidth<=600){
+  if(isPhoneDevice()){
     grid.querySelectorAll('.fs-color-dot').forEach(dot=>{
       const fi=+dot.dataset.fi;
       let lpTimer=null;
