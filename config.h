@@ -26,7 +26,11 @@
 #define DMX_MAX_CHANNELS   512
 
 // Sound-to-light
-#define FFT_SAMPLES        512     // Zmanjšano iz 1024 — prihranek ~12KB RAM
+#if HAS_PSRAM
+#define FFT_SAMPLES        1024    // Boljša frekvenčna ločljivost s PSRAM (~10.7 Hz/bin)
+#else
+#define FFT_SAMPLES        512     // Konservativno za ESP32 DRAM (~21.5 Hz/bin)
+#endif
 #define FFT_SAMPLE_RATE    22050   // Hz — dovolj za do 11kHz analizo
 #define FFT_BINS           (FFT_SAMPLES / 2)
 #define STL_MAX_RULES      8      // Zmanjšano iz 16
@@ -39,11 +43,38 @@
 #define WS_UPDATE_INTERVAL  80   // ~12 fps posodobitev WebSocket klientov
 
 // ============================================================================
-//  GPIO DODELITVE — ESP32 DevKit V1
+//  GPIO DODELITVE
 // ============================================================================
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+// --- ESP32-S3 N16R8 ---
+// GPIO 26-37 NI NA VOLJO (Octal SPI flash/PSRAM)
+// Na voljo: 0-21, 38-48
+
+#define DMX_TX_PIN         17    // UART1 TX → MAX485 DI
+#define DMX_RX_PIN         18    // UART1 RX (neuporabljen pri TX)
+#define DMX_DE_PIN          8    // MAX485 DE+RE
+#define DMX_UART_PORT      UART_NUM_1
+
+#define NEOPIXEL_PIN       48    // Vgrajena WS2812 NeoPixel
+#define NEOPIXEL_COUNT      1
+
+#define RESET_BTN_PIN      14    // Drži LOW ob zagonu = factory reset
+
+// Audio
+#define AUDIO_ADC_PIN       4    // Line-in (ADC1_CH3 na S3)
+#define AUDIO_ADC_CHANNEL  ADC1_CHANNEL_3
+#define I2S_BCK_PIN        12    // I2S mikrofon
+#define I2S_WS_PIN         11
+#define I2S_DATA_PIN       10
+
+#define HAS_PSRAM           1
+
+#else
+// --- ESP32 DevKit V1 (original) ---
 #define DMX_TX_PIN         17    // UART2 TX → MAX485 DI
 #define DMX_RX_PIN         16    // UART2 RX (neuporabljen pri TX)
 #define DMX_DE_PIN          4    // MAX485 DE+RE
+#define DMX_UART_PORT      UART_NUM_2
 
 #define LED_R_PIN          25
 #define LED_G_PIN          26
@@ -51,11 +82,15 @@
 
 #define RESET_BTN_PIN      14    // Drži LOW ob zagonu = factory reset
 
-// Audio (faza 4+5, aktivno)
+// Audio
 #define AUDIO_ADC_PIN      36    // Line-in (ADC1_CH0)
+#define AUDIO_ADC_CHANNEL  ADC1_CHANNEL_0
 #define I2S_BCK_PIN        22    // I2S mikrofon
 #define I2S_WS_PIN         21
 #define I2S_DATA_PIN       34
+
+#define HAS_PSRAM           0
+#endif
 
 // ============================================================================
 //  DMX KONSTANTE

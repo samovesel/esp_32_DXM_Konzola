@@ -7,13 +7,13 @@
 
 class DmxOutput {
 public:
-  bool begin(int txPin, int rxPin, int dePin, uart_port_t port = UART_NUM_2);
+  bool begin(int txPin, int rxPin, int dePin, uart_port_t port = DMX_UART_PORT);
   void sendFrame(const uint8_t* data, uint16_t channels);
   void blackout();
   void end();
 
 private:
-  uart_port_t _port = UART_NUM_2;
+  uart_port_t _port = DMX_UART_PORT;
   int _dePin = -1;
   bool _ok = false;
   void sendBreak();

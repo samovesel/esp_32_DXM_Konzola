@@ -24,12 +24,12 @@ bool AudioInput::begin(uint8_t source) {
   } else {
     // ADC setup
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11);  // GPIO36, 0-3.3V
-    Serial.println("[AUD] ADC inicializiran (GPIO36)");
+    adc1_config_channel_atten(AUDIO_ADC_CHANNEL, ADC_ATTEN_DB_11);
+    Serial.printf("[AUD] ADC inicializiran (GPIO%d)\n", AUDIO_ADC_PIN);
   }
 
   // Zaženi task na jedru 0 (jedro 1 je za WiFi/DMX/Web)
-  xTaskCreatePinnedToCore(audioTask, "audio", 4096, this, 3, &_taskHandle, 0);
+  xTaskCreatePinnedToCore(audioTask, "audio", HAS_PSRAM ? 8192 : 4096, this, 3, &_taskHandle, 0);
   Serial.printf("[AUD] Audio task zagnan na jedru 0 (vir: %s)\n",
                 _source == 1 ? "ADC line-in" : "I2S mikrofon");
   return true;
@@ -104,7 +104,7 @@ void AudioInput::taskLoop() {
       for (int i = 0; i < 64 && sampleIdx < FFT_SAMPLES; i++) {
         unsigned long t0 = micros();
 
-        int raw = adc1_get_raw(ADC1_CHANNEL_0);  // 0-4095
+        int raw = adc1_get_raw(AUDIO_ADC_CHANNEL);  // 0-4095
         // Odstrani DC offset (2048 = sredina) in normaliziraj na -1.0 ... 1.0
         writeBuf[sampleIdx] = (raw - 2048) / 2048.0f;
         sampleIdx++;
