@@ -25,25 +25,8 @@
 #define CROSSFADE_DEFAULT_MS 1500  // 1.5 sekunde
 #define DMX_MAX_CHANNELS   512
 
-// Sound-to-light
-#if HAS_PSRAM
-#define FFT_SAMPLES        1024    // Boljša frekvenčna ločljivost s PSRAM (~10.7 Hz/bin)
-#else
-#define FFT_SAMPLES        512     // Konservativno za ESP32 DRAM (~21.5 Hz/bin)
-#endif
-#define FFT_SAMPLE_RATE    22050   // Hz — dovolj za do 11kHz analizo
-#define FFT_BINS           (FFT_SAMPLES / 2)
-#define STL_MAX_RULES      8      // Zmanjšano iz 16
-#define STL_BAND_COUNT     8      // Število frekvenčnih pasov za vizualizacijo
-#define STL_ATTACK_DEFAULT 50     // ms
-#define STL_DECAY_DEFAULT  200    // ms
-#define BEAT_HISTORY_SIZE  24     // Zmanjšano iz 32
-#define DMX_UNIVERSE_SIZE  513   // Start code + 512
-#define ARTNET_TIMEOUT_MS  10000  // 10 sekund
-#define WS_UPDATE_INTERVAL  80   // ~12 fps posodobitev WebSocket klientov
-
 // ============================================================================
-//  GPIO DODELITVE
+//  GPIO DODELITVE + PLATFORMA
 // ============================================================================
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 // --- ESP32-S3 N16R8 ---
@@ -91,6 +74,23 @@
 
 #define HAS_PSRAM           0
 #endif
+
+// Sound-to-light (HAS_PSRAM mora biti definiran prej!)
+#if HAS_PSRAM
+#define FFT_SAMPLES        1024    // Boljša frekvenčna ločljivost s PSRAM (~10.7 Hz/bin)
+#else
+#define FFT_SAMPLES        512     // Konservativno za ESP32 DRAM (~21.5 Hz/bin)
+#endif
+#define FFT_SAMPLE_RATE    22050   // Hz — dovolj za do 11kHz analizo
+#define FFT_BINS           (FFT_SAMPLES / 2)
+#define STL_MAX_RULES      8      // Zmanjšano iz 16
+#define STL_BAND_COUNT     8      // Število frekvenčnih pasov za vizualizacijo
+#define STL_ATTACK_DEFAULT 50     // ms
+#define STL_DECAY_DEFAULT  200    // ms
+#define BEAT_HISTORY_SIZE  24     // Zmanjšano iz 32
+#define DMX_UNIVERSE_SIZE  513   // Start code + 512
+#define ARTNET_TIMEOUT_MS  10000  // 10 sekund
+#define WS_UPDATE_INTERVAL  80   // ~12 fps posodobitev WebSocket klientov
 
 // ============================================================================
 //  DMX KONSTANTE
