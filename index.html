@@ -39,7 +39,7 @@ input,select{width:100%;padding:7px;border:1px solid #333;border-radius:4px;back
 .ch-row .ch-name{width:90px;font-size:0.8em;color:#aaa;text-align:right;flex-shrink:0}
 .ch-row input[type=range]{flex:1;accent-color:#0af}
 .ch-row .ch-val{width:36px;font-size:0.85em;text-align:center;color:#0ff}
-.ch-row .ch-range{font-size:0.7em;color:#666;width:80px}
+.ch-row .ch-range{font-size:0.72em;color:#888;min-width:140px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .master-row{display:flex;align-items:center;gap:10px;padding:10px;background:#1a1a2e;border-radius:6px;margin-bottom:10px}
 .master-row label{margin:0;font-weight:bold;color:#0ff}
 .master-row input[type=range]{flex:1;accent-color:#0ff}
@@ -537,6 +537,7 @@ function sendMaster(v){document.getElementById('masterVal').textContent=v;wsSend
 // Barve krogcev sliderjev po tipu kanala
 var CH_COLORS={1:'#0af',2:'#ff2020',3:'#20ff20',4:'#2060ff',5:'#ffffff',6:'#ffaa00',7:'#cc00ff',19:'#ffff00',14:'#ffff00',8:'#999',9:'#999',10:'#999',11:'#999',12:'#777',13:'#cc8800',0:'#0af',21:'#aaff00',22:'#00ffcc',23:'#ffd070',24:'#ffe0a0'};
 var CH_LIGHT_TYPES=new Set([1,2,3,4,5,6,7,21,22,24]); // intensity + vsi barvni kanali
+var CH_MOVEMENT_TYPES=new Set([8,9,10,11]); // pan, pan_fine, tilt, tilt_fine
 function chColor(t){return CH_COLORS[t]||'#0af'}
 // Podlage fixture-ov
 var FX_BG=['#1a1a2e','#1e2a1a','#2a1a2a','#2a261a','#1a2a2a','#2a1a1a','#1e1e30','#2a1e1a'];
@@ -1195,6 +1196,7 @@ function fsFullOn(fi,press){
   if(press){
     fsFullOnState[fi]={};
     f.channels.forEach((ch,ci)=>{
+      if(CH_MOVEMENT_TYPES.has(ch.type)) return;
       fsFullOnState[fi][ci]=ch.currentValue||0;
       wsSend({cmd:'fxch',f:f.idx,c:ci,v:CH_LIGHT_TYPES.has(ch.type)?255:0});
     });
@@ -1327,6 +1329,7 @@ function fsGrpFullOn(gi,press){
       if(!f.channels)return;
       fsGrpFullOnState[gi][i]={};
       f.channels.forEach((ch,ci)=>{
+        if(CH_MOVEMENT_TYPES.has(ch.type)) return;
         fsGrpFullOnState[gi][i][ci]=ch.currentValue||0;
         wsSend({cmd:'fxch',f:f.idx,c:ci,v:CH_LIGHT_TYPES.has(ch.type)?255:0});
       });
