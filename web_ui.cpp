@@ -1042,5 +1042,19 @@ void webLoop() {
     }
   }
 
+  // Fixture output vrednosti za prikaz (dejanski DMX izhod z beatom, master/group dimmerji)
+  const uint8_t* outVals=_mix->getDmxOutput();
+  JsonArray fxo=doc["fxo"].to<JsonArray>();
+  for(int i=0;i<MAX_FIXTURES;i++){
+    const PatchEntry* fx=_fix->getFixture(i);
+    if(!fx||!fx->active){fxo.add(nullptr);continue;}
+    JsonArray cho=fxo.add<JsonArray>();
+    uint8_t chCount=_fix->fixtureChannelCount(i);
+    for(int c=0;c<chCount;c++){
+      uint16_t addr=fx->dmxAddress+c-1;
+      cho.add(addr<DMX_MAX_CHANNELS?outVals[addr]:0);
+    }
+  }
+
   String json; serializeJson(doc,json); _ws->textAll(json); _ws->cleanupClients();
 }
