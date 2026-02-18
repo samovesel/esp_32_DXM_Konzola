@@ -212,7 +212,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .lay-fx-item{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid #172517;cursor:grab;touch-action:none;font-size:0.82em;user-select:none;color:#aaa}
 .lay-fx-item:hover{background:#182818}
 .lay-fx-item.placed{opacity:0.4}
-.lay-fx-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid #444}
+.lay-fx-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:2px solid #444}
 .lx-popup{position:fixed;z-index:220;background:#101a10;border:1px solid #27ae60;border-radius:10px;padding:14px 16px;min-width:235px;max-width:280px;box-shadow:0 8px 40px rgba(0,0,0,0.9)}
 .lx-popup h4{color:#27ae60;margin:0 0 10px;font-size:0.92em;padding-right:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lx-x{position:absolute;top:10px;right:10px;background:none;border:none;color:#555;font-size:1.1em;cursor:pointer;padding:2px 6px;line-height:1}
@@ -1278,6 +1278,28 @@ function getFxOutputColor(fi){
   r=Math.round(r*dim/255);g=Math.round(g*dim/255);b=Math.round(b*dim/255);
   var bri=Math.round((r+g+b)/3*100/255);
   return{css:'rgb('+r+','+g+','+b+')',bri:bri};
+}
+// Barva iz DMX izhoda BREZ dimerja — za border pike (vedno kaže nastavljeno barvo)
+function getFxBorderColor(fi){
+  var f=fixtures[fi];
+  if(!f||!f.channels)return'#444';
+  var fxo=lastFxo&&lastFxo[f.idx];
+  if(!fxo)return'#444';
+  var r=0,g=0,b=0;
+  for(var i=0;i<f.channels.length&&i<fxo.length;i++){
+    var v=fxo[i]||0;
+    switch(f.channels[i].type){
+      case 2:r=Math.max(r,v);break;case 3:g=Math.max(g,v);break;case 4:b=Math.max(b,v);break;
+      case 5:r=Math.max(r,v);g=Math.max(g,v);b=Math.max(b,v);break;
+      case 6:r=Math.max(r,v);g=Math.max(g,Math.round(v*0.65));break;
+      case 7:r=Math.max(r,Math.round(v*0.5));b=Math.max(b,v);break;
+      case 19:r=Math.max(r,v);g=Math.max(g,v);break;
+      case 21:g=Math.max(g,v);b=Math.max(b,Math.round(v*0.5));break;
+      case 22:g=Math.max(g,v);b=Math.max(b,v);break;
+    }
+  }
+  if(r===0&&g===0&&b===0)return'#444';
+  return'rgb('+r+','+g+','+b+')';
 }
 function updateFsColorDots(){
   if(!fsActive)return;
@@ -2481,7 +2503,7 @@ function renderLayFixtures(){
   var h='';
   Object.keys(layData.fixturePositions).forEach(function(idx){
     var fi=+idx,pos=layData.fixturePositions[idx],f=fixtures[fi];if(!f)return;
-    var cx=pos.x,cy=pos.y,col=getFxLayColor(fi);
+    var cx=pos.x,cy=pos.y,col=getFxLayColor(fi),bcol=getFxBorderColor(fi);
     var isMH=hasChType(f,8)||hasChType(f,10);
     h+='<g class="lay-fx-grp" data-fi="'+fi+'" style="cursor:pointer">';
     if(isMH){
@@ -2489,9 +2511,9 @@ function renderLayFixtures(){
       var bc=col!=='#2a2a2a'?col:'rgb(180,180,180)';
       h+='<path class="lay-beam" d="M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.12)')+'" stroke="'+bc.replace('rgb(','rgba(').replace(')',',0.3)')+'" stroke-width="0.5" pointer-events="none"/>';
       h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.35)')+'" pointer-events="none"/>';
-      h+='<circle cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="#555" stroke-width="1.5"/>';
+      h+='<circle cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
     }else{
-      h+='<circle cx="'+cx+'" cy="'+cy+'" r="18" fill="'+col+'" stroke="#444" stroke-width="1.5"/>';
+      h+='<circle cx="'+cx+'" cy="'+cy+'" r="18" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
     }
     var nm=f.name.length>13?f.name.substring(0,12)+'…':f.name;
     h+='<text x="'+cx+'" y="'+(cy+30)+'" fill="#888" font-size="13" text-anchor="middle" pointer-events="none" font-family="sans-serif">'+escHtml(nm)+'</text>';
@@ -2545,9 +2567,9 @@ function renderLaySidebar(){
   var h='';
   fixtures.forEach(function(f,fi){
     if(!f)return;
-    var col=getFxLayColor(fi),isP=placed.has(fi);
+    var col=getFxLayColor(fi),bcol=getFxBorderColor(fi),isP=placed.has(fi);
     h+='<div class="lay-fx-item'+(isP?' placed':'')+'" data-fi="'+fi+'" title="'+(isP?'Že na odru (desni klik → odstrani)':'Povleci na oder')+'">';
-    h+='<div class="lay-fx-dot" style="background:'+col+'"></div><span>'+escHtml(f.name)+'</span></div>';
+    h+='<div class="lay-fx-dot" style="background:'+col+';border-color:'+bcol+'"></div><span>'+escHtml(f.name)+'</span></div>';
   });
   var list=document.getElementById('layFxList');
   list.innerHTML=h||'<p style="padding:10px;font-size:0.8em;color:#555">Ni fixture-ov</p>';
@@ -2615,9 +2637,9 @@ function updateLayColors(){
   var fg=document.getElementById('layFxG');
   if(fg){
     fg.querySelectorAll('.lay-fx-grp').forEach(function(g){
-      var fi=+g.dataset.fi,col=getFxLayColor(fi);
+      var fi=+g.dataset.fi,col=getFxLayColor(fi),bcol=getFxBorderColor(fi);
       var c=g.querySelector('circle');
-      if(c){c.setAttribute('fill',col);c.setAttribute('opacity','1');}
+      if(c){c.setAttribute('fill',col);c.setAttribute('stroke',bcol);c.setAttribute('opacity','1');}
       // Posodobi žarek za moving heade
       var beam=g.querySelector('.lay-beam');
       if(beam){
@@ -2642,10 +2664,11 @@ function updateLayColors(){
   var list=document.getElementById('layFxList');
   if(list){
     list.querySelectorAll('.lay-fx-item').forEach(function(item){
-      var fi=+item.dataset.fi,col=getFxLayColor(fi);
+      var fi=+item.dataset.fi,col=getFxLayColor(fi),bcol=getFxBorderColor(fi);
       var dot=item.querySelector('.lay-fx-dot');
       if(dot){
         dot.style.background=col;
+        dot.style.borderColor=bcol;
         dot.style.opacity='1';
       }
     });
