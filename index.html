@@ -209,8 +209,8 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .lx-popup h4{color:#27ae60;margin:0 0 10px;font-size:0.92em;padding-right:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lx-x{position:absolute;top:10px;right:10px;background:none;border:none;color:#555;font-size:1.1em;cursor:pointer;padding:2px 6px;line-height:1}
 .lx-x:hover{color:#fff}
-.lx-sv{width:150px;height:108px;cursor:crosshair;border-radius:3px;display:block}
-.lx-hue{width:150px;height:12px;cursor:ew-resize;border-radius:6px;margin-top:5px;display:block}
+.lx-wheel{width:150px;height:150px;cursor:crosshair;border-radius:50%;display:block;position:relative}
+.lx-wcur{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 3px #000;pointer-events:none;transform:translate(-50%,-50%);left:50%;top:50%}
 .lx-pal{display:flex;flex-wrap:wrap;gap:3px;margin:7px 0 4px}
 .lx-pc{width:22px;height:22px;border-radius:4px;border:2px solid transparent;cursor:pointer;transition:transform .1s,border-color .1s}
 .lx-pc:hover{transform:scale(1.18);border-color:#fff}
@@ -505,10 +505,10 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     <button onclick="exitLayoutEditor()" style="background:#1a3a1a;border:1px solid #27ae60;color:#27ae60;font-size:0.85em;padding:5px 10px;flex-shrink:0">&#x2715; Zapri</button>
     <button class="bo" id="layBoBtn" onclick="toggleBlackout()" style="font-size:0.85em;padding:5px 12px;flex-shrink:0">BO</button>
     <button onclick="doUndo()" id="layUndoBtn" style="background:#555;color:#fff;padding:4px 8px;font-size:0.78em;border:none;border-radius:4px;cursor:pointer;display:none;flex-shrink:0" title="Razveljavi">&#x21A9;</button>
-    <button onclick="laySaveScene()" style="background:#1a6;color:#fff;padding:4px 8px;font-size:0.78em;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" title="Shrani sceno">&#x1F4BE; Shrani</button>
+    <button onclick="laySaveScene()" style="background:#1a6;color:#fff;padding:4px 8px;font-size:0.78em;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" title="Shrani sceno">&#x1F4BE; Shrani sceno</button>
     <select id="laySelect" onchange="loadLayoutByName(this.value)" style="background:#0f1f0f;color:#ccc;border:1px solid #1e3a1e;border-radius:4px;padding:4px 6px;font-size:0.78em;max-width:100px;flex-shrink:0"><option value="">— novi —</option></select>
-    <button onclick="saveLayout()" style="background:#27ae60;color:#000;font-size:0.78em;padding:4px 6px;font-weight:bold;flex-shrink:0" title="Shrani layout">&#x1F4BE;</button>
-    <button onclick="deleteLayout()" style="background:#1e1e1e;color:#666;border:1px solid #333;font-size:0.78em;padding:4px 6px;flex-shrink:0">Briši</button>
+    <button onclick="saveLayout()" style="background:#27ae60;color:#000;font-size:0.78em;padding:4px 6px;font-weight:bold;flex-shrink:0" title="Shrani layout">&#x1F4BE; Shrani layout</button>
+    <button onclick="deleteLayout()" style="background:#1e1e1e;color:#666;border:1px solid #333;font-size:0.78em;padding:4px 6px;flex-shrink:0">Izbriši layout</button>
     <button id="layStageBtn" onclick="toggleLayStageEdit()" style="background:#1e3a1e;color:#6a6;border:1px solid #2a4a2a;font-size:0.78em;padding:4px 8px;flex-shrink:0">Oder</button>
     <button onclick="toggleLaySidebar()" style="background:#1e3a1e;color:#6a6;border:1px solid #2a4a2a;font-size:0.78em;padding:4px 8px;flex-shrink:0">&#9776; Luči</button>
     <span id="layTip" style="font-size:0.7em;color:#4a7a4a;flex-shrink:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
@@ -555,9 +555,9 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     <span id="lxDimV" style="font-size:0.82em;color:#0ff;width:26px;text-align:right;flex-shrink:0">0</span>
   </div>
   <div style="display:flex;gap:10px;align-items:flex-start">
-    <div>
-      <canvas class="lx-sv" id="lxSvC" width="150" height="108"></canvas>
-      <canvas class="lx-hue" id="lxHueC" width="150" height="12"></canvas>
+    <div class="lx-wheel" id="lxWheelWrap">
+      <canvas id="lxWheelC" width="150" height="150" style="width:150px;height:150px;display:block;border-radius:50%"></canvas>
+      <div class="lx-wcur" id="lxWCur"></div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:2px">
       <div id="lxPrev" style="width:32px;height:32px;border-radius:6px;border:2px solid #444;background:#000"></div>
@@ -846,6 +846,7 @@ function syncFxValues(fxv){
       if(ldim&&document.activeElement!==ldim){
         var dv=getFxChVal(lxf,1);ldim.value=dv;
         var ldv=document.getElementById('lxDimV');if(ldv)ldv.textContent=dv;
+        lxUpdatePrev();
       }
     }
   }
@@ -2650,7 +2651,7 @@ function renderLayBeatRow(){
 
 // ---- Save / Load ----
 function loadLayoutList(){
-  fetch('/api/layouts').then(function(r){return r.json();}).then(function(names){
+  fetch('/api/layouts?_t='+Date.now()).then(function(r){return r.json();}).then(function(names){
     var sel=document.getElementById('laySelect'),cur=sel.value;
     sel.innerHTML='<option value="">— novi —</option>';
     (names||[]).forEach(function(n){sel.innerHTML+='<option value="'+escHtml(n)+'"'+(n===cur?' selected':'')+'>'+escHtml(n)+'</option>';});
@@ -2678,7 +2679,7 @@ function deleteLayout(){
   fetch('/api/layout/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})})
     .then(function(r){return r.json();}).then(function(d){
       showMsg(d.ok?'Izbrisano':'Napaka',d.ok);
-      if(d.ok){layData={name:'',date:'',stageRects:[],fixturePositions:{}};loadLayoutList();renderLayLayout();}
+      if(d.ok){layData={name:'',date:'',stageRects:[],fixturePositions:{}};document.getElementById('laySelect').value='';loadLayoutList();renderLayLayout();}
     });
 }
 function newLayout(){
@@ -2701,7 +2702,7 @@ function openLxPopup(fi,cx,cy){
   document.getElementById('lxDim').value=dv;document.getElementById('lxDimV').textContent=dv;
   var c=getFxColorNoDim(f),rgb=(c.css.match(/\d+/g)||['0','0','0']);
   var hsv=rgbToHsv(+rgb[0],+rgb[1],+rgb[2]);lxH=hsv[0];lxS=hsv[1];lxV=hsv[2];
-  lxDrawHue();lxDrawSv();lxUpdatePrev();
+  lxDrawWheel();lxUpdateWCur();lxUpdatePrev();
   document.getElementById('lxPal').innerHTML=LX_PAL.map(function(p){
     return '<div class="lx-pc" style="background:'+p.css+'" onclick="lxApplyPal('+p.r+','+p.g+','+p.b+')" title="'+p.css+'"></div>';
   }).join('');
@@ -2716,7 +2717,7 @@ function openLxPopup(fi,cx,cy){
   pop.style.left=Math.max(8,px)+'px';pop.style.top=Math.max(8,py)+'px';
 }
 function closeLxPopup(){document.getElementById('lxPopup').style.display='none';document.getElementById('lxOverlay').style.display='none';lxFxIdx=-1;}
-function lxDimChange(v){document.getElementById('lxDimV').textContent=v;if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=+v;wsSend({cmd:'fxch',f:f.idx,c:ci,v:+v});}});updateLayColors();}
+function lxDimChange(v){document.getElementById('lxDimV').textContent=v;if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=+v;wsSend({cmd:'fxch',f:f.idx,c:ci,v:+v});}});lxUpdatePrev();updateLayColors();}
 var lxFoState=null,lxBoState=null;
 function lxFullOn(press){
   if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f||!f.channels)return;
@@ -2781,11 +2782,25 @@ function lxToConsole(){
 }
 function lxSendColor(r,g,b){
   if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f||!f.channels)return;
+  // Pametna pretvorba: izračunaj W, Amber, UV iz RGB
+  var hasW=false,hasA=false,hasUV=false,hasL=false,hasC=false,hasWW=false;
+  f.channels.forEach(function(ch){
+    if(ch.type===5)hasW=true;else if(ch.type===6)hasA=true;else if(ch.type===7)hasUV=true;
+    else if(ch.type===21)hasL=true;else if(ch.type===22)hasC=true;else if(ch.type===24)hasWW=true;
+  });
+  var wOut=0,aOut=0,uvOut=0,lOut=0,cOut=0,wwOut=0;
+  if(hasW)wOut=Math.min(r,g,b);
+  if(hasA&&r>100&&g>50&&b<100&&b<Math.min(r,g)*0.5)aOut=Math.min(r,g);
+  if(hasUV&&r>80&&b>150&&g<50)uvOut=Math.min(r,b);
+  if(hasL&&g>100&&b>50&&r<80)lOut=Math.round(Math.min(g,b)*0.7);
+  if(hasC&&g>100&&b>100&&r<80)cOut=Math.round(Math.min(g,b)*0.8);
+  if(hasWW){var warm=Math.min(r,g,Math.round(b*0.5));if(r>g&&r>100)wwOut=Math.round(warm*0.8);}
   f.channels.forEach(function(ch,ci){
     var v=-1;
     if(ch.type===2)v=r;else if(ch.type===3)v=g;else if(ch.type===4)v=b;
-    else if(ch.type===5)v=Math.round((r+g+b)/3);
-    if(v>=0){ch.currentValue=v;wsSend({cmd:'fxch',f:f.idx,c:ci,v:v});}
+    else if(ch.type===5)v=wOut;else if(ch.type===6)v=aOut;else if(ch.type===7)v=uvOut;
+    else if(ch.type===21)v=lOut;else if(ch.type===22)v=cOut;else if(ch.type===24)v=wwOut;
+    if(v>=0){ch.currentValue=Math.round(v);wsSend({cmd:'fxch',f:f.idx,c:ci,v:Math.round(v)});}
   });
   updateLayColors();
 }
@@ -2798,7 +2813,7 @@ function lxApplyPal(r,g,b){
   // Send full-brightness color (V=1)
   var bright=hsvToRgb(lxH,lxS,1);
   lxSendColor(bright[0],bright[1],bright[2]);
-  lxDrawSv();lxUpdatePrev();
+  lxUpdateWCur();lxUpdatePrev();
 }
 
 // ---- HSV color picker ----
@@ -2814,52 +2829,53 @@ function rgbToHsv(r,g,b){
   return[h,s,v];
 }
 function rgbToHex(r,g,b){return'#'+[r,g,b].map(function(x){return x.toString(16).padStart(2,'0');}).join('');}
-function lxDrawHue(){
-  var c=document.getElementById('lxHueC');if(!c)return;
-  var ctx=c.getContext('2d'),g=ctx.createLinearGradient(0,0,c.width,0);
-  for(var i=0;i<=6;i++)g.addColorStop(i/6,'hsl('+(i*60)+',100%,50%)');
-  ctx.fillStyle=g;ctx.fillRect(0,0,c.width,c.height);
-  var cx=lxH/360*c.width;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(cx-2,0,4,c.height);
+function lxDrawWheel(){
+  var c=document.getElementById('lxWheelC');if(!c)return;
+  var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=cx;
+  var img=ctx.createImageData(w,h);
+  for(var y=0;y<h;y++){for(var x=0;x<w;x++){
+    var dx=x-cx,dy=y-cy,dist=Math.sqrt(dx*dx+dy*dy);
+    var idx=(y*w+x)*4;
+    if(dist>r){img.data[idx]=0;img.data[idx+1]=0;img.data[idx+2]=0;img.data[idx+3]=0;continue;}
+    var ang=Math.atan2(dy,dx)*(180/Math.PI);if(ang<0)ang+=360;
+    var hue=(ang+90)%360,sat=dist/r;
+    var rgb=hsvToRgb(hue,sat,1);
+    img.data[idx]=rgb[0];img.data[idx+1]=rgb[1];img.data[idx+2]=rgb[2];img.data[idx+3]=255;
+  }}
+  ctx.putImageData(img,0,0);
 }
-function lxDrawSv(){
-  var c=document.getElementById('lxSvC');if(!c)return;
-  var ctx=c.getContext('2d'),w=c.width,h=c.height,base=hsvToRgb(lxH,1,1);
-  var gH=ctx.createLinearGradient(0,0,w,0);gH.addColorStop(0,'#fff');gH.addColorStop(1,'rgb('+base+')');
-  ctx.fillStyle=gH;ctx.fillRect(0,0,w,h);
-  var gV=ctx.createLinearGradient(0,0,0,h);gV.addColorStop(0,'rgba(0,0,0,0)');gV.addColorStop(1,'#000');
-  ctx.fillStyle=gV;ctx.fillRect(0,0,w,h);
-  var px=lxS*w,py=(1-lxV)*h;
-  ctx.strokeStyle=lxV>0.5?'#000':'#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.stroke();
+function lxUpdateWCur(){
+  var cur=document.getElementById('lxWCur');if(!cur)return;
+  if(lxS<0.01){cur.style.left='50%';cur.style.top='50%';return;}
+  var hueRad=(lxH-90)*(Math.PI/180),dist=lxS*75;
+  cur.style.left=(75+Math.cos(hueRad)*dist)+'px';
+  cur.style.top=(75+Math.sin(hueRad)*dist)+'px';
 }
 function lxUpdatePrev(){
-  var rgb=hsvToRgb(lxH,lxS,lxV),hex=rgbToHex(rgb[0],rgb[1],rgb[2]);
-  document.getElementById('lxPrev').style.background=hex;document.getElementById('lxHex').textContent=hex;
+  var rgb=hsvToRgb(lxH,lxS,1);
+  var dim=(+document.getElementById('lxDim').value)/255;
+  var dr=Math.round(rgb[0]*dim),dg=Math.round(rgb[1]*dim),db=Math.round(rgb[2]*dim);
+  var hex=rgbToHex(dr,dg,db);
+  document.getElementById('lxPrev').style.background=hex;document.getElementById('lxHex').textContent=rgbToHex(rgb[0],rgb[1],rgb[2]);
 }
 function bindLxCanvas(){
-  var sv=document.getElementById('lxSvC'),hue=document.getElementById('lxHueC');
-  if(!sv||!hue)return;
-  var svD=false;
-  function onSv(e){
-    var r=sv.getBoundingClientRect();
-    lxS=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
-    lxV=Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height));
-    lxDrawSv();lxUpdatePrev();
-    // Sync dimmer with V, send full-brightness color
-    var dimVal=Math.round(lxV*255);
-    document.getElementById('lxDim').value=dimVal;document.getElementById('lxDimV').textContent=dimVal;
-    if(lxFxIdx>=0){var f=fixtures[lxFxIdx];if(f)f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=dimVal;wsSend({cmd:'fxch',f:f.idx,c:ci,v:dimVal})}});}
-    var bright=hsvToRgb(lxH,lxS,1);lxSendColor(bright[0],bright[1],bright[2]);
+  var wh=document.getElementById('lxWheelC');if(!wh)return;
+  var active=false;
+  function onWheel(e){
+    var rect=wh.getBoundingClientRect();
+    var cx=rect.width/2,cy=rect.height/2;
+    var px=(e.clientX-rect.left),py=(e.clientY-rect.top);
+    var dx=px-cx,dy=py-cy;
+    var dist=Math.sqrt(dx*dx+dy*dy),maxDist=cx;
+    if(dist>maxDist){var sc=maxDist/dist;dx*=sc;dy*=sc;dist=maxDist;}
+    var ang=Math.atan2(dy,dx)*(180/Math.PI);if(ang<0)ang+=360;
+    lxH=(ang+90)%360;lxS=dist/maxDist;
+    lxUpdateWCur();lxUpdatePrev();
+    var rgb=hsvToRgb(lxH,lxS,1);lxSendColor(rgb[0],rgb[1],rgb[2]);
   }
-  sv.onpointerdown=function(e){e.preventDefault();sv.setPointerCapture(e.pointerId);svD=true;onSv(e);};
-  sv.onpointermove=function(e){if(svD)onSv(e);};sv.onpointerup=function(){svD=false;};
-  var hD=false;
-  function onHue(e){
-    var r=hue.getBoundingClientRect();
-    lxH=Math.max(0,Math.min(359,(e.clientX-r.left)/r.width*360));
-    lxDrawHue();lxDrawSv();lxUpdatePrev();var bright=hsvToRgb(lxH,lxS,1);lxSendColor(bright[0],bright[1],bright[2]);
-  }
-  hue.onpointerdown=function(e){e.preventDefault();hue.setPointerCapture(e.pointerId);hD=true;onHue(e);};
-  hue.onpointermove=function(e){if(hD)onHue(e);};hue.onpointerup=function(){hD=false;};
+  wh.onpointerdown=function(e){e.preventDefault();wh.setPointerCapture(e.pointerId);active=true;onWheel(e);};
+  wh.onpointermove=function(e){if(active)onWheel(e);};
+  wh.onpointerup=function(){active=false;};wh.onpointercancel=function(){active=false;};
 }
 
 // bindHorizontalSliders: fader način za horizontalne sliderje (brez skoka na pozicijo)
