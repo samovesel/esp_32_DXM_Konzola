@@ -817,6 +817,8 @@ static void apiGetLayouts(AsyncWebServerRequest* req) {
     while (f) {
       if (!f.isDirectory()) {
         String n = f.name();
+        int sl = n.lastIndexOf('/');
+        if (sl >= 0) n = n.substring(sl + 1);
         if (n.endsWith(".json")) arr.add(n.substring(0, n.length()-5));
       }
       f = dir.openNextFile();
