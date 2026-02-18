@@ -120,7 +120,11 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .fs-top .fs-master .val{font-size:1.1em;color:#0ff;width:36px;text-align:center}
 .fs-mid{flex:1;overflow-x:auto;overflow-y:auto;padding:6px;-webkit-overflow-scrolling:touch}
 .fs-mid .console{min-height:100%}
-.fs-bottom{flex-shrink:0;background:#16213e;border-top:1px solid #333;padding:4px 8px}
+.fs-bottom{flex-shrink:0;background:#16213e;border-top:1px solid #333;padding:4px 8px;position:relative}
+.fs-bottom-toggle{position:absolute;right:4px;top:2px;background:none;border:1px solid #555;color:#888;font-size:0.75em;padding:1px 6px;border-radius:3px;cursor:pointer;z-index:5;line-height:1.2}
+.fs-bottom-toggle:hover{color:#fff;border-color:#888}
+.fs-bottom.collapsed .fs-beat-row,.fs-bottom.collapsed .fs-scene-row,.fs-bottom.collapsed .fs-grp-row,.fs-bottom.collapsed .fs-cf-bar{display:none}
+.fs-bottom.collapsed{padding:2px 8px}
 .fs-scene-row{display:flex;gap:4px;overflow-x:auto;padding:3px 0;-webkit-overflow-scrolling:touch;align-items:center}
 .fs-scene-row .fs-lbl{color:#888;font-size:0.7em;white-space:nowrap;flex-shrink:0;margin-right:4px}
 .fs-scene-row button.fs-scn{flex-shrink:0;padding:6px 12px;font-size:0.8em;background:#222;color:#aaa;border:1px solid #333;border-radius:4px;white-space:nowrap}
@@ -495,7 +499,8 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   <div class="fs-mid">
     <div class="console" id="fsConsoleGrid"></div>
   </div>
-  <div class="fs-bottom">
+  <div class="fs-bottom" id="fsBotPanel">
+    <button class="fs-bottom-toggle" onclick="toggleFsBottom('fsBotPanel',this)" title="Skrij/pokaži">_</button>
     <div class="fs-cf-bar"><div class="fs-cf-fill" id="fsCfBar"></div></div>
     <div class="fs-beat-row" id="fsBeatRow"></div>
     <div class="fs-scene-row" id="fsSceneRow"></div>
@@ -541,7 +546,8 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
       <div id="layFxList"></div>
     </div>
   </div>
-  <div class="fs-bottom" id="layBottom">
+  <div class="fs-bottom" id="layBotPanel">
+    <button class="fs-bottom-toggle" onclick="toggleFsBottom('layBotPanel',this)" title="Skrij/pokaži">_</button>
     <div class="fs-cf-bar"><div class="fs-cf-fill" id="layCfFill"></div></div>
     <div class="fs-beat-row" id="layBeatRow"></div>
     <div class="fs-scene-row" id="laySceneRow"></div>
@@ -2360,6 +2366,7 @@ function uploadConfig(input){
   });
 }
 function showMsg(t,ok){const m=document.getElementById('msg');m.textContent=t;m.className=ok?'ok':'err';setTimeout(()=>m.className='',3000)}
+function toggleFsBottom(id,btn){var el=document.getElementById(id);if(!el)return;el.classList.toggle('collapsed');btn.textContent=el.classList.contains('collapsed')?'\u25b4':'_';}
 
 // ============================================================================
 //  2D LAYOUT EDITOR
