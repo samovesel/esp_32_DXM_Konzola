@@ -2684,10 +2684,10 @@ function deleteLayout(){
   var name=document.getElementById('laySelect').value;
   if(!name){showMsg('Izberi layout za brisanje',false);return;}
   if(!confirm('Izbrisati layout "'+name+'"?'))return;
-  fetch('/api/layout/delete?name='+encodeURIComponent(name),{method:'POST'})
+  fetch('/api/layout/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})})
     .then(function(r){return r.json();}).then(function(d){
       showMsg(d.ok?'Izbrisano':'Napaka: '+(d.error||'neznana'),d.ok);
-      if(d.ok){layData={name:'',date:'',stageRects:[],fixturePositions:{}};var sel=document.getElementById('laySelect');var opt=sel.querySelector('option[value="'+CSS.escape(name)+'"]');if(opt)opt.remove();sel.value='';loadLayoutList();renderLayLayout();}
+      if(d.ok){layData={name:'',date:'',stageRects:[],fixturePositions:{}};document.getElementById('laySelect').value='';loadLayoutList();renderLayLayout();}
     }).catch(function(e){showMsg('Napaka pri brisanju: '+e,false);});
 }
 function newLayout(){
