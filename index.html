@@ -197,7 +197,11 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 /* ============ 2D Layout Editor ============ */
 .lay-editor{position:fixed;top:0;left:0;width:100%;height:100%;background:#090909;z-index:60;display:none;flex-direction:column}
 .lay-editor.active{display:flex}
-.lay-top{display:flex;align-items:center;gap:5px;padding:5px 8px;background:#0d1a0d;border-bottom:2px solid #27ae60;flex-shrink:0;flex-wrap:wrap}
+.lay-top{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#1a1a2e;border-bottom:2px solid #0af;flex-shrink:0;flex-wrap:wrap}
+.lay-top .fs-master{display:flex;align-items:center;gap:8px;flex:1;min-width:150px}
+.lay-top .fs-master label{font-weight:bold;color:#0ff;margin:0;font-size:0.9em;white-space:nowrap}
+.lay-top .fs-master input[type=range]{flex:1;accent-color:#0ff}
+.lay-top .fs-master .val{font-size:1.1em;color:#0ff;width:36px;text-align:center}
 .lay-canvas{flex:1;position:relative;overflow:hidden;background:#0d0d0d}
 .lay-sidebar{position:absolute;right:0;top:0;height:100%;width:165px;background:#101a10;border-left:1px solid #1e3a1e;overflow-y:auto;z-index:5;transition:transform 0.2s;touch-action:pan-y}
 .lay-sidebar.closed{transform:translateX(100%)}
@@ -502,20 +506,19 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 <!-- ============ 2D Layout Editor ============ -->
 <div id="layEditor" class="lay-editor">
   <div class="lay-top">
-    <button onclick="exitLayoutEditor()" style="background:#1a3a1a;border:1px solid #27ae60;color:#27ae60;font-size:0.85em;padding:5px 10px;flex-shrink:0">&#x2715; Zapri</button>
-    <button class="bo" id="layBoBtn" onclick="toggleBlackout()" style="font-size:0.85em;padding:5px 12px;flex-shrink:0">BO</button>
-    <button onclick="doUndo()" id="layUndoBtn" style="background:#555;color:#fff;padding:4px 8px;font-size:0.78em;border:none;border-radius:4px;cursor:pointer;display:none;flex-shrink:0" title="Razveljavi">&#x21A9;</button>
-    <button onclick="laySaveScene()" style="background:#1a6;color:#fff;padding:4px 8px;font-size:0.78em;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" title="Shrani sceno">&#x1F4BE; Shrani sceno</button>
-    <select id="laySelect" onchange="loadLayoutByName(this.value)" style="background:#0f1f0f;color:#ccc;border:1px solid #1e3a1e;border-radius:4px;padding:4px 6px;font-size:0.78em;max-width:100px;flex-shrink:0"><option value="">— novi —</option></select>
-    <button onclick="saveLayout()" style="background:#27ae60;color:#000;font-size:0.78em;padding:4px 6px;font-weight:bold;flex-shrink:0" title="Shrani layout">&#x1F4BE; Shrani layout</button>
-    <button onclick="deleteLayout()" style="background:#1e1e1e;color:#666;border:1px solid #333;font-size:0.78em;padding:4px 6px;flex-shrink:0">Izbriši layout</button>
-    <button id="layStageBtn" onclick="toggleLayStageEdit()" style="background:#1e3a1e;color:#6a6;border:1px solid #2a4a2a;font-size:0.78em;padding:4px 8px;flex-shrink:0">Oder</button>
-    <button onclick="toggleLaySidebar()" style="background:#1e3a1e;color:#6a6;border:1px solid #2a4a2a;font-size:0.78em;padding:4px 8px;flex-shrink:0">&#9776; Luči</button>
-    <span id="layTip" style="font-size:0.7em;color:#4a7a4a;flex-shrink:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-    <div style="display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0;min-width:120px;max-width:200px">
-      <label style="font-weight:bold;color:#0ff;margin:0;font-size:0.78em;white-space:nowrap">M</label>
-      <input type="range" min="0" max="255" value="255" id="layMasterSlider" oninput="sendMaster(this.value)" style="flex:1;accent-color:#0ff;min-width:60px">
-      <span id="layMasterVal" style="font-size:0.85em;color:#0ff;width:28px;text-align:center;flex-shrink:0">255</span>
+    <button class="fs-close" onclick="exitLayoutEditor()">&#x2715; Izhod</button>
+    <button class="bo" id="layBoBtn" onclick="toggleBlackout()">BLACKOUT</button>
+    <button id="layUndoBtn" onclick="doUndo()" style="background:#555;color:#fff;padding:4px 10px;font-size:0.8em;display:none;border:none;border-radius:4px;cursor:pointer" title="Razveljavi">&#x21A9; Undo</button>
+    <button onclick="laySaveScene()" style="background:#1a6;color:#fff;padding:4px 10px;font-size:0.8em;border:none;border-radius:4px;cursor:pointer" title="Shrani sceno">&#x1F4BE; Shrani sceno</button>
+    <select id="laySelect" onchange="loadLayoutByName(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #0af;border-radius:4px;padding:4px 6px;font-size:0.8em;max-width:110px;flex-shrink:0"><option value="">— novi —</option></select>
+    <button onclick="saveLayout()" style="background:#27ae60;color:#000;font-size:0.8em;padding:4px 10px;font-weight:bold;border:none;border-radius:4px;cursor:pointer;flex-shrink:0" title="Shrani layout">&#x1F4BE; Shrani layout</button>
+    <button onclick="deleteLayout()" style="background:#333;color:#aaa;border:1px solid #555;font-size:0.8em;padding:4px 10px;border-radius:4px;cursor:pointer;flex-shrink:0">Izbriši layout</button>
+    <button id="layStageBtn" onclick="toggleLayStageEdit()" style="background:#555;color:#fff;border:none;font-size:0.8em;padding:4px 10px;border-radius:4px;cursor:pointer;flex-shrink:0">Oder</button>
+    <button onclick="toggleLaySidebar()" style="background:#555;color:#fff;border:none;font-size:0.8em;padding:4px 10px;border-radius:4px;cursor:pointer;flex-shrink:0">&#9776; Luči</button>
+    <div class="fs-master">
+      <label>Master</label>
+      <input type="range" min="0" max="255" value="255" id="layMasterSlider" oninput="sendMaster(this.value)">
+      <span class="val" id="layMasterVal">255</span>
     </div>
   </div>
   <div class="lay-canvas" id="layCanvas">
@@ -2354,8 +2357,8 @@ function exitLayoutEditor(){layActive=false;document.getElementById('layEditor')
 function toggleLayStageEdit(){
   layStageEdit=!layStageEdit;
   var b=document.getElementById('layStageBtn');
-  b.style.background=layStageEdit?'#27ae60':'#1e3a1e';b.style.color=layStageEdit?'#000':'#6a6';
-  document.getElementById('layTip').textContent=layStageEdit?'Povleci za risanje odra · klik ✕ za brisanje':'';
+  b.style.background=layStageEdit?'#27ae60':'#555';b.style.color=layStageEdit?'#000':'#fff';
+  var tip=document.getElementById('layTip');if(tip)tip.textContent=layStageEdit?'Povleci za risanje odra · klik ✕ za brisanje':'';
   renderLayLayout();
 }
 function toggleLaySidebar(){document.getElementById('laySidebar').classList.toggle('closed')}
@@ -2610,13 +2613,13 @@ function renderLayGroups(){
   if(!has)h+='<span style="color:#555;font-size:0.8em;margin-left:6px">Ni skupin</span>';
   row.innerHTML=h;
   row.querySelectorAll('.fs-grp-name').forEach(function(el){el.addEventListener('click',function(){fsToggleGroup(+el.dataset.gi);renderLayGroups();});});
-  // Bind hold buttons helper
+  // Bind hold buttons helper (pointer events + capture za zanesljivo delovanje)
   function bindHold(selector,pressFn,releaseFn){
     row.querySelectorAll(selector).forEach(function(btn){
       var gi=+btn.dataset.gi;
-      var p=function(){pressFn(gi,true)},r=function(){releaseFn(gi)};
-      btn.addEventListener('mousedown',function(e){e.preventDefault();p()});btn.addEventListener('mouseup',r);btn.addEventListener('mouseleave',r);
-      btn.addEventListener('touchstart',function(e){e.preventDefault();p()},{passive:false});btn.addEventListener('touchend',function(e){e.preventDefault();r()});btn.addEventListener('touchcancel',r);
+      btn.onpointerdown=function(e){e.preventDefault();btn.setPointerCapture(e.pointerId);pressFn(gi,true);};
+      btn.onpointerup=function(){releaseFn(gi);};
+      btn.onpointercancel=function(){releaseFn(gi);};
     });
   }
   bindHold('.fs-grp-bo',fsGrpBlackout,function(gi){if(fsGrpBoState[gi])fsGrpBlackout(gi,false)});
@@ -2676,11 +2679,11 @@ function deleteLayout(){
   var name=document.getElementById('laySelect').value;
   if(!name){showMsg('Izberi layout za brisanje',false);return;}
   if(!confirm('Izbrisati layout "'+name+'"?'))return;
-  fetch('/api/layout/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})})
+  fetch('/api/layout/delete?name='+encodeURIComponent(name),{method:'POST'})
     .then(function(r){return r.json();}).then(function(d){
-      showMsg(d.ok?'Izbrisano':'Napaka',d.ok);
+      showMsg(d.ok?'Izbrisano':'Napaka: '+(d.error||'neznana'),d.ok);
       if(d.ok){layData={name:'',date:'',stageRects:[],fixturePositions:{}};document.getElementById('laySelect').value='';loadLayoutList();renderLayLayout();}
-    });
+    }).catch(function(e){showMsg('Napaka pri brisanju: '+e,false);});
 }
 function newLayout(){
   if(!confirm('Nov layout? Neshranjene spremembe bodo izgubljene.'))return;
@@ -2722,29 +2725,32 @@ var lxFoState=null,lxBoState=null;
 function lxFullOn(press){
   if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f||!f.channels)return;
   if(press){
+    if(lxFoState)return; // Že pritisnjeno
     lxFoState={};
     f.channels.forEach(function(ch,ci){
       if(CH_MOVEMENT_TYPES.has(ch.type))return;
       lxFoState[ci]=ch.currentValue||0;
-      ch.currentValue=CH_LIGHT_TYPES.has(ch.type)?255:0;
-      wsSend({cmd:'fxch',f:f.idx,c:ci,v:ch.currentValue});
+      var nv=CH_LIGHT_TYPES.has(ch.type)?255:0;
+      ch.currentValue=nv;
+      wsSend({cmd:'fxch',f:f.idx,c:ci,v:nv});
     });
     document.getElementById('lxDim').value=255;document.getElementById('lxDimV').textContent='255';
   }else{
     if(!lxFoState)return;
-    Object.keys(lxFoState).forEach(function(ci){
-      var v=lxFoState[ci];f.channels[+ci].currentValue=v;
+    var saved=lxFoState;lxFoState=null;
+    Object.keys(saved).forEach(function(ci){
+      var v=saved[ci];f.channels[+ci].currentValue=v;
       wsSend({cmd:'fxch',f:f.idx,c:+ci,v:v});
     });
     var dv=getFxChVal(f,1);
     document.getElementById('lxDim').value=dv;document.getElementById('lxDimV').textContent=dv;
-    lxFoState=null;
   }
-  updateLayColors();
+  lxUpdatePrev();updateLayColors();
 }
 function lxBlackout(press){
   if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f||!f.channels)return;
   if(press){
+    if(lxBoState)return; // Že pritisnjeno
     lxBoState={};
     f.channels.forEach(function(ch,ci){
       if(ch.type===1){lxBoState[ci]=ch.currentValue||0;ch.currentValue=0;wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});}
@@ -2752,27 +2758,29 @@ function lxBlackout(press){
     document.getElementById('lxDim').value=0;document.getElementById('lxDimV').textContent='0';
   }else{
     if(!lxBoState)return;
-    Object.keys(lxBoState).forEach(function(ci){
-      var v=lxBoState[ci];f.channels[+ci].currentValue=v;
+    var saved=lxBoState;lxBoState=null;
+    Object.keys(saved).forEach(function(ci){
+      var v=saved[ci];f.channels[+ci].currentValue=v;
       wsSend({cmd:'fxch',f:f.idx,c:+ci,v:v});
     });
     var dv=getFxChVal(f,1);
     document.getElementById('lxDim').value=dv;document.getElementById('lxDimV').textContent=dv;
-    lxBoState=null;
   }
-  updateLayColors();
+  lxUpdatePrev();updateLayColors();
 }
+var _lxFoBoBound=false;
 function bindLxFoBo(){
+  if(_lxFoBoBound)return;_lxFoBoBound=true;
   var fo=document.getElementById('lxFoBtn'),bo=document.getElementById('lxBoBtn');
   if(fo){
-    var pFo=function(){lxFullOn(true)},rFo=function(){if(lxFoState)lxFullOn(false)};
-    fo.addEventListener('mousedown',function(e){e.preventDefault();pFo()});fo.addEventListener('mouseup',rFo);fo.addEventListener('mouseleave',rFo);
-    fo.addEventListener('touchstart',function(e){e.preventDefault();pFo()},{passive:false});fo.addEventListener('touchend',function(e){e.preventDefault();rFo()});fo.addEventListener('touchcancel',rFo);
+    fo.onpointerdown=function(e){e.preventDefault();fo.setPointerCapture(e.pointerId);lxFullOn(true);};
+    fo.onpointerup=function(){lxFullOn(false);};
+    fo.onpointercancel=function(){lxFullOn(false);};
   }
   if(bo){
-    var pBo=function(){lxBlackout(true)},rBo=function(){if(lxBoState)lxBlackout(false)};
-    bo.addEventListener('mousedown',function(e){e.preventDefault();pBo()});bo.addEventListener('mouseup',rBo);bo.addEventListener('mouseleave',rBo);
-    bo.addEventListener('touchstart',function(e){e.preventDefault();pBo()},{passive:false});bo.addEventListener('touchend',function(e){e.preventDefault();rBo()});bo.addEventListener('touchcancel',rBo);
+    bo.onpointerdown=function(e){e.preventDefault();bo.setPointerCapture(e.pointerId);lxBlackout(true);};
+    bo.onpointerup=function(){lxBlackout(false);};
+    bo.onpointercancel=function(){lxBlackout(false);};
   }
 }
 function lxToConsole(){
