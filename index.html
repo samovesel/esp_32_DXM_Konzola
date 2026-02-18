@@ -1055,7 +1055,7 @@ function updateSliderHeight(){
   avail=Math.max(80,Math.min(avail,500));
   document.documentElement.style.setProperty('--fs-slider-h',avail+'px');
 }
-window.addEventListener('resize',function(){if(fsActive){updateSliderHeight();var el=document.getElementById('fsConsole');if(isPhoneDevice())el.classList.add('fs-phone');else el.classList.remove('fs-phone')}});
+window.addEventListener('resize',function(){if(fsActive){updateSliderHeight();var el=document.getElementById('fsConsole');if(isPhoneDevice())el.classList.add('fs-phone');else el.classList.remove('fs-phone')}if(layActive)updateLayViewBox()});
 // bindFsSliderTouch: fader nacin za vse vertikalne sliderje (miska + dotik + pisalo)
 // - horizontalni poteg → skrola fs-mid levo/desno (vrednost se ne spremeni)
 // - vertikalni poteg   → menja vrednost relativno od zacetne (fader, brez skoka)
@@ -1252,29 +1252,18 @@ function updateFsColorDots(){
     if(!el)return;
     const lv=lastFxl?lastFxl[fi]||0:0;
     if(lv>5){
-      const c=getFxColor(f);
+      const c=getFxColorNoDim(f);
       const lvF=lv/100;
-      if(c.bri>0){
-        // Ima svetlost — prikaži barvo z opacity modulacijo
+      if(c.bri===0){
+        // Fixture brez barvnih kanalov: topla oranžna
+        const fb=Math.round(lvF*200);
+        el.style.background='rgb('+fb+','+Math.round(fb*0.7)+','+Math.round(fb*0.3)+')';
+        el.style.boxShadow='0 0 '+Math.max(4,lv/5)+'px rgb('+fb+','+Math.round(fb*0.5)+',0)';
+      }else{
         el.style.background=c.css;
         el.style.boxShadow='0 0 '+Math.max(4,lv/5)+'px '+c.css;
-        el.style.opacity=Math.max(0.3,lvF).toFixed(2);
-      }else{
-        // Dimmer na 0 — preverimo ali je fixture brez barvnih kanalov
-        const raw=getFxColorNoDim(f);
-        if(raw.bri===0){
-          // Fixture brez barvnih kanalov: topla oranžna
-          const fb=Math.round(lvF*200);
-          el.style.background='rgb('+fb+','+Math.round(fb*0.7)+','+Math.round(fb*0.3)+')';
-          el.style.boxShadow='0 0 '+Math.max(4,lv/5)+'px rgb('+fb+','+Math.round(fb*0.5)+',0)';
-          el.style.opacity=Math.max(0.3,lvF).toFixed(2);
-        }else{
-          // Ima barve ampak dimmer=0 → ugasnjeno
-          el.style.background='#222';
-          el.style.boxShadow='none';
-          el.style.opacity='1';
-        }
       }
+      el.style.opacity=Math.max(0.3,lvF).toFixed(2);
     }else{
       const c=getFxColor(f);
       el.style.background=c.css;
@@ -2354,6 +2343,15 @@ function showMsg(t,ok){const m=document.getElementById('msg');m.textContent=t;m.
 var layActive=false,layStageEdit=false;
 var layData={name:'',date:'',stageRects:[],fixturePositions:{}};
 var layRectId=1,lxFxIdx=-1,lxH=0,lxS=1,lxV=1;
+var layVbW=1000,layVbH=600;
+function updateLayViewBox(){
+  var canvas=document.getElementById('layCanvas'),svg=document.getElementById('laySvg');
+  if(!canvas||!svg)return;
+  var cr=canvas.getBoundingClientRect();
+  if(cr.width<1||cr.height<1)return;
+  layVbH=600;layVbW=Math.max(1000,Math.round(layVbH*cr.width/cr.height));
+  svg.setAttribute('viewBox','0 0 '+layVbW+' '+layVbH);
+}
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
@@ -2361,6 +2359,7 @@ function enterLayoutEditor(){
   layActive=true;
   document.getElementById('layEditor').classList.add('active');
   if(isPhoneDevice())document.getElementById('laySidebar').classList.add('closed');
+  updateLayViewBox();
   loadLayoutList();
   renderLayLayout();
   renderLayBottom();
@@ -2424,6 +2423,8 @@ function renderLayStage(){
 
 function getFxLayColor(fi){
   var f=fixtures[fi];if(!f)return'#2a2a2a';
+  var lv=lastFxl?lastFxl[fi]||0:0;
+  if(lv>5){var c=getFxColorNoDim(f);return c.bri>3?c.css:'rgb('+Math.round(lv*1.8)+','+Math.round(lv*0.6)+',0)';}
   var c=getFxColor(f);return c.bri>3?c.css:'#2a2a2a';
 }
 function getFxChVal(f,type){if(!f||!f.channels)return 0;for(var i=0;i<f.channels.length;i++){if(f.channels[i].type===type)return f.channels[i].currentValue||0;}return 0;}
@@ -2468,7 +2469,7 @@ function bindLayFxGroup(g){
       if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
       if(!moved)return;
       var nx=startPos.x+dx,ny=startPos.y+dy;
-      nx=Math.max(2,Math.min(998,nx));ny=Math.max(2,Math.min(598,ny));
+      nx=Math.max(2,Math.min(layVbW-2,nx));ny=Math.max(2,Math.min(layVbH-2,ny));
       layData.fixturePositions[fi]={x:Math.round(nx),y:Math.round(ny)};
       // Update position in-place without full re-render
       var circle=g.querySelector('circle');
@@ -2524,7 +2525,7 @@ function bindLaySidebarDrag(item,fi){
     if(e.clientX>=cr.left&&e.clientX<=cr.right&&e.clientY>=cr.top&&e.clientY<=cr.bottom){
       var pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
       var svgPt=pt.matrixTransform(svg.getScreenCTM().inverse());
-      layData.fixturePositions[fi]={x:Math.round(Math.max(2,Math.min(998,svgPt.x))),y:Math.round(Math.max(2,Math.min(598,svgPt.y)))};
+      layData.fixturePositions[fi]={x:Math.round(Math.max(2,Math.min(layVbW-2,svgPt.x))),y:Math.round(Math.max(2,Math.min(layVbH-2,svgPt.y)))};
       renderLayLayout();
     }
   });
