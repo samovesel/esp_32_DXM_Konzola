@@ -642,7 +642,7 @@ function handleWs(d){
     if(d.cf){
       const bar=document.getElementById('cfBar'),st=document.getElementById('cfStatus');
       if(d.cf.active){bar.style.width=(d.cf.progress*100)+'%';cfTarget=d.cf.target;const sc=scenes.find(s=>s&&s.slot===d.cf.target);st.textContent='Crossfade → '+(sc?sc.name:'?')+' ('+Math.round(d.cf.progress*100)+'%)';}
-      else{if(cfTarget>=0){cfTarget=-1;renderSceneGrid();renderFsScenes()}bar.style.width='0%';st.textContent='';if(fsActive)document.getElementById('fsCfBar').style.width='0%'}
+      else{if(cfTarget>=0){cfTarget=-1;renderSceneGrid();renderFsScenes();if(layActive)renderLayScenes()}bar.style.width='0%';st.textContent='';if(fsActive)document.getElementById('fsCfBar').style.width='0%'}
     }
     if(fsActive&&d.cf){
       const fsBar=document.getElementById('fsCfBar');
@@ -853,6 +853,8 @@ function syncFxValues(fxv){
       }
     }
   }
+  // Update layout light display colors after channel value sync
+  if(layActive)updateLayColors();
 }
 
 // ---- Kompakt pogled (horizontalni) — skupna kontrola vseh izbranih ----
@@ -2682,7 +2684,7 @@ function deleteLayout(){
   fetch('/api/layout/delete?name='+encodeURIComponent(name),{method:'POST'})
     .then(function(r){return r.json();}).then(function(d){
       showMsg(d.ok?'Izbrisano':'Napaka: '+(d.error||'neznana'),d.ok);
-      if(d.ok){layData={name:'',date:'',stageRects:[],fixturePositions:{}};document.getElementById('laySelect').value='';loadLayoutList();renderLayLayout();}
+      if(d.ok){layData={name:'',date:'',stageRects:[],fixturePositions:{}};var sel=document.getElementById('laySelect');var opt=sel.querySelector('option[value="'+CSS.escape(name)+'"]');if(opt)opt.remove();sel.value='';loadLayoutList();renderLayLayout();}
     }).catch(function(e){showMsg('Napaka pri brisanju: '+e,false);});
 }
 function newLayout(){
