@@ -799,6 +799,67 @@ static bool checkAuth(AsyncWebServerRequest* req) {
 //  JAVNE FUNKCIJE
 // ============================================================================
 
+// ============================================================================
+//  LAYOUT API — 2D oder urejevalnik
+// ============================================================================
+
+#define LAYOUT_BUF_SIZE 5120
+static char _layoutBuf[LAYOUT_BUF_SIZE];
+static size_t _layoutBufLen = 0;
+
+static void apiGetLayouts(AsyncWebServerRequest* req) {
+  if (!checkAuth(req)) return;
+  if (!LittleFS.exists("/layouts")) LittleFS.mkdir("/layouts");
+  JsonDocument doc; JsonArray arr = doc.to<JsonArray>();
+  File dir = LittleFS.open("/layouts");
+  if (dir && dir.isDirectory()) {
+    File f = dir.openNextFile();
+    while (f) {
+      if (!f.isDirectory()) {
+        String n = f.name();
+        if (n.endsWith(".json")) arr.add(n.substring(0, n.length()-5));
+      }
+      f = dir.openNextFile();
+    }
+  }
+  String json; serializeJson(doc, json); req->send(200, "application/json", json);
+}
+
+static void apiGetLayout(AsyncWebServerRequest* req) {
+  if (!checkAuth(req)) return;
+  if (!req->hasParam("name")) { req->send(400,"application/json","{\"ok\":false}"); return; }
+  String path = String("/layouts/") + req->getParam("name")->value() + ".json";
+  if (!LittleFS.exists(path)) { req->send(404,"application/json","{\"ok\":false,\"error\":\"not found\"}"); return; }
+  req->send(LittleFS, path, "application/json");
+}
+
+static void apiLayoutSave(AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
+  if (index == 0) _layoutBufLen = 0;
+  size_t cpLen = min((size_t)len, (size_t)(LAYOUT_BUF_SIZE-1-_layoutBufLen));
+  memcpy(_layoutBuf+_layoutBufLen, data, cpLen); _layoutBufLen+=cpLen; _layoutBuf[_layoutBufLen]=0;
+  if (index+len < total) return;
+  JsonDocument doc;
+  if (deserializeJson(doc, _layoutBuf)) { req->send(400,"application/json","{\"ok\":false}"); return; }
+  const char* name = doc["name"]; if (!name||!name[0]) { req->send(400,"application/json","{\"ok\":false}"); return; }
+  if (!LittleFS.exists("/layouts")) LittleFS.mkdir("/layouts");
+  String path = String("/layouts/") + name + ".json";
+  File f = LittleFS.open(path, "w");
+  if (!f) { req->send(500,"application/json","{\"ok\":false,\"error\":\"write failed\"}"); return; }
+  f.write((const uint8_t*)_layoutBuf, _layoutBufLen); f.close();
+  req->send(200, "application/json", "{\"ok\":true}");
+}
+
+static void apiLayoutDelete(AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
+  POST_ACCUM(data,len,index,total)
+  JsonDocument doc; if (deserializeJson(doc,_postBuf)) { req->send(400,"application/json","{\"ok\":false}"); return; }
+  const char* name = doc["name"]; if (!name||!name[0]) { req->send(400,"application/json","{\"ok\":false}"); return; }
+  String path = String("/layouts/") + name + ".json";
+  bool ok = LittleFS.exists(path) && LittleFS.remove(path);
+  req->send(200, "application/json", ok?"{\"ok\":true}":"{\"ok\":false,\"error\":\"not found\"}");
+}
+
+// ============================================================================
+
 void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
               NodeConfig* cfg, FixtureEngine* fixtures, MixerEngine* mixer,
               SceneEngine* scenes, SoundEngine* sound, AudioInput* audio) {
@@ -826,6 +887,12 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   server->on("/api/sound/rules",HTTP_POST,[](AsyncWebServerRequest* req){},NULL,apiPostSoundRules);
   server->on("/api/factory-reset",HTTP_POST,apiFactoryReset);
   server->on("/api/wifiscan",HTTP_GET,[](AsyncWebServerRequest* req){if(!checkAuth(req))return;apiWifiScan(req);});
+
+  // Layout (2D oder)
+  server->on("/api/layouts",HTTP_GET,apiGetLayouts);
+  server->on("/api/layout",HTTP_GET,apiGetLayout);
+  server->on("/api/layout",HTTP_POST,[](AsyncWebServerRequest* req){},NULL,apiLayoutSave);
+  server->on("/api/layout/delete",HTTP_POST,[](AsyncWebServerRequest* req){},NULL,apiLayoutDelete);
 
   // Config management
   server->on("/api/cfglist",HTTP_GET,apiGetCfgList);
