@@ -851,17 +851,31 @@ static void apiLayoutSave(AsyncWebServerRequest* req, uint8_t* data, size_t len,
   req->send(200, "application/json", "{\"ok\":true}");
 }
 
-static void apiLayoutDelete(AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
-  POST_ACCUM(data, len, index, total)
-  JsonDocument doc;
-  if (deserializeJson(doc, _postBuf)) { req->send(400,"application/json","{\"ok\":false,\"error\":\"bad json\"}"); return; }
-  const char* name = doc["name"];
-  if (!name || !name[0]) { req->send(400,"application/json","{\"ok\":false,\"error\":\"no name\"}"); return; }
+static void apiLayoutDelete(AsyncWebServerRequest* req) {
+  if (!checkAuth(req)) return;
+  if (!req->hasParam("name")) {
+    Serial.println("[LAY] Delete: missing 'name' param");
+    req->send(400,"application/json","{\"ok\":false,\"error\":\"no name\"}"); return;
+  }
+  String name = req->getParam("name")->value();
+  if (name.length() == 0) {
+    Serial.println("[LAY] Delete: empty name");
+    req->send(400,"application/json","{\"ok\":false,\"error\":\"empty name\"}"); return;
+  }
   String path = String("/layouts/") + name + ".json";
-  Serial.printf("[LAY] Delete: '%s' -> %s\n", name, path.c_str());
+  Serial.printf("[LAY] Delete: name='%s' path='%s'\n", name.c_str(), path.c_str());
   bool exists = LittleFS.exists(path);
   bool removed = exists && LittleFS.remove(path);
   Serial.printf("[LAY] exists=%d removed=%d\n", exists, removed);
+  if (!exists) {
+    // Izpiši dejanske datoteke za debug
+    File dir = LittleFS.open("/layouts");
+    if (dir && dir.isDirectory()) {
+      Serial.println("[LAY] Files in /layouts/:");
+      File f = dir.openNextFile();
+      while (f) { Serial.printf("  '%s'\n", f.name()); f = dir.openNextFile(); }
+    }
+  }
   req->send(200, "application/json", removed?"{\"ok\":true}":"{\"ok\":false,\"error\":\"not found\"}");
 }
 
@@ -899,7 +913,7 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   server->on("/api/layouts",HTTP_GET,apiGetLayouts);
   server->on("/api/layout",HTTP_GET,apiGetLayout);
   server->on("/api/layout",HTTP_POST,[](AsyncWebServerRequest* req){},NULL,apiLayoutSave);
-  server->on("/api/layout/delete",HTTP_POST,[](AsyncWebServerRequest* req){},NULL,apiLayoutDelete);
+  server->on("/api/layoutdelete",HTTP_GET,apiLayoutDelete);
 
   // Config management
   server->on("/api/cfglist",HTTP_GET,apiGetCfgList);
