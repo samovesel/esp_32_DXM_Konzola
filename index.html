@@ -197,7 +197,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 /* ============ 2D Layout Editor ============ */
 .lay-editor{position:fixed;top:0;left:0;width:100%;height:100%;background:#090909;z-index:60;display:none;flex-direction:column}
 .lay-editor.active{display:flex}
-.lay-top{display:flex;align-items:center;gap:5px;padding:5px 8px;background:#0d1a0d;border-bottom:2px solid #27ae60;flex-shrink:0;flex-wrap:wrap}
+.lay-top{display:flex;align-items:center;gap:5px;padding:5px 8px;background:#1a1a2e;border-bottom:2px solid #0af;flex-shrink:0;flex-wrap:wrap}
 .lay-canvas{flex:1;position:relative;overflow:hidden;background:#0d0d0d}
 .lay-sidebar{position:absolute;right:0;top:0;height:100%;width:165px;background:#101a10;border-left:1px solid #1e3a1e;overflow-y:auto;z-index:5;transition:transform 0.2s;touch-action:pan-y}
 .lay-sidebar.closed{transform:translateX(100%)}
@@ -205,6 +205,12 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .lay-fx-item:hover{background:#182818}
 .lay-fx-item.placed{opacity:0.4}
 .lay-fx-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid #444}
+.lay-fx-circ{position:absolute;transform:translate(-50%,-50%);pointer-events:all;cursor:pointer;user-select:none;touch-action:none;text-align:center}
+.lay-fx-ball{width:38px;height:38px;border-radius:50%;border:2px solid #555;margin:0 auto;transition:background 0.05s;box-sizing:border-box}
+.lay-fx-lbl{font-size:10px;color:#888;white-space:nowrap;margin-top:3px;pointer-events:none;max-width:72px;overflow:hidden;text-overflow:ellipsis}
+.lay-trash{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:none;z-index:6;background:rgba(192,57,43,0.92);color:#fff;border-radius:8px;padding:8px 22px;font-size:0.88em;pointer-events:none;white-space:nowrap;transition:background 0.1s,transform 0.1s}
+.lay-trash.over{background:rgba(231,76,60,1);transform:translateX(-50%) scale(1.1)}
+.lay-del-btn{position:absolute;width:28px;height:28px;border-radius:50%;background:#c0392b;color:#fff;border:2px solid #e74c3c;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;pointer-events:all;z-index:3;transform:translate(-50%,-50%);line-height:1;padding:0}
 .lx-popup{position:fixed;z-index:220;background:#101a10;border:1px solid #27ae60;border-radius:10px;padding:14px 16px;min-width:235px;max-width:280px;box-shadow:0 8px 40px rgba(0,0,0,0.9)}
 .lx-popup h4{color:#27ae60;margin:0 0 10px;font-size:0.92em;padding-right:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lx-x{position:absolute;top:10px;right:10px;background:none;border:none;color:#555;font-size:1.1em;cursor:pointer;padding:2px 6px;line-height:1}
@@ -502,17 +508,23 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 <!-- ============ 2D Layout Editor ============ -->
 <div id="layEditor" class="lay-editor">
   <div class="lay-top">
-    <button onclick="exitLayoutEditor()" style="background:#1a3a1a;border:1px solid #27ae60;color:#27ae60;font-size:0.85em;padding:5px 10px">&#x2715; Zapri</button>
-    <span style="color:#27ae60;font-weight:bold;font-size:0.9em">&#9633; 2D Oder</span>
-    <select id="laySelect" onchange="loadLayoutByName(this.value)" style="background:#0f1f0f;color:#ccc;border:1px solid #1e3a1e;border-radius:4px;padding:4px 6px;font-size:0.82em;max-width:120px"><option value="">— novi —</option></select>
-    <button onclick="saveLayout()" style="background:#27ae60;color:#000;font-size:0.85em;padding:5px 10px;font-weight:bold">Shrani</button>
-    <button onclick="deleteLayout()" style="background:#1e1e1e;color:#666;border:1px solid #333;font-size:0.82em;padding:5px 8px">Briši</button>
-    <button id="layStageBtn" onclick="toggleLayStageEdit()" style="background:#1e3a1e;color:#6a6;border:1px solid #2a4a2a;font-size:0.82em;padding:5px 10px">Uredi oder</button>
-    <button onclick="toggleLaySidebar()" style="background:#1e3a1e;color:#6a6;border:1px solid #2a4a2a;font-size:0.82em;padding:5px 10px">&#9776; Luči</button>
-    <span id="layTip" style="font-size:0.75em;color:#4a7a4a;margin-left:2px"></span>
+    <button class="fs-close" onclick="exitLayoutEditor()">&#x2715; Izhod</button>
+    <button class="bo" id="layBoBtn" onclick="toggleBlackout()" style="font-size:0.82em;padding:4px 10px">BLACKOUT</button>
+    <button onclick="fsSaveScene()" style="background:#1a6;color:#fff;padding:4px 8px;font-size:0.8em;border:none;border-radius:4px;cursor:pointer" title="Shrani sceno">&#x1F4BE; Shrani sceno</button>
+    <select id="laySelect" onchange="loadLayoutByName(this.value)" style="background:#0f1f0f;color:#ccc;border:1px solid #1e3a1e;border-radius:4px;padding:3px 5px;font-size:0.8em;max-width:100px"><option value="">— novi —</option></select>
+    <button onclick="saveLayout()" style="background:#27ae60;color:#000;font-size:0.8em;padding:4px 8px;font-weight:bold;border:none;border-radius:4px">Shrani</button>
+    <button onclick="deleteLayout()" style="background:#1e1e1e;color:#666;border:1px solid #333;font-size:0.8em;padding:4px 6px;border-radius:4px">Briši</button>
+    <button id="layStageBtn" onclick="toggleLayStageEdit()" style="background:#1e3a1e;color:#6a6;border:1px solid #2a4a2a;font-size:0.8em;padding:4px 8px;border-radius:4px">Uredi oder</button>
+    <button onclick="toggleLaySidebar()" style="background:#1e3a1e;color:#6a6;border:1px solid #2a4a2a;font-size:0.8em;padding:4px 8px;border-radius:4px">&#9776; Luči</button>
+    <span id="layTip" style="font-size:0.75em;color:#4a7a4a"></span>
+    <div class="fs-master" style="flex:0 1 180px;min-width:120px">
+      <label>Master</label>
+      <input type="range" min="0" max="255" value="255" id="layMasterSlider" oninput="sendMaster(this.value);document.getElementById('layMasterVal').textContent=this.value">
+      <span class="val" id="layMasterVal">255</span>
+    </div>
   </div>
   <div class="lay-canvas" id="layCanvas">
-    <svg id="laySvg" viewBox="0 0 1000 600" preserveAspectRatio="none" style="position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none">
+    <svg id="laySvg" viewBox="0 0 1000 600" preserveAspectRatio="none" style="position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none;z-index:1">
       <defs>
         <filter id="stageBlob" color-interpolation-filters="sRGB" x="-3%" y="-3%" width="106%" height="106%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
@@ -522,9 +534,14 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
       </defs>
       <g id="layStageG" filter="url(#stageBlob)"></g>
       <g id="layLabelG"></g>
-      <g id="layFxG"></g>
       <g id="layDrawG"></g>
     </svg>
+    <!-- HTML overlay for delete buttons (z-index:2) -->
+    <div id="layDelOverlay" style="position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden"></div>
+    <!-- HTML overlay for fixture circles (z-index:4) -->
+    <div id="layFxOverlay" style="position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden"></div>
+    <!-- Trash zone shown during drag -->
+    <div id="layTrashZone" class="lay-trash">&#128465; Spusti za odstranitev</div>
     <div class="lay-sidebar" id="laySidebar">
       <div style="padding:7px 10px;font-size:0.78em;color:#27ae60;font-weight:bold;border-bottom:1px solid #1e3a1e;background:#0d1a0d">&#11015; povleci na oder</div>
       <div id="layFxList"></div>
@@ -558,8 +575,8 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   </div>
   <div class="lx-pal" id="lxPal"></div>
   <div style="display:flex;gap:6px;margin-top:6px">
-    <button onclick="lxFullOn()" style="flex:1;background:#e67e22;color:#000;font-size:0.82em;padding:6px;font-weight:bold">Full On</button>
-    <button onclick="lxBlackout()" style="flex:1;background:#1a1a1a;border:1px solid #444;color:#aaa;font-size:0.82em;padding:6px">Blackout</button>
+    <button id="lxFullOnBtn" style="flex:1;background:#e67e22;color:#000;font-size:0.82em;padding:6px;font-weight:bold;border:none;border-radius:4px;cursor:pointer;user-select:none;touch-action:none">Full On</button>
+    <button id="lxBlackoutBtn" style="flex:1;background:#1a1a1a;border:1px solid #444;color:#aaa;font-size:0.82em;padding:6px;border-radius:4px;cursor:pointer;user-select:none;touch-action:none">Blackout</button>
   </div>
   <button onclick="lxToConsole()" style="width:100%;margin-top:6px;background:#0d1a0d;border:1px solid #1e3a1e;color:#0af;font-size:0.78em;padding:5px">Podrobnosti → konzola</button>
 </div>
@@ -626,6 +643,11 @@ function handleWs(d){
     if(fsActive){
       document.getElementById('fsBoBtn').style.background=boState?'#f33':'#555';
       document.getElementById('fsMasterSlider').value=d.master;document.getElementById('fsMasterVal').textContent=d.master;
+    }
+    // 2D Layout editor sinhronizacija
+    if(layActive){
+      var lb=document.getElementById('layBoBtn');if(lb)lb.style.background=boState?'#f33':'#555';
+      var lms=document.getElementById('layMasterSlider');if(lms){lms.value=d.master;var lmv=document.getElementById('layMasterVal');if(lmv)lmv.textContent=d.master;}
     }
     if(d.snaps)renderSnapshots(d.snaps);
     if(d.cf){
@@ -1480,6 +1502,7 @@ function fsFullOn(fi,press){
   }
 }
 function renderFsScenes(){
+  if(layActive)renderLayScenes();
   if(!fsActive)return;
   const row=document.getElementById('fsSceneRow');
   let h='<span class="fs-lbl">Scene:</span>';
@@ -1498,6 +1521,7 @@ function fsRecallScene(slot){
   const fade=sel?+sel.value:1500;
   wsSend({cmd:'scene_recall',slot:slot,fade:fade});
 }
+
 function fsSaveScene(){
   const name=prompt('Ime scene:','Scena '+(scenes.filter(Boolean).length+1));
   if(!name)return;
@@ -1507,6 +1531,7 @@ function fsSaveScene(){
   });
 }
 function renderFsGroups(){
+  if(layActive)renderLayGroups();
   if(!fsActive)return;
   const row=document.getElementById('fsGrpRow');
   let h='<span class="fs-lbl">Skupine:</span>';
@@ -1905,14 +1930,15 @@ function onMbBpmSlider(){
 function setMbProg(p){
   mbProg=p;
   document.querySelectorAll('#mbProgBtns button').forEach((b,i)=>b.className=i===p?'ps-sel':'');
-  // Posodobi tudi FS prog gumbe
   document.querySelectorAll('#fsProgBtns button').forEach((b,i)=>b.className=i===p?'fs-beat-prog ps-sel':'fs-beat-prog');
+  document.querySelectorAll('#layProgBtns button').forEach((b,i)=>b.className=i===p?'fs-beat-prog ps-sel':'fs-beat-prog');
   sendMbCfg();
 }
 function setMbSub(s){
   mbSub=s;
   document.querySelectorAll('#mbSubBtns button').forEach((b,i)=>b.className=i===s?'ps-sel':'');
   document.querySelectorAll('#fsSubBtns button').forEach((b,i)=>b.className=i===s?'fs-beat-prog ps-sel':'fs-beat-prog');
+  document.querySelectorAll('#laySubBtns button').forEach((b,i)=>b.className=i===s?'fs-beat-prog ps-sel':'fs-beat-prog');
   sendMbCfg();
 }
 function setMbSrc(s){
@@ -1952,6 +1978,16 @@ function updateMbStatus(mb){
   // FS active indicator
   var fAct=document.getElementById('fsBeatActive');
   if(fAct){fAct.textContent=mb.active?'ON':'OFF';fAct.style.color=mb.active?'#0f0':'#666'}
+  // Lay BPM + TAP + active sync
+  var lbpm=document.getElementById('layBeatBpm');
+  if(lbpm)lbpm.textContent=(mb.bpm?mb.bpm.toFixed(0):'--')+' BPM';
+  var layTap=document.getElementById('layTapBtn');
+  if(layTap){
+    if(mb.active){var bright=0.3+0.7*(1-ph);layTap.style.background='rgba(231,76,60,'+bright.toFixed(2)+')';layTap.style.boxShadow=ph<0.3?'0 0 '+(16*(1-ph)).toFixed(0)+'px rgba(231,76,60,0.7)':'none';}
+    else{layTap.style.background='';layTap.style.boxShadow='';}
+  }
+  var lAct=document.getElementById('layBeatActive');
+  if(lAct){lAct.textContent=mb.active?'ON':'OFF';lAct.style.color=mb.active?'#0f0':'#666'}
   // Sync prog/pal/dc iz servra
   if(mb.prog!==undefined&&mb.prog!==mbProg){mbProg=mb.prog;document.querySelectorAll('#mbProgBtns button').forEach((b,i)=>b.className=i===mbProg?'ps-sel':'')}
   if(mb.pal!==undefined&&mb.pal!==mbPal){mbPal=mb.pal;renderPalBtns()}
@@ -2288,6 +2324,7 @@ function showMsg(t,ok){const m=document.getElementById('msg');m.textContent=t;m.
 var layActive=false,layStageEdit=false;
 var layData={name:'',date:'',stageRects:[],fixturePositions:{}};
 var layRectId=1,lxFxIdx=-1,lxH=0,lxS=1,lxV=1;
+var _laySvgHandlers=null,lxPrevState=null;
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
@@ -2295,13 +2332,29 @@ function enterLayoutEditor(){
   layActive=true;
   document.getElementById('layEditor').classList.add('active');
   if(isPhoneDevice())document.getElementById('laySidebar').classList.add('closed');
+  // Sync master slider from main slider
+  var ms=document.getElementById('masterSlider'),lms=document.getElementById('layMasterSlider');
+  if(ms&&lms){lms.value=ms.value;var lmv=document.getElementById('layMasterVal');if(lmv)lmv.textContent=ms.value;}
+  // Sync BLACKOUT button
+  var lb=document.getElementById('layBoBtn');if(lb)lb.style.background=boState?'#f33':'#555';
   loadLayoutList();
   renderLayLayout();
   renderLayBottom();
   bindLaySvgEvents();
-  updateLayColors();
+  renderLayFixtures();
 }
-function exitLayoutEditor(){layActive=false;document.getElementById('layEditor').classList.remove('active')}
+function exitLayoutEditor(){
+  layActive=false;
+  document.getElementById('layEditor').classList.remove('active');
+  // Remove SVG event listeners
+  if(_laySvgHandlers){
+    var svg=document.getElementById('laySvg');
+    svg.removeEventListener('pointerdown',_laySvgHandlers.pd);
+    svg.removeEventListener('pointermove',_laySvgHandlers.pm);
+    svg.removeEventListener('pointerup',_laySvgHandlers.pu);
+    _laySvgHandlers=null;
+  }
+}
 
 function toggleLayStageEdit(){
   layStageEdit=!layStageEdit;
@@ -2323,22 +2376,24 @@ function laySvgPt(e){
 function renderLayLayout(){renderLayStage();renderLayFixtures();renderLaySidebar()}
 
 function renderLayStage(){
-  var sh='',lh='';
+  var sh='',lh='',dh='';
   layData.stageRects.forEach(function(r){
     sh+='<rect x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" fill="#1e3a1e" rx="8"/>';
     var cx=r.x+r.w/2,cy=r.y+r.h/2;
     lh+='<text x="'+cx+'" y="'+cy+'" fill="#4a8a4a" font-size="22" text-anchor="middle" dominant-baseline="middle" pointer-events="none" font-family="sans-serif">'+escHtml(r.label)+'</text>';
-    if(layStageEdit)lh+='<text x="'+(r.x+r.w-8)+'" y="'+(r.y+22)+'" fill="#c0392b" font-size="22" text-anchor="end" cursor="pointer" font-family="sans-serif" data-del="'+r.id+'">✕</text>';
+    // HTML delete button positioned at top-right of rect (percentage of canvas)
+    if(layStageEdit){
+      var bx=((r.x+r.w)/1000*100).toFixed(2),by=(r.y/600*100).toFixed(2);
+      dh+='<button class="lay-del-btn" style="left:'+bx+'%;top:'+by+'%" onclick="delStageRect('+r.id+')" title="Odstrani sekcijo">&#x2715;</button>';
+    }
   });
   document.getElementById('layStageG').innerHTML=sh;
-  var lg=document.getElementById('layLabelG');lg.innerHTML=lh;
-  lg.querySelectorAll('[data-del]').forEach(function(el){
-    el.addEventListener('pointerdown',function(e){
-      e.stopPropagation();var id=+el.dataset.del;
-      layData.stageRects=layData.stageRects.filter(function(r){return r.id!==id});
-      renderLayStage();
-    },{passive:false});
-  });
+  document.getElementById('layLabelG').innerHTML=lh;
+  document.getElementById('layDelOverlay').innerHTML=dh;
+}
+function delStageRect(id){
+  layData.stageRects=layData.stageRects.filter(function(r){return r.id!==id});
+  renderLayStage();
 }
 
 function getFxLayColor(fi){
@@ -2350,60 +2405,65 @@ function getFxLayColor(fi){
 function getFxChVal(f,type){if(!f||!f.channels)return 0;for(var i=0;i<f.channels.length;i++){if(f.channels[i].type===type)return f.channels[i].currentValue||0;}return 0;}
 function hasChType(f,type){if(!f||!f.channels)return false;for(var i=0;i<f.channels.length;i++){if(f.channels[i].type===type)return true;}return false;}
 
+// ---- Fixtures: HTML divs in layFxOverlay (no SVG distortion) ----
+var _layDragging=false; // flag: drag in progress, suppress updateLayColors DOM rebuild
 function renderLayFixtures(){
+  if(_layDragging)return; // don't rebuild DOM during drag
+  var ov=document.getElementById('layFxOverlay');if(!ov)return;
   var h='';
   Object.keys(layData.fixturePositions).forEach(function(idx){
     var fi=+idx,pos=layData.fixturePositions[idx],f=fixtures[fi];if(!f)return;
-    var cx=pos.x,cy=pos.y,col=getFxLayColor(fi);
-    var isMH=hasChType(f,8)||hasChType(f,10);
-    h+='<g class="lay-fx-grp" data-fi="'+fi+'" style="cursor:pointer">';
-    if(isMH){
-      var pan=getFxChVal(f,8),tilt=getFxChVal(f,10);
-      var ang=(pan/255*360-180)*Math.PI/180,alen=26+tilt/255*12;
-      var ex=cx+Math.sin(ang)*alen,ey=cy-Math.cos(ang)*alen;
-      h+='<circle cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="#555" stroke-width="1.5"/>';
-      h+='<line x1="'+cx+'" y1="'+cy+'" x2="'+ex+'" y2="'+ey+'" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" pointer-events="none"/>';
-      h+='<circle cx="'+ex+'" cy="'+ey+'" r="3" fill="#fff" pointer-events="none"/>';
-    }else{
-      h+='<circle cx="'+cx+'" cy="'+cy+'" r="18" fill="'+col+'" stroke="#444" stroke-width="1.5"/>';
-    }
-    var nm=f.name.length>13?f.name.substring(0,12)+'…':f.name;
-    h+='<text x="'+cx+'" y="'+(cy+30)+'" fill="#888" font-size="13" text-anchor="middle" pointer-events="none" font-family="sans-serif">'+escHtml(nm)+'</text>';
-    h+='</g>';
+    var col=getFxLayColor(fi);
+    var nm=f.name.length>12?f.name.substring(0,11)+'…':f.name;
+    var lpct=(pos.x/10).toFixed(2),tpct=(pos.y/6).toFixed(2);
+    h+='<div class="lay-fx-circ" data-fi="'+fi+'" style="left:'+lpct+'%;top:'+tpct+'%">';
+    h+='<div class="lay-fx-ball" data-fi="'+fi+'" style="background:'+col+'"></div>';
+    h+='<div class="lay-fx-lbl">'+escHtml(nm)+'</div></div>';
   });
-  var fg=document.getElementById('layFxG');fg.innerHTML=h;
-  fg.querySelectorAll('.lay-fx-grp').forEach(function(g){bindLayFxGroup(g)});
+  ov.innerHTML=h;
+  ov.querySelectorAll('.lay-fx-circ').forEach(function(el){bindLayFxGroup(el)});
+  renderLaySidebar();
 }
 
-function bindLayFxGroup(g){
-  var fi=+g.dataset.fi,moved=false,startX,startY,startPos;
-  g.addEventListener('pointerdown',function(e){
+function bindLayFxGroup(el){
+  var fi=+el.dataset.fi,moved=false,startX,startY,startPos;
+  var trash=document.getElementById('layTrashZone'),overTrash=false;
+  el.addEventListener('pointerdown',function(e){
     if(layStageEdit)return;
-    e.preventDefault();e.stopPropagation();g.setPointerCapture(e.pointerId);
-    moved=false;startX=e.clientX;startY=e.clientY;
+    e.preventDefault();e.stopPropagation();el.setPointerCapture(e.pointerId);
+    moved=false;overTrash=false;startX=e.clientX;startY=e.clientY;
+    if(!layData.fixturePositions[fi])return;
     startPos={x:layData.fixturePositions[fi].x,y:layData.fixturePositions[fi].y};
-    function onMove(ev){
-      var dx=ev.clientX-startX,dy=ev.clientY-startY;
-      if(Math.abs(dx)>5||Math.abs(dy)>5)moved=true;
-      if(!moved)return;
-      var sr=document.getElementById('laySvg').getBoundingClientRect();
-      var nx=startPos.x+dx*1000/sr.width,ny=startPos.y+dy*600/sr.height;
-      nx=Math.max(20,Math.min(980,nx));ny=Math.max(20,Math.min(580,ny));
-      layData.fixturePositions[fi]={x:Math.round(nx),y:Math.round(ny)};
-      renderLayFixtures();
-    }
-    function onUp(ev){
-      g.removeEventListener('pointermove',onMove);g.removeEventListener('pointerup',onUp);
-      if(!moved)openLxPopup(fi,ev.clientX,ev.clientY);
-    }
-    g.addEventListener('pointermove',onMove);g.addEventListener('pointerup',onUp);
+    _layDragging=true;
   },{passive:false});
-  // Right-click / long-press: remove from stage
-  g.addEventListener('contextmenu',function(e){
-    e.preventDefault();e.stopPropagation();
-    if(confirm('Odstraniti "'+fixtures[fi].name+'" z odra?')){
-      delete layData.fixturePositions[fi];renderLayLayout();
+  el.addEventListener('pointermove',function(e){
+    if(!_layDragging||!startPos)return;
+    var dx=e.clientX-startX,dy=e.clientY-startY;
+    if(Math.abs(dx)>5||Math.abs(dy)>5)moved=true;
+    if(!moved)return;
+    var sr=document.getElementById('laySvg').getBoundingClientRect();
+    var nx=startPos.x+dx*1000/sr.width,ny=startPos.y+dy*600/sr.height;
+    nx=Math.max(20,Math.min(980,nx));ny=Math.max(20,Math.min(580,ny));
+    layData.fixturePositions[fi]={x:Math.round(nx),y:Math.round(ny)};
+    // Update CSS position directly — no DOM rebuild
+    el.style.left=(nx/10)+'%';el.style.top=(ny/6)+'%';
+    // Show trash zone
+    if(trash){trash.style.display='block';
+      var tr=trash.getBoundingClientRect();
+      overTrash=(e.clientX>=tr.left&&e.clientX<=tr.right&&e.clientY>=tr.top&&e.clientY<=tr.bottom);
+      trash.className='lay-trash'+(overTrash?' over':'');
     }
+  });
+  el.addEventListener('pointerup',function(e){
+    _layDragging=false;
+    if(trash){trash.style.display='none';trash.className='lay-trash';}
+    if(moved&&overTrash){delete layData.fixturePositions[fi];renderLayFixtures();return;}
+    if(!moved)openLxPopup(fi,e.clientX,e.clientY);
+    else renderLayFixtures();
+  });
+  el.addEventListener('pointercancel',function(){
+    _layDragging=false;
+    if(trash){trash.style.display='none';trash.className='lay-trash';}
   });
 }
 
@@ -2413,7 +2473,7 @@ function renderLaySidebar(){
   fixtures.forEach(function(f,fi){
     if(!f)return;
     var col=getFxLayColor(fi),isP=placed.has(fi);
-    h+='<div class="lay-fx-item'+(isP?' placed':'')+'" data-fi="'+fi+'" title="'+(isP?'Že na odru (desni klik → odstrani)':'Povleci na oder')+'">';
+    h+='<div class="lay-fx-item'+(isP?' placed':'')+'" data-fi="'+fi+'" title="'+(isP?'Že na odru':'Povleci na oder')+'">';
     h+='<div class="lay-fx-dot" style="background:'+col+'"></div><span>'+escHtml(f.name)+'</span></div>';
   });
   var list=document.getElementById('layFxList');
@@ -2424,57 +2484,97 @@ function renderLaySidebar(){
 }
 
 function bindLaySidebarDrag(item,fi){
-  var ghost=null,dragging=false;
+  var ghost=null;
   item.addEventListener('pointerdown',function(e){
-    e.preventDefault();item.setPointerCapture(e.pointerId);dragging=true;
+    e.preventDefault();item.setPointerCapture(e.pointerId);
     ghost=document.createElement('div');
     ghost.style.cssText='position:fixed;width:32px;height:32px;border-radius:50%;background:'+getFxLayColor(fi)+';border:2px solid #27ae60;opacity:0.8;pointer-events:none;z-index:500;transform:translate(-50%,-50%)';
     document.body.appendChild(ghost);
   },{passive:false});
   item.addEventListener('pointermove',function(e){if(ghost){ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';}});
   item.addEventListener('pointerup',function(e){
-    dragging=false;if(ghost){ghost.remove();ghost=null;}
+    if(ghost){ghost.remove();ghost=null;}
     var cr=document.getElementById('layCanvas').getBoundingClientRect();
     if(e.clientX>=cr.left&&e.clientX<=cr.right&&e.clientY>=cr.top&&e.clientY<=cr.bottom){
       var sr=document.getElementById('laySvg').getBoundingClientRect();
       layData.fixturePositions[fi]={x:Math.round((e.clientX-sr.left)/sr.width*1000),y:Math.round((e.clientY-sr.top)/sr.height*600)};
-      renderLayLayout();
+      renderLayFixtures();
     }
   });
-  item.addEventListener('pointercancel',function(){dragging=false;if(ghost){ghost.remove();ghost=null;}});
+  item.addEventListener('pointercancel',function(){if(ghost){ghost.remove();ghost=null;}});
 }
 
-// ---- Stage drawing ----
+// ---- Stage drawing (fix: remove old listeners before adding new) ----
 function bindLaySvgEvents(){
-  var svg=document.getElementById('laySvg'),dg=document.getElementById('layDrawG'),ds=null;
-  svg.addEventListener('pointerdown',function(e){
+  var svg=document.getElementById('laySvg');
+  // Remove old handlers if any
+  if(_laySvgHandlers){
+    svg.removeEventListener('pointerdown',_laySvgHandlers.pd);
+    svg.removeEventListener('pointermove',_laySvgHandlers.pm);
+    svg.removeEventListener('pointerup',_laySvgHandlers.pu);
+  }
+  var dg=document.getElementById('layDrawG'),ds=null;
+  function pd(e){
     if(!layStageEdit)return;
-    if(e.target.closest('.lay-fx-grp')||e.target.dataset.del)return;
     e.preventDefault();svg.setPointerCapture(e.pointerId);
     ds=laySvgPt(e);
     dg.innerHTML='<rect id="dRect" x="'+ds.x+'" y="'+ds.y+'" width="1" height="1" fill="#27ae60" fill-opacity="0.2" stroke="#27ae60" stroke-width="2" stroke-dasharray="6,3"/>';
-  },{passive:false});
-  svg.addEventListener('pointermove',function(e){
+  }
+  function pm(e){
     if(!ds)return;var pt=laySvgPt(e);
     var x=Math.min(ds.x,pt.x),y=Math.min(ds.y,pt.y),w=Math.abs(pt.x-ds.x),h=Math.abs(pt.y-ds.y);
     var r=document.getElementById('dRect');if(r){r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',Math.max(1,w));r.setAttribute('height',Math.max(1,h));}
-  });
-  svg.addEventListener('pointerup',function(e){
+  }
+  function pu(e){
     if(!ds)return;var pt=laySvgPt(e);
     var x=Math.min(ds.x,pt.x),y=Math.min(ds.y,pt.y),w=Math.abs(pt.x-ds.x),h=Math.abs(pt.y-ds.y);
     ds=null;dg.innerHTML='';
     if(w>20&&h>15){
-      var lbl=prompt('Ime sekcije odra:','Oder');if(lbl===null)return;
-      layData.stageRects.push({id:layRectId++,x:Math.round(x),y:Math.round(y),w:Math.round(w),h:Math.round(h),label:lbl});
-      renderLayStage();
+      // setTimeout prevents prompt from firing multiple times (event loop safety)
+      var rx=Math.round(x),ry=Math.round(y),rw=Math.round(w),rh=Math.round(h);
+      setTimeout(function(){
+        var lbl=prompt('Ime sekcije odra:','Oder');if(!lbl)return;
+        layData.stageRects.push({id:layRectId++,x:rx,y:ry,w:rw,h:rh,label:lbl});
+        renderLayStage();
+      },10);
     }
-  });
+  }
+  _laySvgHandlers={pd:pd,pm:pm,pu:pu};
+  svg.addEventListener('pointerdown',pd,{passive:false});
+  svg.addEventListener('pointermove',pm);
+  svg.addEventListener('pointerup',pu);
 }
 
-// ---- Live color update ----
-function updateLayColors(){if(!layActive)return;renderLayFixtures();renderLaySidebar();}
+// ---- Live color update (in-place, no DOM rebuild — fixes beat blocking) ----
+function updateLayColors(){
+  if(!layActive)return;
+  // Update fixture circle colors in-place
+  var ov=document.getElementById('layFxOverlay');
+  if(ov){ov.querySelectorAll('.lay-fx-ball').forEach(function(ball){
+    var fi=+ball.dataset.fi;ball.style.background=getFxLayColor(fi);
+  });}
+  // Update sidebar dot colors in-place
+  var list=document.getElementById('layFxList');
+  if(list){list.querySelectorAll('.lay-fx-item').forEach(function(item){
+    var fi=+item.dataset.fi,dot=item.querySelector('.lay-fx-dot');
+    if(dot)dot.style.background=getFxLayColor(fi);
+  });}
+  // Update open popup live
+  if(lxFxIdx>=0)updateLxPopupLive(lxFxIdx);
+}
+function updateLxPopupLive(fi){
+  var pop=document.getElementById('lxPopup');if(!pop||pop.style.display==='none')return;
+  var f=fixtures[fi];if(!f)return;
+  // Sync dimmer slider (only if not actively dragging it)
+  var elS=document.getElementById('lxDim'),elV=document.getElementById('lxDimV');
+  if(elS&&document.activeElement!==elS){var dv=getFxChVal(f,1);elS.value=dv;if(elV)elV.textContent=dv;}
+  // Sync color preview
+  var c=getFxColorNoDim(f);
+  var prev=document.getElementById('lxPrev'),hex=document.getElementById('lxHex');
+  if(prev)prev.style.background=c.css;if(hex)hex.textContent=c.css;
+}
 
-// ---- Bottom bar ----
+// ---- Bottom bar (identical to fullscreen console) ----
 function renderLayBottom(){renderLayScenes();renderLayGroups();renderLayBeatRow();}
 function renderLayScenes(){
   var row=document.getElementById('laySceneRow');if(!row)return;
@@ -2491,26 +2591,58 @@ function renderLayGroups(){
   groups.forEach(function(g,i){
     if(!g)return;has=true;var a=fsActiveGroups.has(i);
     h+='<div class="fs-grp-item"><span class="fs-grp-name'+(a?' grp-active':'')+'" data-gi="'+i+'">'+escHtml(g)+'</span>';
-    h+='<button class="fs-grp-bo" data-gi="'+i+'">BO</button><button class="fs-grp-fo" data-gi="'+i+'">FO</button></div>';
+    h+='<button class="fs-grp-bo" data-gi="'+i+'">BO</button><button class="fs-grp-fo" data-gi="'+i+'">FO</button>';
+    h+='<button class="fs-grp-solo" data-gi="'+i+'">SOLO</button>';
+    h+='<span class="phone-hide">';
+    var gp=mbGrpOverrides[i]?mbGrpOverrides[i].p:255;
+    h+='<select class="fs-grp-prog" data-gi="'+i+'" onchange="setGrpProg('+i+',+this.value)" style="background:#1a1a2e;color:#e74c3c;border:1px solid #444;border-radius:3px;padding:1px 3px;font-size:0.6em">';
+    h+='<option value="255"'+(gp===255?' selected':'')+'>--</option>';
+    progNames.forEach(function(n,pi){h+='<option value="'+pi+'"'+(pi===gp?' selected':'')+'>'+n+'</option>'});
+    h+='</select>';
+    var gs=mbGrpOverrides[i]?mbGrpOverrides[i].s:255;
+    h+='<select class="fs-grp-prog" data-gi="'+i+'" onchange="setGrpSub('+i+',+this.value)" style="background:#1a1a2e;color:#f39c12;border:1px solid #444;border-radius:3px;padding:1px 3px;font-size:0.6em">';
+    h+='<option value="255"'+(gs===255?' selected':'')+'>--</option>';
+    subNames.forEach(function(n,si){h+='<option value="'+si+'"'+(si===gs?' selected':'')+'>'+n+'</option>'});
+    h+='</select></span></div>';
   });
   if(!has)h+='<span style="color:#555;font-size:0.8em;margin-left:6px">Ni skupin</span>';
   row.innerHTML=h;
+  function bindHoldGrp(sel,pressF,releaseF){
+    row.querySelectorAll(sel).forEach(function(btn){
+      var gi=+btn.dataset.gi;
+      var p=function(){pressF(gi,true)},r=function(){releaseF(gi)};
+      btn.addEventListener('mousedown',function(e){e.preventDefault();p()});btn.addEventListener('mouseup',r);btn.addEventListener('mouseleave',r);
+      btn.addEventListener('touchstart',function(e){e.preventDefault();p()},{passive:false});btn.addEventListener('touchend',function(e){e.preventDefault();r()});btn.addEventListener('touchcancel',r);
+    });
+  }
   row.querySelectorAll('.fs-grp-name').forEach(function(el){el.addEventListener('click',function(){fsToggleGroup(+el.dataset.gi);renderLayGroups();});});
-  row.querySelectorAll('.fs-grp-bo').forEach(function(btn){
-    var gi=+btn.dataset.gi,p=function(){fsGrpBlackout(gi,true)},r=function(){if(fsGrpBoState[gi])fsGrpBlackout(gi,false)};
-    btn.addEventListener('mousedown',function(e){e.preventDefault();p()});btn.addEventListener('mouseup',r);btn.addEventListener('mouseleave',r);
-    btn.addEventListener('touchstart',function(e){e.preventDefault();p()},{passive:false});btn.addEventListener('touchend',function(e){e.preventDefault();r()});btn.addEventListener('touchcancel',r);
-  });
-  row.querySelectorAll('.fs-grp-fo').forEach(function(btn){
-    var gi=+btn.dataset.gi,p=function(){fsGrpFullOn(gi,true)},r=function(){if(fsGrpFullOnState[gi])fsGrpFullOn(gi,false)};
-    btn.addEventListener('mousedown',function(e){e.preventDefault();p()});btn.addEventListener('mouseup',r);btn.addEventListener('mouseleave',r);
-    btn.addEventListener('touchstart',function(e){e.preventDefault();p()},{passive:false});btn.addEventListener('touchend',function(e){e.preventDefault();r()});btn.addEventListener('touchcancel',r);
-  });
+  bindHoldGrp('.fs-grp-bo',fsGrpBlackout,function(gi){if(fsGrpBoState[gi])fsGrpBlackout(gi,false)});
+  bindHoldGrp('.fs-grp-fo',fsGrpFullOn,function(gi){if(fsGrpFullOnState[gi])fsGrpFullOn(gi,false)});
+  bindHoldGrp('.fs-grp-solo',fsGrpSolo,function(gi){if(fsGrpSoloState[gi])fsGrpSolo(gi,false)});
 }
 function renderLayBeatRow(){
   var row=document.getElementById('layBeatRow');if(!row)return;
-  row.innerHTML='<span class="fs-lbl">Beat:</span><button class="fs-tap-btn" id="layTapBtn" style="font-size:0.82em;padding:5px 14px">TAP</button><span class="fs-beat-bpm" id="layBpmDisp">-- BPM</span>';
-  var tb=document.getElementById('layTapBtn');if(tb)tb.addEventListener('click',function(){wsSend({cmd:'tap'});});
+  var mbOnEl=document.getElementById('mbOn');
+  var h='<span class="fs-lbl">Beat:</span>';
+  h+='<button class="fs-tap-btn" id="layTapBtn" onpointerdown="doTap()">TAP</button>';
+  h+='<span class="fs-beat-bpm" id="layBeatBpm">-- BPM</span>';
+  h+='<button class="fs-beat-toggle'+(mbOnEl&&mbOnEl.checked?' active':'')+'" id="layMbToggle" onclick="toggleLayMb()">MB</button>';
+  h+='<button class="fs-beat-menu phone-only" onclick="openBeatMenu()" style="background:#333;color:#ddd;border:1px solid #555;padding:4px 10px;border-radius:4px;font-size:1em;cursor:pointer">\u2630</button>';
+  h+='<span class="phone-hide">';
+  h+='<span class="fs-lbl" style="margin-left:4px">Prog:</span><span id="layProgBtns">';
+  progNames.forEach(function(n,i){h+='<button class="fs-beat-prog'+(i===mbProg?' ps-sel':'')+'" onclick="setMbProg('+i+')">'+n+'</button>'});
+  h+='</span><span class="fs-lbl" style="margin-left:4px">Sub:</span><span id="laySubBtns">';
+  subNames.forEach(function(n,i){h+='<button class="fs-beat-prog'+(i===mbSub?' ps-sel':'')+'" onclick="setMbSub('+i+')">'+n+'</button>'});
+  h+='</span></span>';
+  h+='<span class="fs-lbl" id="layBeatActive" style="margin-left:4px;color:#666">OFF</span>';
+  row.innerHTML=h;
+}
+function toggleLayMb(){
+  var el=document.getElementById('mbOn');
+  if(el){el.checked=!el.checked;sendMbCfg();}
+  var b1=document.getElementById('layMbToggle'),b2=document.getElementById('fsMbToggle');
+  var cls='fs-beat-toggle'+(el&&el.checked?' active':'');
+  if(b1)b1.className=cls;if(b2)b2.className=cls;
 }
 
 // ---- Save / Load ----
@@ -2573,6 +2705,17 @@ function openLxPopup(fi,cx,cy){
   var pop=document.getElementById('lxPopup');pop.style.display='block';
   document.getElementById('lxOverlay').style.display='block';
   bindLxCanvas();
+  // Bind hold buttons for Full On / Blackout
+  function bindHoldBtn(id,onD,onU){
+    var b=document.getElementById(id);if(!b)return;
+    var nb=b.cloneNode(true);b.parentNode.replaceChild(nb,b); // remove old listeners
+    nb.addEventListener('mousedown',function(e){e.preventDefault();onD()},{passive:false});
+    nb.addEventListener('touchstart',function(e){e.preventDefault();onD()},{passive:false});
+    nb.addEventListener('mouseup',onU);nb.addEventListener('mouseleave',onU);
+    nb.addEventListener('touchend',onU);nb.addEventListener('touchcancel',onU);
+  }
+  bindHoldBtn('lxFullOnBtn',function(){lxFullOn(true)},function(){lxFullOn(false)});
+  bindHoldBtn('lxBlackoutBtn',function(){lxBlackout(true)},function(){lxBlackout(false)});
   // Position
   var pw=pop.offsetWidth||265,ph=pop.offsetHeight||310;
   var px=cx+14,py=cy-20;
@@ -2581,16 +2724,33 @@ function openLxPopup(fi,cx,cy){
   pop.style.left=Math.max(8,px)+'px';pop.style.top=Math.max(8,py)+'px';
 }
 function closeLxPopup(){document.getElementById('lxPopup').style.display='none';document.getElementById('lxOverlay').style.display='none';lxFxIdx=-1;}
-function lxDimChange(v){document.getElementById('lxDimV').textContent=v;if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=+v;wsSend({cmd:'fxch',f:f.idx,c:ci,v:+v});}});}
-function lxFullOn(){
+function lxDimChange(v){document.getElementById('lxDimV').textContent=v;if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=+v;wsSend({cmd:'fxch',f:f.idx,c:ci,v:+v});}});updateLayColors();}
+// Full On / Blackout: hold-to-activate (release restores previous state)
+function lxFullOn(down){
   if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f||!f.channels)return;
-  f.channels.forEach(function(ch,ci){if(ch.type===1||ch.type===2||ch.type===3||ch.type===4||ch.type===5){ch.currentValue=255;wsSend({cmd:'fxch',f:f.idx,c:ci,v:255});}});
-  document.getElementById('lxDim').value=255;document.getElementById('lxDimV').textContent='255';
+  if(down){
+    if(!lxPrevState){lxPrevState={};f.channels.forEach(function(ch,ci){lxPrevState[ci]=ch.currentValue||0;});}
+    f.channels.forEach(function(ch,ci){if(ch.type===1||ch.type===2||ch.type===3||ch.type===4||ch.type===5){ch.currentValue=255;wsSend({cmd:'fxch',f:f.idx,c:ci,v:255});}});
+    document.getElementById('lxDim').value=255;document.getElementById('lxDimV').textContent='255';updateLayColors();
+  }else{
+    if(!lxPrevState)return;
+    f.channels.forEach(function(ch,ci){if(lxPrevState[ci]!==undefined){ch.currentValue=lxPrevState[ci];wsSend({cmd:'fxch',f:f.idx,c:ci,v:lxPrevState[ci]});}});
+    var dv=getFxChVal(f,1);document.getElementById('lxDim').value=dv;document.getElementById('lxDimV').textContent=dv;
+    lxPrevState=null;updateLayColors();
+  }
 }
-function lxBlackout(){
+function lxBlackout(down){
   if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f||!f.channels)return;
-  f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=0;wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});}});
-  document.getElementById('lxDim').value=0;document.getElementById('lxDimV').textContent='0';
+  if(down){
+    if(!lxPrevState){lxPrevState={};f.channels.forEach(function(ch,ci){lxPrevState[ci]=ch.currentValue||0;});}
+    f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=0;wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});}});
+    document.getElementById('lxDim').value=0;document.getElementById('lxDimV').textContent='0';updateLayColors();
+  }else{
+    if(!lxPrevState)return;
+    f.channels.forEach(function(ch,ci){if(lxPrevState[ci]!==undefined){ch.currentValue=lxPrevState[ci];wsSend({cmd:'fxch',f:f.idx,c:ci,v:lxPrevState[ci]});}});
+    var dv=getFxChVal(f,1);document.getElementById('lxDim').value=dv;document.getElementById('lxDimV').textContent=dv;
+    lxPrevState=null;updateLayColors();
+  }
 }
 function lxToConsole(){
   var savedFi=lxFxIdx;closeLxPopup();exitLayoutEditor();
@@ -2651,7 +2811,11 @@ function bindLxCanvas(){
     var r=sv.getBoundingClientRect();
     lxS=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
     lxV=Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height));
-    lxDrawSv();lxUpdatePrev();var rgb=hsvToRgb(lxH,lxS,lxV);lxSendColor(rgb[0],rgb[1],rgb[2]);
+    lxDrawSv();lxUpdatePrev();
+    // Send pure color (V=1) to RGB channels, V controls dimmer
+    var rgb=hsvToRgb(lxH,lxS,1);lxSendColor(rgb[0],rgb[1],rgb[2]);
+    var dimVal=Math.round(lxV*255);
+    document.getElementById('lxDim').value=dimVal;lxDimChange(dimVal);
   }
   sv.onpointerdown=function(e){e.preventDefault();sv.setPointerCapture(e.pointerId);svD=true;onSv(e);};
   sv.onpointermove=function(e){if(svD)onSv(e);};sv.onpointerup=function(){svD=false;};
