@@ -2359,12 +2359,15 @@ function enterLayoutEditor(){
   layActive=true;
   document.getElementById('layEditor').classList.add('active');
   if(isPhoneDevice())document.getElementById('laySidebar').classList.add('closed');
-  updateLayViewBox();
   loadLayoutList();
-  renderLayLayout();
   renderLayBottom();
   bindLaySvgEvents();
-  updateLayColors();
+  // Počakaj na layout (display:none→flex) preden izračunaj viewBox
+  requestAnimationFrame(function(){
+    updateLayViewBox();
+    renderLayLayout();
+    updateLayColors();
+  });
 }
 function exitLayoutEditor(){layActive=false;document.getElementById('layEditor').classList.remove('active')}
 
