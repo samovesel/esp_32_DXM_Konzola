@@ -1966,6 +1966,9 @@ function updateMbStatus(mb){
   if(!mb)return;
   var bpmEl=document.getElementById('mbBpmDisp');
   if(bpmEl)bpmEl.textContent=mb.bpm?mb.bpm.toFixed(0):'--';
+  // Sync BPM slider so sendMbCfg() won't overwrite tap tempo
+  var bpmSlider=document.getElementById('mbBpmSlider');
+  if(mb.bpm&&bpmSlider&&document.activeElement!==bpmSlider){bpmSlider.value=Math.round(mb.bpm);var bpmVal=document.getElementById('mbBpmVal');if(bpmVal)bpmVal.textContent=Math.round(mb.bpm);}
   var tapEl=document.getElementById('mbTapDisp');
   if(tapEl)tapEl.textContent=Math.min(mb.taps||0,4)+'/4';
   var actEl=document.getElementById('mbActiveDisp');
