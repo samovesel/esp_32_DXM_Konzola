@@ -1252,19 +1252,29 @@ function updateFsColorDots(){
     if(!el)return;
     const lv=lastFxl?lastFxl[fi]||0:0;
     if(lv>5){
-      // Beat aktiven: pokaži barvo brez dimmer skaliranja
-      const c=getFxColorNoDim(f);
+      const c=getFxColor(f);
       const lvF=lv/100;
-      if(c.bri===0){
-        // Fixture brez barvnih kanalov: topla oranžna
-        const fb=Math.round(lvF*200);
-        el.style.background='rgb('+fb+','+Math.round(fb*0.7)+','+Math.round(fb*0.3)+')';
-        el.style.boxShadow='0 0 '+Math.max(4,lv/5)+'px rgb('+fb+','+Math.round(fb*0.5)+',0)';
-      }else{
+      if(c.bri>0){
+        // Ima svetlost — prikaži barvo z opacity modulacijo
         el.style.background=c.css;
         el.style.boxShadow='0 0 '+Math.max(4,lv/5)+'px '+c.css;
+        el.style.opacity=Math.max(0.3,lvF).toFixed(2);
+      }else{
+        // Dimmer na 0 — preverimo ali je fixture brez barvnih kanalov
+        const raw=getFxColorNoDim(f);
+        if(raw.bri===0){
+          // Fixture brez barvnih kanalov: topla oranžna
+          const fb=Math.round(lvF*200);
+          el.style.background='rgb('+fb+','+Math.round(fb*0.7)+','+Math.round(fb*0.3)+')';
+          el.style.boxShadow='0 0 '+Math.max(4,lv/5)+'px rgb('+fb+','+Math.round(fb*0.5)+',0)';
+          el.style.opacity=Math.max(0.3,lvF).toFixed(2);
+        }else{
+          // Ima barve ampak dimmer=0 → ugasnjeno
+          el.style.background='#222';
+          el.style.boxShadow='none';
+          el.style.opacity='1';
+        }
       }
-      el.style.opacity=Math.max(0.3,lvF).toFixed(2);
     }else{
       const c=getFxColor(f);
       el.style.background=c.css;
@@ -2414,8 +2424,6 @@ function renderLayStage(){
 
 function getFxLayColor(fi){
   var f=fixtures[fi];if(!f)return'#2a2a2a';
-  var lv=lastFxl?lastFxl[fi]||0:0;
-  if(lv>5){var c=getFxColorNoDim(f);return c.bri>3?c.css:'rgb('+Math.round(lv*1.8)+','+Math.round(lv*0.6)+',0)';}
   var c=getFxColor(f);return c.bri>3?c.css:'#2a2a2a';
 }
 function getFxChVal(f,type){if(!f||!f.channels)return 0;for(var i=0;i<f.channels.length;i++){if(f.channels[i].type===type)return f.channels[i].currentValue||0;}return 0;}
@@ -2460,7 +2468,7 @@ function bindLayFxGroup(g){
       if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
       if(!moved)return;
       var nx=startPos.x+dx,ny=startPos.y+dy;
-      nx=Math.max(20,Math.min(980,nx));ny=Math.max(20,Math.min(580,ny));
+      nx=Math.max(2,Math.min(998,nx));ny=Math.max(2,Math.min(598,ny));
       layData.fixturePositions[fi]={x:Math.round(nx),y:Math.round(ny)};
       // Update position in-place without full re-render
       var circle=g.querySelector('circle');
@@ -2516,7 +2524,7 @@ function bindLaySidebarDrag(item,fi){
     if(e.clientX>=cr.left&&e.clientX<=cr.right&&e.clientY>=cr.top&&e.clientY<=cr.bottom){
       var pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
       var svgPt=pt.matrixTransform(svg.getScreenCTM().inverse());
-      layData.fixturePositions[fi]={x:Math.round(Math.max(20,Math.min(980,svgPt.x))),y:Math.round(Math.max(20,Math.min(580,svgPt.y)))};
+      layData.fixturePositions[fi]={x:Math.round(Math.max(2,Math.min(998,svgPt.x))),y:Math.round(Math.max(2,Math.min(598,svgPt.y)))};
       renderLayLayout();
     }
   });
@@ -2560,7 +2568,16 @@ function updateLayColors(){
   if(fg){
     fg.querySelectorAll('.lay-fx-grp').forEach(function(g){
       var fi=+g.dataset.fi,col=getFxLayColor(fi);
-      var c=g.querySelector('circle');if(c)c.setAttribute('fill',col);
+      var c=g.querySelector('circle');
+      if(c){
+        c.setAttribute('fill',col);
+        var lv=lastFxl?lastFxl[fi]||0:0;
+        if(lv>5&&col!=='#2a2a2a'){
+          c.setAttribute('opacity',Math.max(0.3,lv/100).toFixed(2));
+        }else{
+          c.setAttribute('opacity','1');
+        }
+      }
     });
   }
   // Update sidebar dot colors in-place
@@ -2568,7 +2585,12 @@ function updateLayColors(){
   if(list){
     list.querySelectorAll('.lay-fx-item').forEach(function(item){
       var fi=+item.dataset.fi,col=getFxLayColor(fi);
-      var dot=item.querySelector('.lay-fx-dot');if(dot)dot.style.background=col;
+      var dot=item.querySelector('.lay-fx-dot');
+      if(dot){
+        dot.style.background=col;
+        var lv=lastFxl?lastFxl[fi]||0:0;
+        dot.style.opacity=(lv>5&&col!=='#2a2a2a')?Math.max(0.3,lv/100).toFixed(2):'1';
+      }
     });
   }
 }
