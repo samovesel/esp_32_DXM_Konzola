@@ -2467,6 +2467,16 @@ function getFxLayColor(fi){
 function getFxChVal(f,type){if(!f||!f.channels)return 0;for(var i=0;i<f.channels.length;i++){if(f.channels[i].type===type)return f.channels[i].currentValue||0;}return 0;}
 function hasChType(f,type){if(!f||!f.channels)return false;for(var i=0;i<f.channels.length;i++){if(f.channels[i].type===type)return true;}return false;}
 
+function calcBeam(f,cx,cy){
+  var pan=getFxChVal(f,8),tilt=getFxChVal(f,10),zoom=getFxChVal(f,18);
+  var ang=(pan/255*360-180)*Math.PI/180;
+  var alen=22+tilt/255*45;
+  var hs=5+(hasChType(f,18)?(zoom/255*14):7);
+  var bdx=Math.sin(ang),bdy=-Math.cos(ang);
+  var pdx=Math.cos(ang),pdy=Math.sin(ang);
+  var ex=cx+bdx*alen,ey=cy+bdy*alen;
+  return{ex:ex,ey:ey,x1:ex+pdx*hs,y1:ey+pdy*hs,x2:ex-pdx*hs,y2:ey-pdy*hs,hs:hs};
+}
 function renderLayFixtures(){
   var h='';
   Object.keys(layData.fixturePositions).forEach(function(idx){
@@ -2475,12 +2485,11 @@ function renderLayFixtures(){
     var isMH=hasChType(f,8)||hasChType(f,10);
     h+='<g class="lay-fx-grp" data-fi="'+fi+'" style="cursor:pointer">';
     if(isMH){
-      var pan=getFxChVal(f,8),tilt=getFxChVal(f,10);
-      var ang=(pan/255*360-180)*Math.PI/180,alen=26+tilt/255*12;
-      var ex=cx+Math.sin(ang)*alen,ey=cy-Math.cos(ang)*alen;
+      var bm=calcBeam(f,cx,cy);
+      var bc=col!=='#2a2a2a'?col:'rgb(180,180,180)';
+      h+='<path class="lay-beam" d="M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.12)')+'" stroke="'+bc.replace('rgb(','rgba(').replace(')',',0.3)')+'" stroke-width="0.5" pointer-events="none"/>';
+      h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.35)')+'" pointer-events="none"/>';
       h+='<circle cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="#555" stroke-width="1.5"/>';
-      h+='<line x1="'+cx+'" y1="'+cy+'" x2="'+ex+'" y2="'+ey+'" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round" pointer-events="none"/>';
-      h+='<circle cx="'+ex+'" cy="'+ey+'" r="3" fill="#fff" pointer-events="none"/>';
     }else{
       h+='<circle cx="'+cx+'" cy="'+cy+'" r="18" fill="'+col+'" stroke="#444" stroke-width="1.5"/>';
     }
@@ -2509,12 +2518,13 @@ function bindLayFxGroup(g){
       nx=Math.max(2,Math.min(layVbW-2,nx));ny=Math.max(2,Math.min(layVbH-2,ny));
       layData.fixturePositions[fi]={x:Math.round(nx),y:Math.round(ny)};
       // Update position in-place without full re-render
+      var rnx=Math.round(nx),rny=Math.round(ny);
       var circle=g.querySelector('circle');
-      if(circle){circle.setAttribute('cx',Math.round(nx));circle.setAttribute('cy',Math.round(ny));}
+      if(circle){circle.setAttribute('cx',rnx);circle.setAttribute('cy',rny);}
       var txt=g.querySelector('text');
-      if(txt){txt.setAttribute('x',Math.round(nx));txt.setAttribute('y',Math.round(ny)+30);}
-      var line=g.querySelector('line');
-      if(line){line.setAttribute('x1',Math.round(nx));line.setAttribute('y1',Math.round(ny));}
+      if(txt){txt.setAttribute('x',rnx);txt.setAttribute('y',rny+30);}
+      var beam=g.querySelector('.lay-beam');
+      if(beam){var ff=fixtures[fi];if(ff){var bm=calcBeam(ff,rnx,rny);beam.setAttribute('d','M '+rnx+' '+rny+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');var spt=g.querySelector('.lay-spot');if(spt){spt.setAttribute('cx',bm.ex.toFixed(1));spt.setAttribute('cy',bm.ey.toFixed(1));}}}
       // Check trash zone hover
       layDragTrashHover(ev.clientX,ev.clientY);
     }
@@ -2607,9 +2617,24 @@ function updateLayColors(){
     fg.querySelectorAll('.lay-fx-grp').forEach(function(g){
       var fi=+g.dataset.fi,col=getFxLayColor(fi);
       var c=g.querySelector('circle');
-      if(c){
-        c.setAttribute('fill',col);
-        c.setAttribute('opacity','1');
+      if(c){c.setAttribute('fill',col);c.setAttribute('opacity','1');}
+      // Posodobi žarek za moving heade
+      var beam=g.querySelector('.lay-beam');
+      if(beam){
+        var f=fixtures[fi],pos=layData.fixturePositions[fi];
+        if(f&&pos){
+          var bm=calcBeam(f,pos.x,pos.y);
+          beam.setAttribute('d','M '+pos.x+' '+pos.y+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');
+          var bc=col!=='#2a2a2a'?col:'rgb(180,180,180)';
+          beam.setAttribute('fill',bc.replace('rgb(','rgba(').replace(')',',0.12)'));
+          beam.setAttribute('stroke',bc.replace('rgb(','rgba(').replace(')',',0.3)'));
+          var spot=g.querySelector('.lay-spot');
+          if(spot){
+            spot.setAttribute('cx',bm.ex.toFixed(1));spot.setAttribute('cy',bm.ey.toFixed(1));
+            spot.setAttribute('rx',Math.max(3,bm.hs*0.6).toFixed(1));spot.setAttribute('ry',Math.max(2,bm.hs*0.4).toFixed(1));
+            spot.setAttribute('fill',bc.replace('rgb(','rgba(').replace(')',',0.35)'));
+          }
+        }
       }
     });
   }
