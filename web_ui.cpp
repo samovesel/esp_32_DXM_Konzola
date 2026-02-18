@@ -23,6 +23,15 @@ static unsigned long   _lastWsSend = 0;
 
 static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
                       AwsEventType type, void* arg, uint8_t* data, size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    JsonDocument hDoc;
+    hDoc["t"] = "hello";
+    hDoc["build"] = __DATE__ " " __TIME__;
+    hDoc["fw"] = FW_VERSION;
+    String hJson; serializeJson(hDoc, hJson);
+    client->text(hJson);
+    return;
+  }
   if (type != WS_EVT_DATA) return;
   AwsFrameInfo* info = (AwsFrameInfo*)arg;
   if (!(info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)) return;
@@ -41,7 +50,8 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   else if (strcmp(cmd, "master") == 0) _mix->setMasterDimmer(doc["v"]|255);
   else if (strcmp(cmd, "grpdim") == 0) _mix->setGroupDimmer(doc["g"]|0, doc["v"]|255);
   else if (strcmp(cmd, "blackout") == 0) { if(doc["v"]|0) _mix->blackout(); else _mix->unBlackout(); }
-  else if (strcmp(cmd, "mode") == 0) { const char* m=doc["v"]; if(m&&strcmp(m,"local")==0) _mix->switchToLocal(); else if(m&&strcmp(m,"artnet")==0) _mix->switchToArtNet(); }
+  else if (strcmp(cmd, "mode") == 0) { const char* m=doc["v"]; if(m&&strcmp(m,"local")==0) _mix->switchToLocal(); else if(m&&strcmp(m,"artnet")==0) _mix->switchToArtNet(); else if(m&&strcmp(m,"primary_local")==0) _mix->switchToPrimaryLocal(); }
+  else if (strcmp(cmd, "switchToArtnet") == 0) _mix->switchToArtNet();
   else if (strcmp(cmd, "recall") == 0) _mix->recallSnapshot(doc["i"]|0);
   else if (strcmp(cmd, "recall_artnet") == 0) _mix->recallArtNetShadow();
   else if (strcmp(cmd, "scene_recall") == 0) _mix->recallScene(doc["slot"]|-1, doc["fade"]|CROSSFADE_DEFAULT_MS);
@@ -159,6 +169,7 @@ static void apiGetConfig(AsyncWebServerRequest* req) {
   doc["dhcp"]=_cfg->dhcp; doc["staticIp"]=_cfg->staticIp;
   doc["staticGw"]=_cfg->staticGw; doc["staticSn"]=_cfg->staticSn; doc["audioSource"]=_cfg->audioSource;
   doc["authEnabled"]=_cfg->authEnabled; doc["authUser"]=_cfg->authUser;
+  doc["artnetTimeoutSec"]=_cfg->artnetTimeoutSec; doc["artnetPrimaryMode"]=_cfg->artnetPrimaryMode;
   doc["version"]=FW_VERSION " " __DATE__; doc["ip"]=WiFi.localIP().toString(); doc["mac"]=WiFi.macAddress();
   doc["mdns"]=String("http://") + _cfg->hostname + ".local";
   String json; serializeJson(doc,json); req->send(200,"application/json",json);
@@ -190,6 +201,8 @@ static void apiPostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t len,
   _cfg->authEnabled=doc["authEnabled"]|_cfg->authEnabled;
   if(doc["authUser"].is<const char*>()) strlcpy(_cfg->authUser,doc["authUser"],sizeof(_cfg->authUser));
   if(doc["authPass"].is<const char*>()&&strlen(doc["authPass"])>0) strlcpy(_cfg->authPass,doc["authPass"],sizeof(_cfg->authPass));
+  if(!doc["artnetTimeoutSec"].isNull()) _cfg->artnetTimeoutSec=doc["artnetTimeoutSec"]|_cfg->artnetTimeoutSec;
+  if(!doc["artnetPrimaryMode"].isNull()) _cfg->artnetPrimaryMode=doc["artnetPrimaryMode"]|false;
 
   bool ok=configSave(*_cfg); req->send(200,"application/json",ok?"{\"ok\":true}":"{\"ok\":false}");
   if(ok){delay(500);ESP.restart();}
@@ -828,6 +841,17 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
 
 void webLoop() {
   if(!_ws||!_mix)return;
+
+  // ArtNet detected v PRIMARY načinu — pošlji notifikacijo (max 1x/30s)
+  static unsigned long lastArtnetNotif = 0;
+  if (_mix->consumeArtNetDetected()) {
+    unsigned long nowMs = millis();
+    if (nowMs - lastArtnetNotif > 30000) {
+      lastArtnetNotif = nowMs;
+      if (_ws->count() > 0) _ws->textAll("{\"t\":\"artnet_detected\"}");
+    }
+  }
+
   unsigned long now=millis(); if(now-_lastWsSend<WS_UPDATE_INTERVAL)return; _lastWsSend=now;
   if(_ws->count()==0)return;
 

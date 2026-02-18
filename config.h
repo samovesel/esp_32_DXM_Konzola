@@ -105,8 +105,9 @@
 // Način krmiljenja
 enum ControlMode : uint8_t {
   CTRL_ARTNET        = 0,  // ArtNet je aktiven, prejema pakete
-  CTRL_LOCAL_AUTO    = 1,  // Ni ArtNet-a 10s, samodejni preklop
-  CTRL_LOCAL_MANUAL  = 2   // Uporabnik ročno preklopil
+  CTRL_LOCAL_AUTO    = 1,  // Ni ArtNet-a Xs, samodejni preklop
+  CTRL_LOCAL_MANUAL  = 2,  // Uporabnik ročno preklopil
+  CTRL_LOCAL_PRIMARY = 3   // Manualna mešalka ima prednost; ArtNet se ignorira dokler operator ne dovoli
 };
 
 // Tip kanala (za fixture profile)
@@ -451,6 +452,10 @@ struct NodeConfig {
   bool authEnabled;
   char authUser[20];
   char authPass[20];
+
+  // ArtNet vedenje
+  uint16_t artnetTimeoutSec;  // Po koliko sekundah brez ArtNet-a preklopi na LOCAL_AUTO (privzeto 10)
+  bool artnetPrimaryMode;     // true = CTRL_LOCAL_PRIMARY ob zagonu (manualna mešalka ima prednost)
 };
 
 // Privzete vrednosti
@@ -466,7 +471,9 @@ static const NodeConfig DEFAULT_CONFIG = {
   0,               // audioSource: off
   false,           // authEnabled
   "admin",         // authUser
-  ""               // authPass (prazno = brez gesla)
+  "",              // authPass (prazno = brez gesla)
+  10,              // artnetTimeoutSec
+  false            // artnetPrimaryMode
 };
 
 // ============================================================================

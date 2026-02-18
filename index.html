@@ -203,7 +203,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     <button class="bo" id="boBtn" onclick="toggleBlackout()">BLACKOUT</button>
     <button id="undoBtn" onclick="doUndo()" style="background:#555;padding:4px 10px;font-size:0.8em;display:none" title="Razveljavi">↩ Undo</button>
   </div>
-  <div class="stats"><span id="statsText">...</span></div>
+  <div class="stats"><span id="statsText">...</span> <span id="buildInfo" style="font-size:0.85em;color:#555"></span></div>
 </header>
 
 <nav>
@@ -216,6 +216,8 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 </nav>
 
 <div id="msg"></div>
+<div id="offlineBanner" style="display:none;position:fixed;top:0;left:0;width:100%;background:#c0392b;color:#fff;text-align:center;padding:8px;z-index:100;font-weight:bold">&#9888; Brez povezave — poskušam vzpostaviti...</div>
+<div id="artnetBanner" style="display:none;position:fixed;top:0;left:0;width:100%;background:#e67e22;color:#000;text-align:center;padding:8px 12px;z-index:99;font-weight:bold">&#9888; ArtNet signal zaznan! <button onclick="acceptArtnet()" style="margin:0 6px;padding:4px 10px;font-size:0.85em">Preklopi na ArtNet</button><button onclick="dismissArtnet()" style="margin:0 3px;padding:4px 10px;font-size:0.85em;background:#555;color:#fff">Ignoriraj</button><button onclick="suppressArtnet()" style="margin:0 3px;padding:4px 10px;font-size:0.85em;background:#333;color:#aaa">Skrij 1 uro</button></div>
 
 <!-- TAB 0: MIXER -->
 <div class="tab show" id="tab0">
@@ -398,6 +400,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   <div class="card"><h3>Naprava</h3>
     <div class="row"><div><label>Ime (hostname)</label><input id="s_host" maxlength="27"></div><div><label>ArtNet Univerza</label><input id="s_univ" type="number" min="0" max="32767"></div></div>
     <label>Število DMX kanalov</label><input id="s_ch" type="number" min="1" max="512">
+    <div class="row" style="margin-top:8px"><div><label>ArtNet timeout (s)</label><input id="s_artTimeout" type="number" min="1" max="3600" value="10"></div><div style="display:flex;align-items:flex-end;padding-bottom:4px"><div class="toggle"><input type="checkbox" id="s_artPrimary"><label>Primarni način (ArtNet ne prevzame)</label></div></div></div>
   </div>
   <div class="card"><h3>WiFi omrežja</h3>
     <p style="font-size:0.7em;color:#666;margin:-4px 0 6px">Do 5 omrežij s samodejnim failover. Prvo delujoče se uporabi.</p>
@@ -465,19 +468,31 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 </div>
 
 <script>
-let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0;
+let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0,currentMode=0;
 var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,fsGroupOrder=null,fsGroupDimmers={};
 function isPhoneDevice(){var touch=window.matchMedia('(hover: none) and (pointer: coarse)').matches;var smallScreen=Math.min(screen.width,screen.height)<=500;return touch&&smallScreen}
 
-function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>setTimeout(wsConnect,2000)}
+function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onopen=function(){document.getElementById('offlineBanner').style.display='none'};ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>{document.getElementById('offlineBanner').style.display='block';setTimeout(wsConnect,2000)}}
 function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
 
 // FFT bars init
 (function(){const b=document.getElementById('fftBox');for(let i=0;i<8;i++){const d=document.createElement('div');d.className='fft-bar';d.id='fb'+i;d.style.height='2px';b.appendChild(d)}})();
 
+var artnetDismissTimer=null,artnetSuppressUntil=0;
+function showArtnetBanner(){if(Date.now()<artnetSuppressUntil)return;document.getElementById('artnetBanner').style.display='block';if(artnetDismissTimer)clearTimeout(artnetDismissTimer);artnetDismissTimer=setTimeout(dismissArtnet,15000)}
+function dismissArtnet(){if(artnetDismissTimer){clearTimeout(artnetDismissTimer);artnetDismissTimer=null}document.getElementById('artnetBanner').style.display='none'}
+function suppressArtnet(){artnetSuppressUntil=Date.now()+3600000;dismissArtnet()}
+function acceptArtnet(){dismissArtnet();wsSend({cmd:'switchToArtnet'})}
+
 function handleWs(d){
+  if(d.t==='hello'){
+    document.getElementById('buildInfo').textContent='| Build: '+d.build;
+    return;
+  }
+  if(d.t==='artnet_detected'){showArtnetBanner();return}
   if(d.t==='status'){
-    const modes=['ARTNET','LOKALNO (auto)','LOKALNO (ročno)'];
+    currentMode=d.mode;
+    const modes=['ARTNET','LOKALNO (auto)','LOKALNO (ročno)','LOKALNO (prim.)'];
     document.getElementById('dot').className='dot '+(d.mode===0?'dot-g':'dot-y');
     document.getElementById('modeText').textContent=modes[d.mode]||'?';
     document.getElementById('modeBtn').textContent=d.mode===0?'Preklopi lokalno':'Preklopi ArtNet';
@@ -537,7 +552,7 @@ function handleWs(d){
 }
 
 function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1)loadScenes();if(n===2){loadRules();renderZoneList();renderFxPreviewInit();renderPalBtns();renderChainList()}if(n===5)loadConfigs()}
-function toggleMode(){wsSend({cmd:'mode',v:document.getElementById('modeText').textContent.includes('ARTNET')?'local':'artnet'})}
+function toggleMode(){if(currentMode===0)wsSend({cmd:'mode',v:'local'});else if(currentMode===3)wsSend({cmd:'mode',v:'local'});else wsSend({cmd:'mode',v:'artnet'})}
 function toggleBlackout(){wsSend({cmd:'blackout',v:boState?0:1})}
 function sendMaster(v){document.getElementById('masterVal').textContent=v;wsSend({cmd:'master',v:+v})}
 
@@ -712,6 +727,7 @@ function renderFaders(){
     h+='<span class="ch-range">'+rl+'</span></div>';
   });
   document.getElementById('faders').innerHTML=h;
+  bindHorizontalSliders(document.getElementById('faders'));
 }
 // Najdi kanal po tipu v fixture-u (vrne index ali -1)
 function findChByType(fx,type){
@@ -832,6 +848,7 @@ function renderConsole(){
     h+='</div>';
   });
   grid.innerHTML=h;
+  bindFsSliderTouch(grid);
 }
 function sendCGang(fxIdx,fi,ci,val){
   val=+val;
@@ -2031,6 +2048,8 @@ function loadSettings(){fetch('/api/config').then(r=>r.json()).then(d=>{
   document.getElementById('staticNet').style.display=d.dhcp!==false?'none':'block';
   document.getElementById('s_auth').checked=!!d.authEnabled;
   document.getElementById('s_auser').value=d.authUser||'admin';
+  document.getElementById('s_artTimeout').value=d.artnetTimeoutSec||10;
+  document.getElementById('s_artPrimary').checked=!!d.artnetPrimaryMode;
   document.getElementById('verInfo').textContent='FW: '+d.version+' | IP: '+d.ip+' | MAC: '+d.mac+(d.mdns?' | '+d.mdns:'');
   // WiFi APs
   window._wifiAPs=d.wifiAPs||[];
@@ -2046,7 +2065,8 @@ function saveSettings(){
     wifiAPs:aps,dhcp:document.getElementById('s_dhcp').checked,
     staticIp:document.getElementById('s_ip').value,staticGw:document.getElementById('s_gw').value,staticSn:document.getElementById('s_sn').value,
     audioSource:+document.getElementById('s_audio').value,
-    authEnabled:document.getElementById('s_auth').checked,authUser:document.getElementById('s_auser').value,authPass:document.getElementById('s_apass').value};
+    authEnabled:document.getElementById('s_auth').checked,authUser:document.getElementById('s_auser').value,authPass:document.getElementById('s_apass').value,
+    artnetTimeoutSec:+document.getElementById('s_artTimeout').value,artnetPrimaryMode:document.getElementById('s_artPrimary').checked};
   fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json()).then(d=>showMsg(d.ok?'Shranjeno, restartiram...':'Napaka',d.ok));
 }
 function renderWifiAps(){
@@ -2148,6 +2168,32 @@ function uploadConfig(input){
   });
 }
 function showMsg(t,ok){const m=document.getElementById('msg');m.textContent=t;m.className=ok?'ok':'err';setTimeout(()=>m.className='',3000)}
+
+// bindHorizontalSliders: fader način za horizontalne sliderje (brez skoka na pozicijo)
+// - horizontalni poteg → relativno meni vrednost (fader)
+// - vertikalni poteg   → pomika stran (page scroll)
+function bindHorizontalSliders(container){
+  container.querySelectorAll('input[type=range]:not([orient=vertical])').forEach(function(sl){
+    sl.style.touchAction='none';
+    var sx,sy,sv,intent,active=false;
+    function onMove(cx,cy){
+      var dx=cx-sx,dy=cy-sy,adx=Math.abs(dx),ady=Math.abs(dy);
+      if(!intent){if(adx<8&&ady<8)return;intent=adx>ady?'slide':'scroll';}
+      if(intent==='scroll'){window.scrollBy(0,-dy);sy=cy;return;}
+      var nv=Math.round(sv+(dx/sl.offsetWidth)*(+sl.max-+sl.min));
+      nv=Math.max(+sl.min,Math.min(+sl.max,nv));
+      if(nv!==+sl.value){sl.value=nv;sl.dispatchEvent(new Event('input',{bubbles:true}));}
+    }
+    sl.addEventListener('touchstart',function(e){e.preventDefault();var t=e.touches[0];sx=t.clientX;sy=t.clientY;sv=+sl.value;intent=null;active=true;},{passive:false});
+    sl.addEventListener('touchmove',function(e){if(!active)return;onMove(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    sl.addEventListener('touchend',function(){active=false;intent=null;});
+    sl.addEventListener('touchcancel',function(){active=false;intent=null;});
+    sl.addEventListener('pointerdown',function(e){if(e.pointerType!=='mouse')return;e.preventDefault();sl.setPointerCapture(e.pointerId);sx=e.clientX;sy=e.clientY;sv=+sl.value;intent=null;active=true;},{passive:false});
+    sl.addEventListener('pointermove',function(e){if(!active||e.pointerType!=='mouse')return;onMove(e.clientX,e.clientY);});
+    sl.addEventListener('pointerup',function(e){if(e.pointerType==='mouse'){active=false;intent=null;}});
+    sl.addEventListener('pointercancel',function(e){if(e.pointerType==='mouse'){active=false;intent=null;}});
+  });
+}
 
 wsConnect();loadFixtures();loadSettings();loadScenes();updateFadeLabel();
 </script></body></html>

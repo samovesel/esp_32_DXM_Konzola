@@ -61,6 +61,14 @@ void MixerEngine::onArtNetData(const uint8_t* data, uint16_t length) {
     _mode = CTRL_ARTNET;
     _manualOverride = false;
   }
+  // V PRIMARY načinu: ArtNet se ignorira, samo zaznamo prisotnost za notifikacijo
+  else if (_mode == CTRL_LOCAL_PRIMARY) {
+    if (!_artnetDetected) {
+      _artnetDetected = true;
+      _artnetDetectedMs = millis();
+      Serial.println("[MIX] ArtNet zaznan v PRIMARY načinu → notifikacija");
+    }
+  }
 
   // V ARTNET načinu: podatke kopira update() iz shadow
   // (onArtNetData samo posodobi shadow, update() aplicira master dimmer)
@@ -111,9 +119,33 @@ void MixerEngine::switchToArtNet() {
   startModeFade();
   _mode = CTRL_ARTNET;
   _manualOverride = false;
+  _artnetDetected = false;
 
   memcpy(_dmxOut, _artnetShadow, DMX_MAX_CHANNELS);
   Serial.println("[MIX] Ročni preklop na ARTNET kontrolo");
+}
+
+void MixerEngine::switchToPrimaryLocal() {
+  if (_mode == CTRL_LOCAL_PRIMARY) return;
+
+  if (_mode == CTRL_ARTNET) {
+    takeSnapshotFrom(_dmxOut, 'A');
+    memcpy(_manualValues, _dmxOut, DMX_MAX_CHANNELS);
+  }
+  startModeFade();
+  _mode = CTRL_LOCAL_PRIMARY;
+  _manualOverride = true;
+  _artnetDetected = false;
+  markDirty();
+  Serial.println("[MIX] Preklop na PRIMARY LOKALNO (ArtNet ignoriran, samo obvesti)");
+}
+
+bool MixerEngine::consumeArtNetDetected() {
+  lock();
+  bool detected = _artnetDetected;
+  _artnetDetected = false;
+  unlock();
+  return detected;
 }
 
 // ============================================================================
@@ -396,7 +428,7 @@ void MixerEngine::update() {
 
   // --- ArtNet timeout: preklop na lokalno ---
   if (_mode == CTRL_ARTNET) {
-    if (_lastArtNetPacket > 0 && (now - _lastArtNetPacket > ARTNET_TIMEOUT_MS)) {
+    if (_lastArtNetPacket > 0 && (now - _lastArtNetPacket > _artnetTimeoutMs)) {
       takeSnapshotFrom(_artnetShadow, 'A');
       Serial.println("[MIX] ArtNet timeout → preklop na LOKALNO (auto)");
       memcpy(_manualValues, _artnetShadow, DMX_MAX_CHANNELS);
@@ -404,7 +436,7 @@ void MixerEngine::update() {
       startModeFade();
       _mode = CTRL_LOCAL_AUTO;
     }
-    else if (_lastArtNetPacket == 0 && now > ARTNET_TIMEOUT_MS) {
+    else if (_lastArtNetPacket == 0 && now > _artnetTimeoutMs) {
       Serial.println("[MIX] Ni ArtNet-a → preklop na LOKALNO s shranjenim stanjem");
       startModeFade();
       _mode = CTRL_LOCAL_AUTO;
