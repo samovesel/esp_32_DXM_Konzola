@@ -22,10 +22,17 @@ public:
   void onArtPoll();
 
   // --- Krmilni način ---
-  void switchToLocal();       // Ročni preklop na lokalno
-  void switchToArtNet();      // Ročni preklop na ArtNet
+  void switchToLocal();           // Ročni preklop na lokalno
+  void switchToArtNet();          // Ročni preklop na ArtNet
+  void switchToPrimaryLocal();    // Preklop na PRIMARY: ArtNet se ignorira, samo obvesti
   ControlMode getMode() const { return _mode; }
   bool isManualOverride() const { return _manualOverride; }
+
+  // --- ArtNet timeout ---
+  void setArtNetTimeout(uint32_t ms) { _artnetTimeoutMs = ms; }
+
+  // --- ArtNet detected flag (za PRIMARY mode notifikacijo) ---
+  bool consumeArtNetDetected();
 
   // --- Mixer operacije (delujejo samo v LOCAL načinu) ---
   void setChannel(uint16_t addr, uint8_t value);                      // Posamezen kanal (1-512)
@@ -94,6 +101,9 @@ private:
   uint8_t _groupDimmers[MAX_GROUPS];
 
   // ArtNet timing
+  uint32_t _artnetTimeoutMs = 10000;
+  bool _artnetDetected = false;
+  unsigned long _artnetDetectedMs = 0;
   unsigned long _lastArtNetPacket = 0;
   unsigned long _artnetPackets = 0;
   unsigned long _fpsCounter = 0;

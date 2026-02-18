@@ -417,6 +417,8 @@ void setup() {
 
   // Mixer
   mixer.begin(&fixtures, &scenes);
+  mixer.setArtNetTimeout(nodeCfg.artnetTimeoutSec * 1000UL);
+  if (nodeCfg.artnetPrimaryMode) mixer.switchToPrimaryLocal();
 
   // Sound engine (preskoči v safe mode)
   if (!safeMode) {
@@ -545,6 +547,9 @@ void auxTask(void* param) {
             break;
           case CTRL_LOCAL_MANUAL:
             ledSet(LED_PURPLE);
+            break;
+          case CTRL_LOCAL_PRIMARY:
+            ledSet(LED_BLUE);
             break;
         }
       }

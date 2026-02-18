@@ -47,6 +47,10 @@ inline bool configLoad(NodeConfig &cfg) {
   cfg.authEnabled = doc["authEnabled"] | false;
   strlcpy(cfg.authUser, doc["authUser"] | "admin", sizeof(cfg.authUser));
   strlcpy(cfg.authPass, doc["authPass"] | "", sizeof(cfg.authPass));
+
+  // ArtNet vedenje
+  cfg.artnetTimeoutSec = doc["artnetTimeoutSec"] | (uint16_t)10;
+  cfg.artnetPrimaryMode = doc["artnetPrimaryMode"] | false;
   return true;
 }
 
@@ -69,9 +73,11 @@ inline bool configSave(const NodeConfig &cfg) {
   doc["staticGw"]     = cfg.staticGw;
   doc["staticSn"]     = cfg.staticSn;
   doc["audioSource"]  = cfg.audioSource;
-  doc["authEnabled"]  = cfg.authEnabled;
-  doc["authUser"]     = cfg.authUser;
-  doc["authPass"]     = cfg.authPass;
+  doc["authEnabled"]      = cfg.authEnabled;
+  doc["authUser"]         = cfg.authUser;
+  doc["authPass"]         = cfg.authPass;
+  doc["artnetTimeoutSec"] = cfg.artnetTimeoutSec;
+  doc["artnetPrimaryMode"]= cfg.artnetPrimaryMode;
 
   File f = LittleFS.open(PATH_CONFIG, "w");
   if (!f) return false;
