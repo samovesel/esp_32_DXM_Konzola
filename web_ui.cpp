@@ -242,7 +242,18 @@ static void apiPostFixtures(AsyncWebServerRequest* req, uint8_t* data, size_t le
   JsonDocument doc; if(deserializeJson(doc,_postBuf)){req->send(400,"application/json","{\"ok\":false}");return;}
   const char* action=doc["action"]; bool ok=false;
   if(strcmp(action,"add")==0){JsonObject fx=doc["fixture"];
-    ok=_fix->addFixture(fx["name"]|"?",fx["profileId"]|"",fx["dmxAddress"]|1,fx["groupMask"]|0,fx["soundReactive"]|false);}
+    ok=_fix->addFixture(fx["name"]|"?",fx["profileId"]|"",fx["dmxAddress"]|1,fx["groupMask"]|0,fx["soundReactive"]|false);
+    // Apliciraj default vrednosti kanalov (npr. Pan=128, Tilt=128 za center)
+    if(ok){
+      for(int i=0;i<MAX_FIXTURES;i++){
+        const PatchEntry* pe=_fix->getFixture(i);
+        if(!pe||!pe->active||pe->profileIndex<0)continue;
+        if(strcmp(pe->profileId,fx["profileId"]|"")!=0||pe->dmxAddress!=(fx["dmxAddress"]|1))continue;
+        const FixtureProfile* p=_fix->getProfile(pe->profileIndex);
+        if(p){for(int c=0;c<p->channelCount;c++){if(p->channels[c].defaultValue)_mix->setFixtureChannel(i,c,p->channels[c].defaultValue);}}
+        break;
+      }
+    }}
   else if(strcmp(action,"remove")==0) ok=_fix->removeFixture(doc["index"]|-1);
   else if(strcmp(action,"update")==0){
     int idx=doc["index"]|-1;
