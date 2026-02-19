@@ -2511,17 +2511,24 @@ function calcBeam(f,cx,cy){
   var pan=getFxChVal(f,8),tilt=getFxChVal(f,10),zoom=getFxChVal(f,18);
   var ang=(pan/255*360-180)*Math.PI/180;
   var alen=30+tilt/255*140;
-  var hs=5+(hasChType(f,18)?(zoom/255*14):7);
+  var zoomDeg=hasChType(f,18)?(10+zoom/255*50):35;
+  var halfRad=zoomDeg/2*Math.PI/180;
+  var hs=Math.tan(halfRad)*alen;
   var bdx=Math.sin(ang),bdy=-Math.cos(ang);
   var pdx=Math.cos(ang),pdy=Math.sin(ang);
+  // Clamp alen so endpoint + beam edges stay within viewbox
+  var m=Math.min(hs,40)+4,maxA=alen;
+  if(bdx>0.01)maxA=Math.min(maxA,(layVbW-m-cx)/bdx);
+  else if(bdx<-0.01)maxA=Math.min(maxA,(m-cx)/bdx);
+  if(bdy>0.01)maxA=Math.min(maxA,(layVbH-m-cy)/bdy);
+  else if(bdy<-0.01)maxA=Math.min(maxA,(m-cy)/bdy);
+  alen=Math.max(25,maxA);
+  hs=Math.tan(halfRad)*alen;
   var ex=cx+bdx*alen,ey=cy+bdy*alen;
-  // Clamp endpoint to viewbox with margin
-  var m=hs+4;
-  if(ex<m){alen=Math.max(25,(m-cx)/bdx||alen);ex=cx+bdx*alen;ey=cy+bdy*alen;}
-  if(ex>layVbW-m){alen=Math.max(25,((layVbW-m)-cx)/bdx||alen);ex=cx+bdx*alen;ey=cy+bdy*alen;}
-  if(ey<m){alen=Math.max(25,(m-cy)/bdy||alen);ex=cx+bdx*alen;ey=cy+bdy*alen;}
-  if(ey>layVbH-m){alen=Math.max(25,((layVbH-m)-cy)/bdy||alen);ex=cx+bdx*alen;ey=cy+bdy*alen;}
-  return{ex:ex,ey:ey,x1:ex+pdx*hs,y1:ey+pdy*hs,x2:ex-pdx*hs,y2:ey-pdy*hs,hs:hs,pdx:pdx,pdy:pdy};
+  // Zoom handle: opposite side of fixture, distance based on zoom value
+  var zhDist=28+zoom/255*25;
+  var zhx=cx-bdx*zhDist,zhy=cy-bdy*zhDist;
+  return{ex:ex,ey:ey,x1:ex+pdx*hs,y1:ey+pdy*hs,x2:ex-pdx*hs,y2:ey-pdy*hs,hs:hs,pdx:pdx,pdy:pdy,zhx:zhx,zhy:zhy};
 }
 function calcPanTiltFromPos(cx,cy,tx,ty){
   var dx=tx-cx,dy=ty-cy;
@@ -2547,7 +2554,7 @@ function renderLayFixtures(){
       h+='<path class="lay-beam" d="M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.12)')+'" stroke="'+bc.replace('rgb(','rgba(').replace(')',',0.3)')+'" stroke-width="0.5" pointer-events="none"/>';
       h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.35)')+'" pointer-events="none"/>';
       h+='<circle class="lay-beam-handle" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" r="12" fill="rgba(255,255,255,0.01)" stroke="rgba(39,174,96,0)" stroke-width="2" style="cursor:crosshair" pointer-events="all"/>';
-      if(hasChType(f,18)){h+='<circle class="lay-zoom-handle" cx="'+bm.x1.toFixed(1)+'" cy="'+bm.y1.toFixed(1)+'" r="10" fill="rgba(32,96,255,0.5)" stroke="#0060ff" stroke-width="1.5" style="cursor:ew-resize" pointer-events="all"/>';}
+      if(hasChType(f,18)){h+='<circle class="lay-zoom-handle" cx="'+bm.zhx.toFixed(1)+'" cy="'+bm.zhy.toFixed(1)+'" r="10" fill="rgba(32,96,255,0.5)" stroke="#0060ff" stroke-width="1.5" style="cursor:pointer" pointer-events="all"/>';}
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
     }else{
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="18" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
@@ -2585,9 +2592,12 @@ function bindLayFxGroup(g){
   }
 }
 function calcZoomFromDrag(f,cx,cy,mx,my){
-  var bm=calcBeam(f,cx,cy);
-  var dist=Math.abs((mx-bm.ex)*bm.pdx+(my-bm.ey)*bm.pdy);
-  var zoom=Math.round((Math.max(0,dist-5)/14)*255);
+  var pan=getFxChVal(f,8);
+  var ang=(pan/255*360-180)*Math.PI/180;
+  var bdx=Math.sin(ang),bdy=-Math.cos(ang);
+  var dx=mx-cx,dy=my-cy;
+  var dist=-(dx*bdx+dy*bdy);
+  var zoom=Math.round(((dist-28)/25)*255);
   return Math.max(0,Math.min(255,zoom));
 }
 function bindZoomHandle(zh,fi,g){
@@ -2609,7 +2619,7 @@ function bindZoomHandle(zh,fi,g){
       if(beam)beam.setAttribute('d','M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');
       var spot=g.querySelector('.lay-spot');
       if(spot){spot.setAttribute('rx',Math.max(3,bm.hs*0.6).toFixed(1));spot.setAttribute('ry',Math.max(2,bm.hs*0.4).toFixed(1));}
-      zh.setAttribute('cx',bm.x1.toFixed(1));zh.setAttribute('cy',bm.y1.toFixed(1));
+      zh.setAttribute('cx',bm.zhx.toFixed(1));zh.setAttribute('cy',bm.zhy.toFixed(1));
       if(!zThrottle){
         zThrottle=setTimeout(function(){zThrottle=null;},30);
         f.channels.forEach(function(ch,ci){
@@ -2666,7 +2676,7 @@ function bindBeamHandle(handle,fi,g){
       if(spot){spot.setAttribute('cx',bm.ex.toFixed(1));spot.setAttribute('cy',bm.ey.toFixed(1));spot.setAttribute('rx',Math.max(3,bm.hs*0.6).toFixed(1));spot.setAttribute('ry',Math.max(2,bm.hs*0.4).toFixed(1));}
       handle.setAttribute('cx',bm.ex.toFixed(1));handle.setAttribute('cy',bm.ey.toFixed(1));
       var zh=g.querySelector('.lay-zoom-handle');
-      if(zh){zh.setAttribute('cx',bm.x1.toFixed(1));zh.setAttribute('cy',bm.y1.toFixed(1));}
+      if(zh){zh.setAttribute('cx',bm.zhx.toFixed(1));zh.setAttribute('cy',bm.zhy.toFixed(1));}
       if(!beamThrottle){
         beamThrottle=setTimeout(function(){beamThrottle=null;},30);
         f.channels.forEach(function(ch,ci){
@@ -2712,7 +2722,7 @@ function bindFixtureCircle(circle,fi,g){
       var txt=g.querySelector('text');
       if(txt){txt.setAttribute('x',rnx);txt.setAttribute('y',rny+30);}
       var beam=g.querySelector('.lay-beam');
-      if(beam){var ff=fixtures[fi];if(ff){var bm=calcBeam(ff,rnx,rny);beam.setAttribute('d','M '+rnx+' '+rny+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');var spt=g.querySelector('.lay-spot');if(spt){spt.setAttribute('cx',bm.ex.toFixed(1));spt.setAttribute('cy',bm.ey.toFixed(1));}var hdl=g.querySelector('.lay-beam-handle');if(hdl){hdl.setAttribute('cx',bm.ex.toFixed(1));hdl.setAttribute('cy',bm.ey.toFixed(1));}var zhl=g.querySelector('.lay-zoom-handle');if(zhl){zhl.setAttribute('cx',bm.x1.toFixed(1));zhl.setAttribute('cy',bm.y1.toFixed(1));}}}
+      if(beam){var ff=fixtures[fi];if(ff){var bm=calcBeam(ff,rnx,rny);beam.setAttribute('d','M '+rnx+' '+rny+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');var spt=g.querySelector('.lay-spot');if(spt){spt.setAttribute('cx',bm.ex.toFixed(1));spt.setAttribute('cy',bm.ey.toFixed(1));}var hdl=g.querySelector('.lay-beam-handle');if(hdl){hdl.setAttribute('cx',bm.ex.toFixed(1));hdl.setAttribute('cy',bm.ey.toFixed(1));}var zhl=g.querySelector('.lay-zoom-handle');if(zhl){zhl.setAttribute('cx',bm.zhx.toFixed(1));zhl.setAttribute('cy',bm.zhy.toFixed(1));}}}
       layDragTrashHover(ev.clientX,ev.clientY);
     }
     function onUp(ev){
@@ -2827,7 +2837,7 @@ function updateLayColors(){
           var hdl=g.querySelector('.lay-beam-handle');
           if(hdl){hdl.setAttribute('cx',bm.ex.toFixed(1));hdl.setAttribute('cy',bm.ey.toFixed(1));}
           var zh=g.querySelector('.lay-zoom-handle');
-          if(zh){zh.setAttribute('cx',bm.x1.toFixed(1));zh.setAttribute('cy',bm.y1.toFixed(1));}
+          if(zh){zh.setAttribute('cx',bm.zhx.toFixed(1));zh.setAttribute('cy',bm.zhy.toFixed(1));}
         }
       }
     });
