@@ -123,7 +123,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .fs-bottom{flex-shrink:0;background:#16213e;border-top:1px solid #333;padding:4px 8px;position:relative}
 .fs-bottom-toggle{position:absolute;right:4px;top:2px;background:none;border:1px solid #555;color:#888;font-size:0.75em;padding:1px 6px;border-radius:3px;cursor:pointer;z-index:5;line-height:1.2}
 .fs-bottom-toggle:hover{color:#fff;border-color:#888}
-.fs-bottom.collapsed .fs-beat-row,.fs-bottom.collapsed .fs-scene-row,.fs-bottom.collapsed .fs-grp-row,.fs-bottom.collapsed .fs-cf-bar{display:none}
+.fs-bottom.collapsed .fs-beat-row,.fs-bottom.collapsed .fs-grp-row,.fs-bottom.collapsed .fs-cf-bar{display:none}
 .fs-bottom.collapsed{padding:2px 8px}
 .fs-scene-row{display:flex;gap:4px;overflow-x:auto;padding:3px 0;-webkit-overflow-scrolling:touch;align-items:center}
 .fs-scene-row .fs-lbl{color:#888;font-size:0.7em;white-space:nowrap;flex-shrink:0;margin-right:4px}
@@ -2708,9 +2708,9 @@ function renderLayFixtures(){
     h+='<g class="lay-fx-grp" data-fi="'+fi+'" style="cursor:pointer">';
     if(isMH){
       var bm=calcBeam(f,cx,cy);
-      var bc=col!=='#2a2a2a'?col:'rgb(180,180,180)';
-      h+='<path class="lay-beam" d="M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.12)')+'" stroke="'+bc.replace('rgb(','rgba(').replace(')',',0.3)')+'" stroke-width="0.5" pointer-events="none"/>';
-      h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.35)')+'" pointer-events="none"/>';
+      var bcc=getFxBorderColor(fi);var bc=bcc!=='#444'?bcc:'rgb(180,180,180)';
+      h+='<path class="lay-beam" d="M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.25)')+'" stroke="'+bc.replace('rgb(','rgba(').replace(')',',0.5)')+'" stroke-width="0.5" pointer-events="none"/>';
+      h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.5)')+'" pointer-events="none"/>';
       h+='<circle class="lay-beam-handle" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" r="12" fill="rgba(255,255,255,0.01)" stroke="rgba(39,174,96,0)" stroke-width="2" style="cursor:crosshair" pointer-events="all"/>';
       if(hasChType(f,18)){h+='<circle class="lay-zoom-handle" cx="'+bm.zhx.toFixed(1)+'" cy="'+bm.zhy.toFixed(1)+'" r="10" fill="rgba(32,96,255,0.5)" stroke="#0060ff" stroke-width="1.5" style="cursor:pointer" pointer-events="all"/>';}
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
@@ -3047,14 +3047,14 @@ function updateLayColors(){
         if(f&&pos){
           var bm=calcBeam(f,pos.x,pos.y);
           beam.setAttribute('d','M '+pos.x+' '+pos.y+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');
-          var bc=col!=='#2a2a2a'?col:'rgb(180,180,180)';
-          beam.setAttribute('fill',bc.replace('rgb(','rgba(').replace(')',',0.12)'));
-          beam.setAttribute('stroke',bc.replace('rgb(','rgba(').replace(')',',0.3)'));
+          var bcc=getFxBorderColor(fi);var bc=bcc!=='#444'?bcc:'rgb(180,180,180)';
+          beam.setAttribute('fill',bc.replace('rgb(','rgba(').replace(')',',0.25)'));
+          beam.setAttribute('stroke',bc.replace('rgb(','rgba(').replace(')',',0.5)'));
           var spot=g.querySelector('.lay-spot');
           if(spot){
             spot.setAttribute('cx',bm.ex.toFixed(1));spot.setAttribute('cy',bm.ey.toFixed(1));
             spot.setAttribute('rx',Math.max(3,bm.hs*0.6).toFixed(1));spot.setAttribute('ry',Math.max(2,bm.hs*0.4).toFixed(1));
-            spot.setAttribute('fill',bc.replace('rgb(','rgba(').replace(')',',0.35)'));
+            spot.setAttribute('fill',bc.replace('rgb(','rgba(').replace(')',',0.5)'));
           }
           var hdl=g.querySelector('.lay-beam-handle');
           if(hdl){hdl.setAttribute('cx',bm.ex.toFixed(1));hdl.setAttribute('cy',bm.ey.toFixed(1));}
