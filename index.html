@@ -112,16 +112,18 @@ input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;
 input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4px;background:var(--ch-col,#0af);cursor:pointer;border:2px solid rgba(255,255,255,0.6)}
 /* Fader stil za tablet touch naprave */
 @media(hover:none) and (pointer:coarse) and (min-width:501px){
-input[orient=vertical]{width:38px}
-input[orient=vertical]::-webkit-slider-runnable-track{width:10px;background:linear-gradient(to right,#222,#333,#222);border:1px solid #444;border-radius:3px}
-input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:18px;border-radius:3px;background:linear-gradient(to bottom,#666,var(--ch-col,#0af),#666);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
-input[orient=vertical]::-moz-range-track{width:10px;background:linear-gradient(to right,#222,#333,#222);border:1px solid #444;border-radius:3px}
-input[orient=vertical]::-moz-range-thumb{width:34px;height:16px;border-radius:3px;background:linear-gradient(to bottom,#666,var(--ch-col,#0af),#666);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
+input[orient=vertical]{-webkit-appearance:none;appearance:none;width:38px;writing-mode:vertical-lr;direction:rtl;background:transparent}
+input[orient=vertical]::-webkit-slider-runnable-track{width:100%;height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
+input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:36px;border-radius:3px;background:linear-gradient(to right,#444,var(--ch-col,#0af),#444);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3);margin-top:-13px}
+input[orient=vertical]::-moz-range-track{width:100%;height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
+input[orient=vertical]::-moz-range-thumb{width:16px;height:34px;border-radius:3px;background:linear-gradient(to right,#444,var(--ch-col,#0af),#444);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
 .ch-row input[type=range]{height:28px;-webkit-appearance:none;appearance:none;background:transparent}
 .ch-row input[type=range]::-webkit-slider-runnable-track{height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
-.ch-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:28px;border-radius:3px;background:linear-gradient(to right,#555,#0af,#555);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3);margin-top:-9px}
+.ch-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:28px;border-radius:3px;background:linear-gradient(to right,#444,var(--ch-col,#0af),#444);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3);margin-top:-9px}
 .ch-row input[type=range]::-moz-range-track{height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
-.ch-row input[type=range]::-moz-range-thumb{width:16px;height:26px;border-radius:3px;background:linear-gradient(to right,#555,#0af,#555);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
+.ch-row input[type=range]::-moz-range-thumb{width:16px;height:26px;border-radius:3px;background:linear-gradient(to right,#444,var(--ch-col,#0af),#444);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
+.fx-col .ch-vval{margin-bottom:8px}
+.fx-col .ch-label{margin-top:8px}
 }
 /* Celozaslonska konzola */
 .fs-console{position:fixed;top:0;left:0;width:100%;height:100%;background:#111;z-index:50;display:none;flex-direction:column}
@@ -965,7 +967,7 @@ function renderFaders(){
     h+='<div class="ch-row">';
     h+='<span class="ch-name" style="color:'+col+'">'+ch.name+'</span>';
     // data-type hrani tip kanala za type-based matching
-    h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+'" data-type="'+ch.type+'" oninput="sendFader('+ci+',this.value)">';
+    h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+';--ch-col:'+col+'" data-type="'+ch.type+'" oninput="sendFader('+ci+',this.value)">';
     h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v+'</span>';
     h+='<span class="ch-range">'+rl+'</span></div>';
   });
@@ -1536,6 +1538,7 @@ function renderFsConsole(){
     const fi=+btn.dataset.fi;
     const press=()=>fsFullOn(fi,true);
     const release=()=>{if(fsFullOnState[fi])fsFullOn(fi,false)};
+    btn.addEventListener('contextmenu',e=>e.preventDefault());
     btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
     btn.addEventListener('mouseup',release);
     btn.addEventListener('mouseleave',release);
@@ -1548,6 +1551,7 @@ function renderFsConsole(){
     const gi=+btn.dataset.gi;
     const press=()=>fsGrpFullOn(gi,true);
     const release=()=>{if(fsGrpFullOnState[gi])fsGrpFullOn(gi,false)};
+    btn.addEventListener('contextmenu',e=>e.preventDefault());
     btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
     btn.addEventListener('mouseup',release);
     btn.addEventListener('mouseleave',release);
@@ -1768,6 +1772,7 @@ function renderFsGroups(){
     const gi=+btn.dataset.gi;
     const press=()=>fsGrpBlackout(gi,true);
     const release=()=>{if(fsGrpBoState[gi])fsGrpBlackout(gi,false)};
+    btn.addEventListener('contextmenu',e=>e.preventDefault());
     btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
     btn.addEventListener('mouseup',release);
     btn.addEventListener('mouseleave',release);
@@ -1780,6 +1785,7 @@ function renderFsGroups(){
     const gi=+btn.dataset.gi;
     const press=()=>fsGrpFullOn(gi,true);
     const release=()=>{if(fsGrpFullOnState[gi])fsGrpFullOn(gi,false)};
+    btn.addEventListener('contextmenu',e=>e.preventDefault());
     btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
     btn.addEventListener('mouseup',release);
     btn.addEventListener('mouseleave',release);
@@ -1792,6 +1798,7 @@ function renderFsGroups(){
     const gi=+btn.dataset.gi;
     const press=()=>fsGrpSolo(gi,true);
     const release=()=>{if(fsGrpSoloState[gi])fsGrpSolo(gi,false)};
+    btn.addEventListener('contextmenu',e=>e.preventDefault());
     btn.addEventListener('mousedown',e=>{e.preventDefault();press()});
     btn.addEventListener('mouseup',release);
     btn.addEventListener('mouseleave',release);
@@ -3242,6 +3249,7 @@ function renderLayGroups(){
   function bindHold(selector,pressFn,releaseFn){
     row.querySelectorAll(selector).forEach(function(btn){
       var gi=+btn.dataset.gi;
+      btn.addEventListener('contextmenu',function(e){e.preventDefault()});
       btn.onpointerdown=function(e){e.preventDefault();btn.setPointerCapture(e.pointerId);pressFn(gi,true);};
       btn.onpointerup=function(){releaseFn(gi);};
       btn.onpointercancel=function(){releaseFn(gi);};
@@ -3432,11 +3440,13 @@ function bindLxFoBo(){
   if(_lxFoBoBound)return;_lxFoBoBound=true;
   var fo=document.getElementById('lxFoBtn'),bo=document.getElementById('lxBoBtn');
   if(fo){
+    fo.addEventListener('contextmenu',function(e){e.preventDefault()});
     fo.onpointerdown=function(e){e.preventDefault();fo.setPointerCapture(e.pointerId);lxFullOn(true);};
     fo.onpointerup=function(){lxFullOn(false);};
     fo.onpointercancel=function(){lxFullOn(false);};
   }
   if(bo){
+    bo.addEventListener('contextmenu',function(e){e.preventDefault()});
     bo.onpointerdown=function(e){e.preventDefault();bo.setPointerCapture(e.pointerId);lxBlackout(true);};
     bo.onpointerup=function(){lxBlackout(false);};
     bo.onpointercancel=function(){lxBlackout(false);};
@@ -3528,10 +3538,10 @@ function lxUpdatePrev(){
 function bindLxCanvas(){
   var wh=document.getElementById('lxWheelC');if(!wh)return;
   var active=false;
-  function onWheel(e){
+  function onWheelXY(clientX,clientY){
     var rect=wh.getBoundingClientRect();
     var cx=rect.width/2,cy=rect.height/2;
-    var px=(e.clientX-rect.left),py=(e.clientY-rect.top);
+    var px=clientX-rect.left,py=clientY-rect.top;
     var dx=px-cx,dy=py-cy;
     var dist=Math.sqrt(dx*dx+dy*dy),maxDist=cx;
     if(dist>maxDist){var sc=maxDist/dist;dx*=sc;dy*=sc;dist=maxDist;}
@@ -3540,9 +3550,13 @@ function bindLxCanvas(){
     lxUpdateWCur();lxUpdatePrev();
     var rgb=hsvToRgb(lxH,lxS,1);lxSendColor(rgb[0],rgb[1],rgb[2]);
   }
-  wh.onpointerdown=function(e){e.preventDefault();wh.setPointerCapture(e.pointerId);active=true;onWheel(e);};
-  wh.onpointermove=function(e){if(active)onWheel(e);};
-  wh.onpointerup=function(){active=false;};wh.onpointercancel=function(){active=false;};
+  wh.addEventListener('touchstart',function(e){e.preventDefault();active=true;var t=e.touches[0];onWheelXY(t.clientX,t.clientY);},{passive:false});
+  wh.addEventListener('touchmove',function(e){if(!active)return;e.preventDefault();var t=e.touches[0];onWheelXY(t.clientX,t.clientY);},{passive:false});
+  wh.addEventListener('touchend',function(){active=false;});
+  wh.addEventListener('touchcancel',function(){active=false;});
+  wh.onpointerdown=function(e){if(e.pointerType==='touch')return;e.preventDefault();wh.setPointerCapture(e.pointerId);active=true;onWheelXY(e.clientX,e.clientY);};
+  wh.onpointermove=function(e){if(!active||e.pointerType==='touch')return;onWheelXY(e.clientX,e.clientY);};
+  wh.onpointerup=function(e){if(e.pointerType!=='touch')active=false;};wh.onpointercancel=function(e){if(e.pointerType!=='touch')active=false;};
 }
 
 // bindHorizontalSliders: fader način za horizontalne sliderje (brez skoka na pozicijo)
@@ -3729,10 +3743,10 @@ function mxCpBindCanvas(){
   var wh=document.getElementById('mxCpWheelC');if(!wh||_mxCpCanvasBound)return;
   _mxCpCanvasBound=true;
   var active=false;
-  function onWheel(e){
+  function onWheelXY(clientX,clientY){
     var rect=wh.getBoundingClientRect();
     var cx=rect.width/2,cy=rect.height/2;
-    var px=(e.clientX-rect.left),py=(e.clientY-rect.top);
+    var px=clientX-rect.left,py=clientY-rect.top;
     var dx=px-cx,dy=py-cy;
     var dist=Math.sqrt(dx*dx+dy*dy),maxDist=cx;
     if(dist>maxDist){var sc=maxDist/dist;dx*=sc;dy*=sc;dist=maxDist;}
@@ -3741,9 +3755,13 @@ function mxCpBindCanvas(){
     mxCpUpdateCur();mxCpUpdatePrev();
     var rgb=hsvToRgb(mxCpH,mxCpS,1);mxCpSendColor(rgb[0],rgb[1],rgb[2]);
   }
-  wh.onpointerdown=function(e){e.preventDefault();wh.setPointerCapture(e.pointerId);active=true;onWheel(e);};
-  wh.onpointermove=function(e){if(active)onWheel(e);};
-  wh.onpointerup=function(){active=false;};wh.onpointercancel=function(){active=false;};
+  wh.addEventListener('touchstart',function(e){e.preventDefault();active=true;var t=e.touches[0];onWheelXY(t.clientX,t.clientY);},{passive:false});
+  wh.addEventListener('touchmove',function(e){if(!active)return;e.preventDefault();var t=e.touches[0];onWheelXY(t.clientX,t.clientY);},{passive:false});
+  wh.addEventListener('touchend',function(){active=false;});
+  wh.addEventListener('touchcancel',function(){active=false;});
+  wh.onpointerdown=function(e){if(e.pointerType==='touch')return;e.preventDefault();wh.setPointerCapture(e.pointerId);active=true;onWheelXY(e.clientX,e.clientY);};
+  wh.onpointermove=function(e){if(!active||e.pointerType==='touch')return;onWheelXY(e.clientX,e.clientY);};
+  wh.onpointerup=function(e){if(e.pointerType!=='touch')active=false;};wh.onpointercancel=function(e){if(e.pointerType!=='touch')active=false;};
 }
 
 // Detekcija klika na barvni fader track (ne na thumb)
