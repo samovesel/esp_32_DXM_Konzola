@@ -217,7 +217,9 @@ static void apiGetFixtures(AsyncWebServerRequest* req) {
     o["dmxAddress"]=fx->dmxAddress; o["groupMask"]=fx->groupMask; o["soundReactive"]=fx->soundReactive;
     if(fx->profileIndex>=0){
       const FixtureProfile* p=_fix->getProfile(fx->profileIndex);
-      if(p){JsonArray cArr=o["channels"].to<JsonArray>();
+      if(p){
+        if(p->zoomMin||p->zoomMax){o["zoomMin"]=p->zoomMin;o["zoomMax"]=p->zoomMax;}
+        JsonArray cArr=o["channels"].to<JsonArray>();
         const uint8_t* vals=(_mix->getMode()==CTRL_ARTNET)?_mix->getDmxOutput():_mix->getManualValues();
         for(int c=0;c<p->channelCount;c++){JsonObject ch=cArr.add<JsonObject>(); ch["name"]=p->channels[c].name;
           ch["type"]=p->channels[c].type; ch["default"]=p->channels[c].defaultValue;
