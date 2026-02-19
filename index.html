@@ -649,7 +649,7 @@ function handleWs(d){
     document.getElementById('modeText').textContent=modes[d.mode]||'?';
     document.getElementById('modeBtn').textContent=d.mode===0?'Preklopi lokalno':'Preklopi ArtNet';
     document.getElementById('statsText').textContent=d.fps.toFixed(1)+' fps | '+d.pkts+' paketov';
-    var heapTxt=d.heap?'Heap: '+(d.heap/1024).toFixed(0)+' KB':'';
+    var heapTxt=d.heap?'Heap: '+(d.heap/1024).toFixed(0)+' KB'+(d.iheap?' (int: '+(d.iheap/1024).toFixed(0)+' KB)':''):'';
     var flashTxt=window._flashInfo||'';
     document.getElementById('sysInfo').textContent=[heapTxt,flashTxt].filter(Boolean).join(' | ');
     boState=!!d.bo;document.getElementById('boBtn').style.background=boState?'#f33':'#555';
