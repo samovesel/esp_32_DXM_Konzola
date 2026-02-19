@@ -223,6 +223,11 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 .lx-pal{display:flex;flex-wrap:wrap;gap:3px;margin:7px 0 4px}
 .lx-pc{width:22px;height:22px;border-radius:4px;border:2px solid transparent;cursor:pointer;transition:transform .1s,border-color .1s}
 .lx-pc:hover{transform:scale(1.18);border-color:#fff}
+/* Mixer color picker popup */
+.mx-cp{position:fixed;z-index:250;background:#101828;border:1px solid #0af;border-radius:10px;padding:14px 16px;min-width:220px;max-width:260px;box-shadow:0 8px 40px rgba(0,0,0,0.9);display:none}
+.mx-cp h4{color:#0af;margin:0 0 10px;font-size:0.88em;padding-right:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mx-cp .lx-x{position:absolute;top:10px;right:10px}
+.mx-cp-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:249}
 </style></head><body>
 
 <header>
@@ -603,6 +608,28 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   <button onclick="lxToConsole()" style="width:100%;margin-top:6px;background:#0d1a0d;border:1px solid #1e3a1e;color:#0af;font-size:0.78em;padding:5px">Podrobnosti → konzola</button>
 </div>
 <div id="lxOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:219" onclick="closeLxPopup()"></div>
+<!-- Mixer color picker popup (Kompakt / Konzola / Celozaslonsko) -->
+<div id="mxCp" class="mx-cp">
+  <button class="lx-x" onclick="closeMxCp()">&#x2715;</button>
+  <h4 id="mxCpTitle">--</h4>
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+    <span style="font-size:0.78em;color:#888;white-space:nowrap">Dimmer</span>
+    <input type="range" id="mxCpDim" min="0" max="255" value="0" style="flex:1;accent-color:#27ae60" oninput="mxCpDimChange(this.value)">
+    <span id="mxCpDimV" style="font-size:0.82em;color:#0ff;width:26px;text-align:right;flex-shrink:0">0</span>
+  </div>
+  <div style="display:flex;gap:10px;align-items:flex-start">
+    <div class="lx-wheel" id="mxCpWheelWrap">
+      <canvas id="mxCpWheelC" width="150" height="150" style="width:150px;height:150px;display:block;border-radius:50%"></canvas>
+      <div class="lx-wcur" id="mxCpWCur"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:2px">
+      <div id="mxCpPrev" style="width:32px;height:32px;border-radius:6px;border:2px solid #444;background:#000"></div>
+      <span id="mxCpHex" style="font-size:0.65em;color:#555">#000000</span>
+    </div>
+  </div>
+  <div class="lx-pal" id="mxCpPal"></div>
+</div>
+<div id="mxCpOverlay" class="mx-cp-overlay" onclick="closeMxCp()"></div>
 
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0,currentMode=0;
@@ -3478,6 +3505,251 @@ function bindHorizontalSliders(container){
     sl.addEventListener('pointercancel',function(e){if(e.pointerType==='mouse'){active=false;intent=null;}});
   });
 }
+
+// ---- Mixer Color Picker (Kompakt / Konzola / Celozaslonsko) ----
+var mxCpOpen=false,mxCpFi=-1,mxCpH=0,mxCpS=0,mxCpV=1,mxCpWheelDrawn=false;
+// Tipi barvnih kanalov ki odprejo picker
+var CP_COLOR_TYPES=new Set([2,3,4,5,6,7,19,21,22,24]);
+
+function openMxCp(fi,cx,cy){
+  var f=fixtures[fi];if(!f||!f.channels)return;
+  // Preveri da ima fixture vsaj en barvni kanal
+  var hasColor=false;
+  f.channels.forEach(function(ch){if(CP_COLOR_TYPES.has(ch.type))hasColor=true});
+  if(!hasColor)return;
+  mxCpFi=fi;mxCpOpen=true;
+  document.getElementById('mxCpTitle').textContent=f.name+' (A'+(f.dmxAddress||'?')+')';
+  // Dimmer
+  var dv=getFxChVal(f,1);
+  document.getElementById('mxCpDim').value=dv;
+  document.getElementById('mxCpDimV').textContent=dv;
+  // Barva iz fixture kanalov
+  var c=getFxColorNoDim(f),rgb=(c.css.match(/\d+/g)||['0','0','0']);
+  var hsv=rgbToHsv(+rgb[0],+rgb[1],+rgb[2]);
+  mxCpH=hsv[0];mxCpS=hsv[1];mxCpV=hsv[2];
+  // Nariši kolo
+  mxCpDrawWheel();mxCpUpdateCur();mxCpUpdatePrev();
+  // Paleta
+  document.getElementById('mxCpPal').innerHTML=LX_PAL.map(function(p){
+    return '<div class="lx-pc" style="background:'+p.css+'" onclick="mxCpApplyPal('+p.r+','+p.g+','+p.b+')" title="'+p.css+'"></div>';
+  }).join('');
+  // Prikaži
+  var pop=document.getElementById('mxCp');
+  pop.style.display='block';
+  document.getElementById('mxCpOverlay').style.display='block';
+  mxCpBindCanvas();
+  // Pozicija
+  var pw=pop.offsetWidth||240,ph=pop.offsetHeight||300;
+  var px=cx+10,py=cy-ph/2;
+  if(px+pw>window.innerWidth-8)px=cx-pw-10;
+  if(py<8)py=8;
+  if(py+ph>window.innerHeight-8)py=window.innerHeight-ph-8;
+  pop.style.left=Math.max(8,px)+'px';pop.style.top=Math.max(8,py)+'px';
+}
+function closeMxCp(){
+  mxCpOpen=false;mxCpFi=-1;
+  document.getElementById('mxCp').style.display='none';
+  document.getElementById('mxCpOverlay').style.display='none';
+}
+function mxCpDrawWheel(){
+  var c=document.getElementById('mxCpWheelC');if(!c)return;
+  var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=cx;
+  var img=ctx.createImageData(w,h);
+  for(var y=0;y<h;y++){for(var x=0;x<w;x++){
+    var dx=x-cx,dy=y-cy,dist=Math.sqrt(dx*dx+dy*dy);
+    var idx=(y*w+x)*4;
+    if(dist>r){img.data[idx]=0;img.data[idx+1]=0;img.data[idx+2]=0;img.data[idx+3]=0;continue;}
+    var ang=Math.atan2(dy,dx)*(180/Math.PI);if(ang<0)ang+=360;
+    var hue=(ang+90)%360,sat=dist/r;
+    var rgb=hsvToRgb(hue,sat,1);
+    img.data[idx]=rgb[0];img.data[idx+1]=rgb[1];img.data[idx+2]=rgb[2];img.data[idx+3]=255;
+  }}
+  ctx.putImageData(img,0,0);
+}
+function mxCpUpdateCur(){
+  var cur=document.getElementById('mxCpWCur');if(!cur)return;
+  if(mxCpS<0.01){cur.style.left='50%';cur.style.top='50%';return;}
+  var hueRad=(mxCpH-90)*(Math.PI/180),dist=mxCpS*75;
+  cur.style.left=(75+Math.cos(hueRad)*dist)+'px';
+  cur.style.top=(75+Math.sin(hueRad)*dist)+'px';
+}
+function mxCpUpdatePrev(){
+  var rgb=hsvToRgb(mxCpH,mxCpS,1);
+  var dim=(+document.getElementById('mxCpDim').value)/255;
+  var dr=Math.round(rgb[0]*dim),dg=Math.round(rgb[1]*dim),db=Math.round(rgb[2]*dim);
+  document.getElementById('mxCpPrev').style.background=rgbToHex(dr,dg,db);
+  document.getElementById('mxCpHex').textContent=rgbToHex(rgb[0],rgb[1],rgb[2]);
+}
+function mxCpDimChange(v){
+  document.getElementById('mxCpDimV').textContent=v;
+  if(mxCpFi<0)return;var f=fixtures[mxCpFi];if(!f)return;
+  f.channels.forEach(function(ch,ci){
+    if(ch.type===1){ch.currentValue=+v;mxCpSendCh(f,ci,+v);}
+  });
+  mxCpUpdatePrev();mxCpSyncSliders();
+}
+function mxCpSendColor(r,g,b){
+  if(mxCpFi<0)return;var f=fixtures[mxCpFi];if(!f||!f.channels)return;
+  var hasW=false,hasA=false,hasUV=false,hasL=false,hasC=false,hasWW=false;
+  f.channels.forEach(function(ch){
+    if(ch.type===5)hasW=true;else if(ch.type===6)hasA=true;else if(ch.type===7)hasUV=true;
+    else if(ch.type===21)hasL=true;else if(ch.type===22)hasC=true;else if(ch.type===24)hasWW=true;
+  });
+  var wOut=0,aOut=0,uvOut=0,lOut=0,cOut=0,wwOut=0;
+  if(hasW)wOut=Math.min(r,g,b);
+  if(hasA&&r>100&&g>50&&b<100&&b<Math.min(r,g)*0.5)aOut=Math.min(r,g);
+  if(hasUV&&r>80&&b>150&&g<50)uvOut=Math.min(r,b);
+  if(hasL&&g>100&&b>50&&r<80)lOut=Math.round(Math.min(g,b)*0.7);
+  if(hasC&&g>100&&b>100&&r<80)cOut=Math.round(Math.min(g,b)*0.8);
+  if(hasWW){var warm=Math.min(r,g,Math.round(b*0.5));if(r>g&&r>100)wwOut=Math.round(warm*0.8);}
+  f.channels.forEach(function(ch,ci){
+    var v=-1;
+    if(ch.type===2)v=r;else if(ch.type===3)v=g;else if(ch.type===4)v=b;
+    else if(ch.type===5)v=wOut;else if(ch.type===6)v=aOut;else if(ch.type===7)v=uvOut;
+    else if(ch.type===21)v=lOut;else if(ch.type===22)v=cOut;else if(ch.type===24)v=wwOut;
+    if(v>=0){ch.currentValue=Math.round(v);mxCpSendCh(f,ci,Math.round(v));}
+  });
+  mxCpSyncSliders();
+}
+// Pošlji vrednost kanala in posodobi sliderje v vseh pogledih
+function mxCpSendCh(f,ci,v){
+  wsSend({cmd:'fxch',f:f.idx,c:ci,v:v});
+  // Posodobi vse sliderje (compact hs_, console vs_/cv_, fullscreen fvs_/fcv_)
+  var el;
+  el=document.getElementById('hs_'+ci);if(el)el.value=v;
+  el=document.getElementById('chv'+ci);if(el)el.textContent=v;
+  el=document.getElementById('vs_'+f.idx+'_'+ci);if(el)el.value=v;
+  el=document.getElementById('cv_'+f.idx+'_'+ci);if(el)el.textContent=v;
+  el=document.getElementById('fvs_'+f.idx+'_'+ci);if(el)el.value=v;
+  el=document.getElementById('fcv_'+f.idx+'_'+ci);if(el)el.textContent=v;
+  consLastVal[mxCpFi+'_'+ci]=v;
+}
+// Sinhroniziraj sliderje po barvni spremembi
+function mxCpSyncSliders(){
+  if(mxCpFi<0)return;var f=fixtures[mxCpFi];if(!f||!f.channels)return;
+  f.channels.forEach(function(ch,ci){
+    var v=ch.currentValue||0;
+    var el;
+    el=document.getElementById('hs_'+ci);if(el)el.value=v;
+    el=document.getElementById('chv'+ci);if(el)el.textContent=v;
+    el=document.getElementById('vs_'+f.idx+'_'+ci);if(el)el.value=v;
+    el=document.getElementById('cv_'+f.idx+'_'+ci);if(el)el.textContent=v;
+    el=document.getElementById('fvs_'+f.idx+'_'+ci);if(el)el.value=v;
+    el=document.getElementById('fcv_'+f.idx+'_'+ci);if(el)el.textContent=v;
+    consLastVal[mxCpFi+'_'+ci]=v;
+  });
+}
+function mxCpApplyPal(r,g,b){
+  var h=rgbToHsv(r,g,b);mxCpH=h[0];mxCpS=h[1];mxCpV=h[2];
+  var dimVal=Math.round(h[2]*255);
+  mxCpDimChange(dimVal);
+  document.getElementById('mxCpDim').value=dimVal;
+  var bright=hsvToRgb(mxCpH,mxCpS,1);
+  mxCpSendColor(bright[0],bright[1],bright[2]);
+  mxCpUpdateCur();mxCpUpdatePrev();
+}
+var _mxCpCanvasBound=false;
+function mxCpBindCanvas(){
+  var wh=document.getElementById('mxCpWheelC');if(!wh||_mxCpCanvasBound)return;
+  _mxCpCanvasBound=true;
+  var active=false;
+  function onWheel(e){
+    var rect=wh.getBoundingClientRect();
+    var cx=rect.width/2,cy=rect.height/2;
+    var px=(e.clientX-rect.left),py=(e.clientY-rect.top);
+    var dx=px-cx,dy=py-cy;
+    var dist=Math.sqrt(dx*dx+dy*dy),maxDist=cx;
+    if(dist>maxDist){var sc=maxDist/dist;dx*=sc;dy*=sc;dist=maxDist;}
+    var ang=Math.atan2(dy,dx)*(180/Math.PI);if(ang<0)ang+=360;
+    mxCpH=(ang+90)%360;mxCpS=dist/maxDist;
+    mxCpUpdateCur();mxCpUpdatePrev();
+    var rgb=hsvToRgb(mxCpH,mxCpS,1);mxCpSendColor(rgb[0],rgb[1],rgb[2]);
+  }
+  wh.onpointerdown=function(e){e.preventDefault();wh.setPointerCapture(e.pointerId);active=true;onWheel(e);};
+  wh.onpointermove=function(e){if(active)onWheel(e);};
+  wh.onpointerup=function(){active=false;};wh.onpointercancel=function(){active=false;};
+}
+
+// Detekcija klika na barvni fader track (ne na thumb)
+// Zaznaj drag: po premiku >8px ne odpri pickerja
+var _mxCpDragFlag=false,_mxCpDownPos=null;
+document.addEventListener('pointerdown',function(e){
+  if(e.target&&e.target.tagName==='INPUT'&&e.target.type==='range'){
+    _mxCpDragFlag=false;_mxCpDownPos={x:e.clientX,y:e.clientY};
+  }
+},true);
+document.addEventListener('pointermove',function(e){
+  if(_mxCpDownPos){
+    var dx=e.clientX-_mxCpDownPos.x,dy=e.clientY-_mxCpDownPos.y;
+    if(Math.abs(dx)>8||Math.abs(dy)>8)_mxCpDragFlag=true;
+  }
+},true);
+document.addEventListener('pointerup',function(){_mxCpDownPos=null},true);
+
+// Horizontalni slider (Kompakt): klik na track odpre popup
+function mxCpHorizClick(e,sl){
+  if(_mxCpDragFlag)return; // po dragu ne odpri
+  // Preveri ali je klik na thumb ali na track
+  var rect=sl.getBoundingClientRect();
+  var ratio=(+sl.value-+sl.min)/(+sl.max-+sl.min);
+  var thumbX=rect.left+ratio*rect.width;
+  if(Math.abs(e.clientX-thumbX)<18)return; // klik na thumb
+  // Najdi fixture
+  var chType=+sl.dataset.type;
+  if(!CP_COLOR_TYPES.has(chType))return;
+  if(selComp.size===0)return;
+  var fi=[...selComp][0];
+  e.preventDefault();e.stopPropagation();
+  openMxCp(fi,e.clientX,e.clientY);
+}
+// Vertikalni slider (Konzola/Celozaslonsko): klik na track odpre popup
+function mxCpVertClick(e,sl){
+  if(_mxCpDragFlag)return; // po dragu ne odpri
+  var rect=sl.getBoundingClientRect();
+  var ratio=(+sl.value-+sl.min)/(+sl.max-+sl.min);
+  // Vertikalni slider: thumb pozicija je od spodaj navzgor
+  var thumbY=rect.bottom-ratio*rect.height;
+  if(Math.abs(e.clientY-thumbY)<18)return; // klik na thumb
+  // Iz ID-ja (vs_IDX_CI ali fvs_IDX_CI) preberi fxIdx
+  var id=sl.id||'';
+  var m=id.match(/f?vs_(\d+)_(\d+)/);
+  if(!m)return;
+  var fxIdx=+m[1],ci=+m[2];
+  var f=fixtures.find(function(x){return x.idx===fxIdx});
+  if(!f||!f.channels||!f.channels[ci])return;
+  if(!CP_COLOR_TYPES.has(f.channels[ci].type))return;
+  var fi=fixtures.indexOf(f);
+  if(fi<0)return;
+  e.preventDefault();e.stopPropagation();
+  openMxCp(fi,e.clientX,e.clientY);
+}
+// Bind horizontalnih sliderjev po renderFaders
+var _origRenderFaders=renderFaders;
+renderFaders=function(){
+  _origRenderFaders();
+  var box=document.getElementById('faders');if(!box)return;
+  box.querySelectorAll('input[type=range]').forEach(function(sl){
+    sl.addEventListener('click',function(e){mxCpHorizClick(e,sl)});
+  });
+};
+// Bind vertikalnih sliderjev po renderConsole
+var _origRenderConsole=renderConsole;
+renderConsole=function(){
+  _origRenderConsole();
+  var grid=document.getElementById('consoleGrid');if(!grid)return;
+  grid.querySelectorAll('input[type=range][orient=vertical]').forEach(function(sl){
+    sl.addEventListener('click',function(e){mxCpVertClick(e,sl)});
+  });
+};
+// Bind vertikalnih sliderjev po renderFsConsole
+var _origRenderFsConsole=renderFsConsole;
+renderFsConsole=function(){
+  _origRenderFsConsole();
+  var grid=document.getElementById('fsConsoleGrid');if(!grid)return;
+  grid.querySelectorAll('input[type=range][orient=vertical]').forEach(function(sl){
+    sl.addEventListener('click',function(e){mxCpVertClick(e,sl)});
+  });
+};
 
 wsConnect();loadFixtures();loadSettings();loadScenes();updateFadeLabel();
 </script></body></html>
