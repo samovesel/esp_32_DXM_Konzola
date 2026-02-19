@@ -8,7 +8,7 @@ header{background:#1a1a2e;padding:8px 12px;display:flex;align-items:center;justi
 header .mode{font-weight:bold;font-size:1.1em}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
 .dot-g{background:#0f0}.dot-y{background:#fc0}
-header .stats{font-size:0.8em;color:#888}
+header .stats{font-size:0.8em;color:#888;text-align:right}
 button{background:#0af;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:0.85em}
 button:hover{background:#0cf}button.danger{background:#c0392b;color:#fff}
 button.scn{background:#222;color:#aaa;border:1px solid #333;padding:10px 14px;font-size:0.95em;min-width:110px;text-align:left;border-radius:6px;position:relative}
@@ -232,7 +232,10 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     <button class="bo" id="boBtn" onclick="toggleBlackout()">BLACKOUT</button>
     <button id="undoBtn" onclick="doUndo()" style="background:#555;padding:4px 10px;font-size:0.8em;display:none" title="Razveljavi">↩ Undo</button>
   </div>
-  <div class="stats"><span id="statsText">...</span> <span id="buildInfo" style="font-size:0.85em;color:#555"></span></div>
+  <div class="stats">
+    <div><span id="statsText">...</span> <span id="buildInfo" style="font-size:0.85em;color:#555"></span></div>
+    <div style="font-size:0.75em;color:#666"><span id="sysInfo">&mdash;</span> <button onclick="showOtaDialog()" style="background:#333;color:#888;border:1px solid #555;padding:1px 6px;border-radius:3px;font-size:0.9em;cursor:pointer;margin-left:4px" title="OTA posodobitev firmware">&#x21bb; FW</button></div>
+  </div>
 </header>
 
 <nav>
@@ -635,6 +638,7 @@ function acceptArtnet(){dismissArtnet();wsSend({cmd:'switchToArtnet'})}
 function handleWs(d){
   if(d.t==='hello'){
     document.getElementById('buildInfo').textContent='| Build: '+d.build;
+    if(d.flashTotal) window._flashInfo='Flash: '+(d.flashUsed/1024).toFixed(0)+'/'+(d.flashTotal/1024).toFixed(0)+' KB';
     return;
   }
   if(d.t==='artnet_detected'){showArtnetBanner();return}
@@ -645,6 +649,9 @@ function handleWs(d){
     document.getElementById('modeText').textContent=modes[d.mode]||'?';
     document.getElementById('modeBtn').textContent=d.mode===0?'Preklopi lokalno':'Preklopi ArtNet';
     document.getElementById('statsText').textContent=d.fps.toFixed(1)+' fps | '+d.pkts+' paketov';
+    var heapTxt=d.heap?'Heap: '+(d.heap/1024).toFixed(0)+' KB':'';
+    var flashTxt=window._flashInfo||'';
+    document.getElementById('sysInfo').textContent=[heapTxt,flashTxt].filter(Boolean).join(' | ');
     boState=!!d.bo;document.getElementById('boBtn').style.background=boState?'#f33':'#555';
     document.getElementById('masterSlider').value=d.master;document.getElementById('masterVal').textContent=d.master;
     // Group dimmers sync
@@ -713,6 +720,21 @@ function handleWs(d){
 
 function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1)loadScenes();if(n===2){loadRules();renderZoneList();renderFxPreviewInit();renderPalBtns();renderChainList()}if(n===5)loadConfigs()}
 function toggleMode(){if(currentMode===0)wsSend({cmd:'mode',v:'local'});else if(currentMode===3)wsSend({cmd:'mode',v:'local'});else wsSend({cmd:'mode',v:'artnet'})}
+function showOtaDialog(){
+  if(!confirm('Firmware posodobitev (OTA).\nIzberi .bin datoteko za nalaganje.\nNaprava se bo po uspešnem nalaganju resetirala.'))return;
+  var inp=document.createElement('input');inp.type='file';inp.accept='.bin';
+  inp.onchange=function(){
+    if(!inp.files[0])return;
+    var fd=new FormData();fd.append('firmware',inp.files[0]);
+    var msg=document.getElementById('msg');
+    msg.textContent='Nalagam firmware... Ne izklopi naprave!';msg.style.color='#f90';
+    fetch('/api/update',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){
+      if(d.ok){msg.textContent='Firmware naložen! Resetiram...';msg.style.color='#0f0';setTimeout(function(){location.reload()},5000);}
+      else{msg.textContent='Napaka: '+(d.error||'?');msg.style.color='#f33';}
+    }).catch(function(e){msg.textContent='Napaka pri nalaganju: '+e;msg.style.color='#f33';});
+  };
+  inp.click();
+}
 function toggleBlackout(){wsSend({cmd:'blackout',v:boState?0:1})}
 function sendMaster(v){
   document.getElementById('masterVal').textContent=v;
