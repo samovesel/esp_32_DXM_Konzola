@@ -110,6 +110,19 @@ td{padding:4px 6px;border-bottom:1px solid #222}
 input[orient=vertical]{-webkit-appearance:slider-vertical;appearance:slider-vertical;width:28px;height:160px;outline:none;cursor:pointer;padding:0;margin:0;accent-color:var(--ch-col,#0af)}
 input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:16px;border-radius:4px;background:var(--ch-col,#0af);cursor:pointer;border:2px solid rgba(255,255,255,0.6)}
 input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4px;background:var(--ch-col,#0af);cursor:pointer;border:2px solid rgba(255,255,255,0.6)}
+/* Fader stil za tablet touch naprave */
+@media(hover:none) and (pointer:coarse) and (min-width:501px){
+input[orient=vertical]{width:38px}
+input[orient=vertical]::-webkit-slider-runnable-track{width:10px;background:linear-gradient(to right,#222,#333,#222);border:1px solid #444;border-radius:3px}
+input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:18px;border-radius:3px;background:linear-gradient(to bottom,#666,var(--ch-col,#0af),#666);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
+input[orient=vertical]::-moz-range-track{width:10px;background:linear-gradient(to right,#222,#333,#222);border:1px solid #444;border-radius:3px}
+input[orient=vertical]::-moz-range-thumb{width:34px;height:16px;border-radius:3px;background:linear-gradient(to bottom,#666,var(--ch-col,#0af),#666);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
+.ch-row input[type=range]{height:28px;-webkit-appearance:none;appearance:none;background:transparent}
+.ch-row input[type=range]::-webkit-slider-runnable-track{height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
+.ch-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:28px;border-radius:3px;background:linear-gradient(to right,#555,#0af,#555);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3);margin-top:-9px}
+.ch-row input[type=range]::-moz-range-track{height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
+.ch-row input[type=range]::-moz-range-thumb{width:16px;height:26px;border-radius:3px;background:linear-gradient(to right,#555,#0af,#555);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
+}
 /* Celozaslonska konzola */
 .fs-console{position:fixed;top:0;left:0;width:100%;height:100%;background:#111;z-index:50;display:none;flex-direction:column}
 .fs-console.active{display:flex}
@@ -1172,7 +1185,25 @@ function bindFsSliderTouch(container){
     sl.addEventListener('touchmove',function(e){
       if(!active)return;onMove(e.touches[0].clientX,e.touches[0].clientY);
     },{passive:true});
-    sl.addEventListener('touchend',function(){active=false;intent=null;});
+    sl.addEventListener('touchend',function(e){
+      // Tap brez premika na barvnem kanalu → odpri color picker (za tablice)
+      if(active&&!intent){
+        var id=sl.id||'';
+        var m=id.match(/f?vs_(\d+)_(\d+)/);
+        if(m){
+          var fxIdx=+m[1],ci=+m[2];
+          var f=fixtures.find(function(x){return x.idx===fxIdx});
+          if(f&&f.channels&&f.channels[ci]&&CP_COLOR_TYPES.has(f.channels[ci].type)){
+            var fi=fixtures.indexOf(f);
+            if(fi>=0){
+              var rect=sl.getBoundingClientRect();
+              openMxCp(fi,rect.right+5,rect.top+rect.height/2);
+            }
+          }
+        }
+      }
+      active=false;intent=null;
+    });
     sl.addEventListener('touchcancel',function(){active=false;intent=null;});
     // POINTER path — samo za misko (touch je ze obdelan zgoraj)
     sl.addEventListener('pointerdown',function(e){
@@ -1534,6 +1565,40 @@ function renderFsConsole(){
       dot.addEventListener('touchstart',e=>{e.preventDefault();press()},{passive:false});
       dot.addEventListener('touchend',e=>{e.preventDefault();release()});
       dot.addEventListener('touchcancel',release);
+    });
+  }
+  // Tablet: tap na color-dot odpre color picker, long-press → FULL ON
+  if(!isPhoneDevice()&&window.matchMedia('(pointer:coarse)').matches){
+    grid.querySelectorAll('.fs-color-dot').forEach(dot=>{
+      const fi=+dot.dataset.fi;
+      let tTimer=null,wasLong=false;
+      dot.addEventListener('touchstart',e=>{
+        e.preventDefault();wasLong=false;
+        tTimer=setTimeout(()=>{wasLong=true;fsFullOn(fi,true);dot.style.border='2px solid #f39c12'},400);
+      },{passive:false});
+      dot.addEventListener('touchend',e=>{
+        e.preventDefault();clearTimeout(tTimer);
+        if(wasLong){if(fsFullOnState[fi])fsFullOn(fi,false);dot.style.border='2px solid #555';return;}
+        // Kratek tap → odpri color picker
+        var f=fixtures[fi];if(!f||!f.channels)return;
+        var hasColor=false;f.channels.forEach(ch=>{if(CP_COLOR_TYPES.has(ch.type))hasColor=true});
+        if(!hasColor)return;
+        var rect=dot.getBoundingClientRect();
+        openMxCp(fi,rect.right+5,rect.top);
+      });
+      dot.addEventListener('touchcancel',()=>{clearTimeout(tTimer);if(wasLong&&fsFullOnState[fi])fsFullOn(fi,false);dot.style.border='2px solid #555'});
+    });
+  }
+  // Desktop: click na color-dot odpre color picker
+  if(!window.matchMedia('(pointer:coarse)').matches){
+    grid.querySelectorAll('.fs-color-dot').forEach(dot=>{
+      const fi=+dot.dataset.fi;
+      dot.addEventListener('click',e=>{
+        var f=fixtures[fi];if(!f||!f.channels)return;
+        var hasColor=false;f.channels.forEach(ch=>{if(CP_COLOR_TYPES.has(ch.type))hasColor=true});
+        if(!hasColor)return;
+        openMxCp(fi,e.clientX,e.clientY);
+      });
     });
   }
   // Touch sliderji: scroll levo-desno brez skoka + fader način
@@ -3497,7 +3562,18 @@ function bindHorizontalSliders(container){
     }
     sl.addEventListener('touchstart',function(e){e.preventDefault();var t=e.touches[0];sx=t.clientX;sy=t.clientY;sv=+sl.value;intent=null;active=true;},{passive:false});
     sl.addEventListener('touchmove',function(e){if(!active)return;onMove(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
-    sl.addEventListener('touchend',function(){active=false;intent=null;});
+    sl.addEventListener('touchend',function(){
+      // Tap brez premika na barvnem kanalu → odpri color picker (za tablice)
+      if(active&&!intent){
+        var chType=+(sl.dataset.type||0);
+        if(typeof CP_COLOR_TYPES!=='undefined'&&CP_COLOR_TYPES.has(chType)&&selComp.size>0){
+          var fi=[...selComp][0];
+          var rect=sl.getBoundingClientRect();
+          openMxCp(fi,rect.left+rect.width/2,rect.bottom+5);
+        }
+      }
+      active=false;intent=null;
+    });
     sl.addEventListener('touchcancel',function(){active=false;intent=null;});
     sl.addEventListener('pointerdown',function(e){if(e.pointerType!=='mouse')return;e.preventDefault();sl.setPointerCapture(e.pointerId);sx=e.clientX;sy=e.clientY;sv=+sl.value;intent=null;active=true;},{passive:false});
     sl.addEventListener('pointermove',function(e){if(!active||e.pointerType!=='mouse')return;onMove(e.clientX,e.clientY);});
