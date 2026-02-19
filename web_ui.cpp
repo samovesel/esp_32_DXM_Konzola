@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <Update.h>
 #include "mbedtls/base64.h"
 #include "web_ui_gz.h"
 
@@ -28,6 +29,8 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     hDoc["t"] = "hello";
     hDoc["build"] = __DATE__ " " __TIME__;
     hDoc["fw"] = FW_VERSION;
+    hDoc["flashTotal"] = LittleFS.totalBytes();
+    hDoc["flashUsed"]  = LittleFS.usedBytes();
     String hJson; serializeJson(hDoc, hJson);
     client->text(hJson);
     return;
@@ -936,6 +939,28 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   server->on("/api/cfgdownload",HTTP_GET,apiCfgDownload);
   server->on("/api/cfgupload",HTTP_POST,[](AsyncWebServerRequest* req){},apiCfgUpload);
 
+  // OTA firmware update
+  server->on("/api/update", HTTP_POST,
+    [](AsyncWebServerRequest* req) {
+      bool ok = !Update.hasError();
+      req->send(200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"Update failed\"}");
+      if (ok) { delay(500); ESP.restart(); }
+    },
+    [](AsyncWebServerRequest* req, const String& filename, size_t index, uint8_t* data, size_t len, bool final) {
+      if (index == 0) {
+        Serial.printf("[OTA] Start: %s\n", filename.c_str());
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) Update.printError(Serial);
+      }
+      if (Update.isRunning()) {
+        if (Update.write(data, len) != len) Update.printError(Serial);
+      }
+      if (final) {
+        if (Update.end(true)) Serial.printf("[OTA] OK, %u bytes\n", index + len);
+        else Update.printError(Serial);
+      }
+    }
+  );
+
   server->begin();
   Serial.println("[WEB] AsyncWebServer + WebSocket zagnan (6 zavihkov)");
 }
@@ -959,6 +984,7 @@ void webLoop() {
   JsonDocument doc;
   doc["t"]="status"; doc["mode"]=(int)_mix->getMode(); doc["fps"]=_mix->getArtNetFps();
   doc["pkts"]=_mix->getArtNetPackets(); doc["master"]=_mix->getMasterDimmer(); doc["bo"]=_mix->isBlackout();
+  doc["heap"]=esp_get_free_heap_size();
 
   // Group dimmers
   JsonArray gd=doc["gd"].to<JsonArray>();
