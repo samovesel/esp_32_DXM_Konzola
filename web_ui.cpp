@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <Update.h>
+#include <esp_heap_caps.h>
 #include "mbedtls/base64.h"
 #include "web_ui_gz.h"
 
@@ -985,6 +986,7 @@ void webLoop() {
   doc["t"]="status"; doc["mode"]=(int)_mix->getMode(); doc["fps"]=_mix->getArtNetFps();
   doc["pkts"]=_mix->getArtNetPackets(); doc["master"]=_mix->getMasterDimmer(); doc["bo"]=_mix->isBlackout();
   doc["heap"]=esp_get_free_heap_size();
+  doc["iheap"]=heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
 
   // Group dimmers
   JsonArray gd=doc["gd"].to<JsonArray>();
