@@ -113,15 +113,15 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
 /* Fader stil za tablet touch naprave */
 @media(hover:none) and (pointer:coarse) and (min-width:501px){
 input[orient=vertical]{-webkit-appearance:none;appearance:none;width:38px;writing-mode:vertical-lr;direction:rtl;background:transparent}
-input[orient=vertical]::-webkit-slider-runnable-track{width:100%;height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
-input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:36px;border-radius:3px;background:linear-gradient(to right,#444,var(--ch-col,#0af),#444);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3);margin-top:-13px}
-input[orient=vertical]::-moz-range-track{width:100%;height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
-input[orient=vertical]::-moz-range-thumb{width:16px;height:34px;border-radius:3px;background:linear-gradient(to right,#444,var(--ch-col,#0af),#444);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
+input[orient=vertical]::-webkit-slider-runnable-track{width:100%;height:10px;background:linear-gradient(to left,#1a1a2e 0%,var(--ch-col,#0af) var(--ch-pct,0%),#2a2a2a var(--ch-pct,0%));border:1px solid #444;border-radius:3px}
+input[orient=vertical]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:14px;border-radius:3px;background:linear-gradient(to bottom,#888,var(--ch-col,#0af),#888);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 6px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.3);margin-top:-2px}
+input[orient=vertical]::-moz-range-track{width:100%;height:10px;background:linear-gradient(to left,#1a1a2e 0%,var(--ch-col,#0af) var(--ch-pct,0%),#2a2a2a var(--ch-pct,0%));border:1px solid #444;border-radius:3px}
+input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3px;background:linear-gradient(to bottom,#888,var(--ch-col,#0af),#888);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 6px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.3)}
 .ch-row input[type=range]{height:28px;-webkit-appearance:none;appearance:none;background:transparent}
-.ch-row input[type=range]::-webkit-slider-runnable-track{height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
-.ch-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:28px;border-radius:3px;background:linear-gradient(to right,#444,var(--ch-col,#0af),#444);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3);margin-top:-9px}
-.ch-row input[type=range]::-moz-range-track{height:10px;background:linear-gradient(to bottom,#222,#333,#222);border:1px solid #444;border-radius:3px}
-.ch-row input[type=range]::-moz-range-thumb{width:16px;height:26px;border-radius:3px;background:linear-gradient(to right,#444,var(--ch-col,#0af),#444);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.3)}
+.ch-row input[type=range]::-webkit-slider-runnable-track{height:10px;background:linear-gradient(to right,#1a1a2e 0%,var(--ch-col,#0af) var(--ch-pct,0%),#2a2a2a var(--ch-pct,0%));border:1px solid #444;border-radius:3px}
+.ch-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:28px;border-radius:3px;background:linear-gradient(to right,#888,var(--ch-col,#0af),#888);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 6px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.3);margin-top:-9px}
+.ch-row input[type=range]::-moz-range-track{height:10px;background:linear-gradient(to right,#1a1a2e 0%,var(--ch-col,#0af) var(--ch-pct,0%),#2a2a2a var(--ch-pct,0%));border:1px solid #444;border-radius:3px}
+.ch-row input[type=range]::-moz-range-thumb{width:12px;height:26px;border-radius:3px;background:linear-gradient(to right,#888,var(--ch-col,#0af),#888);cursor:pointer;border:1px solid rgba(255,255,255,0.5);box-shadow:0 0 6px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.3)}
 .fx-col .ch-vval{margin-bottom:8px}
 .fx-col .ch-label{margin-top:8px}
 }
@@ -649,6 +649,9 @@ input[orient=vertical]::-moz-range-thumb{width:16px;height:34px;border-radius:3p
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0,currentMode=0;
 var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,lastFxo=null,fsGroupOrder=null,fsGroupDimmers={};
+// Posodobi --ch-pct za barvni fill na track sliderja
+function sfill(el){if(!el)return;var pct=((+el.value-+el.min)/(+el.max-+el.min))*100;el.style.setProperty('--ch-pct',pct+'%');}
+function sfillAll(container){if(!container)return;container.querySelectorAll('input[type=range]').forEach(sfill);}
 function isPhoneDevice(){var touch=window.matchMedia('(hover: none) and (pointer: coarse)').matches;var smallScreen=Math.min(screen.width,screen.height)<=500;return touch&&smallScreen}
 
 function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onopen=function(){document.getElementById('offlineBanner').style.display='none'};ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>{document.getElementById('offlineBanner').style.display='block';setTimeout(wsConnect,2000)}}
@@ -702,7 +705,7 @@ function handleWs(d){
       grpLastVal[gi]=v;
       if(fsActive){
         var sl=document.getElementById('fsGrpDim_'+gi);
-        if(sl&&document.activeElement!==sl)sl.value=v;
+        if(sl&&document.activeElement!==sl){sl.value=v;sfill(sl);}
         var vE=document.getElementById('fsGrpDimV_'+gi);
         if(vE)vE.textContent=v;
       }
@@ -917,18 +920,18 @@ function syncFxValues(fxv){
         const cv=document.getElementById('cv_'+i+'_'+c);
         if(cv)cv.textContent=newVal;
         const vs=document.getElementById('vs_'+i+'_'+c);
-        if(vs&&document.activeElement!==vs)vs.value=newVal;
+        if(vs&&document.activeElement!==vs){vs.value=newVal;sfill(vs);}
         // Celozaslonska konzola
         const fcv=document.getElementById('fcv_'+i+'_'+c);
         if(fcv)fcv.textContent=newVal;
         const fvs=document.getElementById('fvs_'+i+'_'+c);
-        if(fvs&&document.activeElement!==fvs)fvs.value=newVal;
+        if(fvs&&document.activeElement!==fvs){fvs.value=newVal;sfill(fvs);}
         // Kompakt: SAMO za fixture ki je dejansko prikazana
         if(i===compactIdx){
           const hv=document.getElementById('chv'+c);
           if(hv)hv.textContent=newVal;
           const hs=document.getElementById('hs_'+c);
-          if(hs&&document.activeElement!==hs)hs.value=newVal;
+          if(hs&&document.activeElement!==hs){hs.value=newVal;sfill(hs);}
         }
       }
     }
@@ -967,7 +970,7 @@ function renderFaders(){
     h+='<div class="ch-row">';
     h+='<span class="ch-name" style="color:'+col+'">'+ch.name+'</span>';
     // data-type hrani tip kanala za type-based matching
-    h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+';--ch-col:'+col+'" data-type="'+ch.type+'" oninput="sendFader('+ci+',this.value)">';
+    h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+';--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" data-type="'+ch.type+'" oninput="sfill(this);sendFader('+ci+',this.value)">';
     h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v+'</span>';
     h+='<span class="ch-range">'+rl+'</span></div>';
   });
@@ -1082,7 +1085,7 @@ function renderConsole(){
         const checked=consGang.has(gKey)?'checked':'';
         h+='<div class="fx-col" style="background:'+bg+'">';
         h+='<div class="ch-vval" style="color:'+col+'" id="cv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+')" ondblclick="event.stopPropagation();startFineTune(this,'+f.idx+','+fi+','+ci+')" title="Klik: solo | 2x klik: natančna vrednost">'+v+'</div>';
-        h+='<input type="range" orient="vertical" id="vs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
+        h+='<input type="range" orient="vertical" id="vs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" oninput="sfill(this);sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
         h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+')">'+ch.name+'</div>';
         h+='<div class="gang-wrap"><input type="checkbox" '+checked+' onchange="toggleGang('+fi+','+ci+')"><div class="gang-lbl">gang</div></div>';
         h+='</div>';
@@ -1120,7 +1123,7 @@ function sendCGang(fxIdx,fi,ci,val){
       if(gNew<0)gNew=0;if(gNew>255)gNew=255;
       consLastVal[gKey]=gNew;
       ['cv_','fcv_'].forEach(p=>{const el=document.getElementById(p+gf.idx+'_'+gCi);if(el)el.textContent=gNew});
-      ['vs_','fvs_'].forEach(p=>{const el=document.getElementById(p+gf.idx+'_'+gCi);if(el)el.value=gNew});
+      ['vs_','fvs_'].forEach(p=>{const el=document.getElementById(p+gf.idx+'_'+gCi);if(el){el.value=gNew;sfill(el)}});
       gf.channels[gCi].currentValue=gNew;
       wsSend({cmd:'fxch',f:gf.idx,c:gCi,v:gNew});
     });
@@ -1241,7 +1244,7 @@ function sendGrpDim(gi,v){
       var vE=document.getElementById('fsGrpDimV_'+ggi);
       if(vE)vE.textContent=gNew;
       var sl=document.getElementById('fsGrpDim_'+ggi);
-      if(sl)sl.value=gNew;
+      if(sl){sl.value=gNew;sfill(sl);}
       wsSend({cmd:'grpdim',g:ggi,v:gNew});
     });
   }
@@ -1308,7 +1311,7 @@ function startFineTune(el,fxIdx,fi,ci){
     el.textContent=v;
     sendCGang(fxIdx,fi,ci,v);
     // Posodobi slider
-    ['vs_','fvs_'].forEach(p=>{const s=document.getElementById(p+fxIdx+'_'+ci);if(s)s.value=v});
+    ['vs_','fvs_'].forEach(p=>{const s=document.getElementById(p+fxIdx+'_'+ci);if(s){s.value=v;sfill(s)}});
   };
   inp.addEventListener('blur',commit);
   inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();inp.blur()}if(e.key==='Escape'){el.textContent=cur;inp.remove()}});
@@ -1479,7 +1482,7 @@ function renderFsConsole(){
       h+='<div class="fs-gdim">';
       h+='<button class="fullon-btn fs-gdim-fo" data-gi="'+gi+'">FULL ON</button>';
       h+='<div class="fs-gdim-val" id="fsGrpDimV_'+gi+'">'+v+'</div>';
-      h+='<input type="range" orient="vertical" id="fsGrpDim_'+gi+'" min="0" max="255" value="'+v+'" oninput="sendGrpDim('+gi+',this.value)">';
+      h+='<input type="range" orient="vertical" id="fsGrpDim_'+gi+'" min="0" max="255" value="'+v+'" style="--ch-pct:'+Math.round(v/2.55)+'%" oninput="sfill(this);sendGrpDim('+gi+',this.value)">';
       h+='<div class="fs-gdim-lbl">'+gName+'</div>';
       h+='<div class="gang-wrap"><input type="checkbox" '+gChecked+' onchange="toggleGrpGang('+gi+')"><div class="gang-lbl">gang</div></div>';
       h+='</div>';
@@ -1522,7 +1525,7 @@ function renderFsConsole(){
         const checked=consGang.has(fi+'_'+ci)?'checked':'';
         h+='<div class="fx-col" style="background:'+bg+'">';
         h+='<div class="ch-vval" style="color:'+col+'" id="fcv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+');renderFsConsole()" ondblclick="event.stopPropagation();startFineTune(this,'+f.idx+','+fi+','+ci+')" title="Klik: solo | Dvojni klik: natančna vrednost">'+v+'</div>';
-        h+='<input type="range" orient="vertical" id="fvs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+'" oninput="sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
+        h+='<input type="range" orient="vertical" id="fvs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" oninput="sfill(this);sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
         h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+');renderFsConsole()">'+ch.name+'</div>';
         h+='<div class="gang-wrap"><input type="checkbox" '+checked+' onchange="toggleGang('+fi+','+ci+')"><div class="gang-lbl">gang</div></div>';
         h+='</div>';
@@ -3706,11 +3709,11 @@ function mxCpSendCh(f,ci,v){
   wsSend({cmd:'fxch',f:f.idx,c:ci,v:v});
   // Posodobi vse sliderje (compact hs_, console vs_/cv_, fullscreen fvs_/fcv_)
   var el;
-  el=document.getElementById('hs_'+ci);if(el)el.value=v;
+  el=document.getElementById('hs_'+ci);if(el){el.value=v;sfill(el);}
   el=document.getElementById('chv'+ci);if(el)el.textContent=v;
-  el=document.getElementById('vs_'+f.idx+'_'+ci);if(el)el.value=v;
+  el=document.getElementById('vs_'+f.idx+'_'+ci);if(el){el.value=v;sfill(el);}
   el=document.getElementById('cv_'+f.idx+'_'+ci);if(el)el.textContent=v;
-  el=document.getElementById('fvs_'+f.idx+'_'+ci);if(el)el.value=v;
+  el=document.getElementById('fvs_'+f.idx+'_'+ci);if(el){el.value=v;sfill(el);}
   el=document.getElementById('fcv_'+f.idx+'_'+ci);if(el)el.textContent=v;
   consLastVal[mxCpFi+'_'+ci]=v;
 }
@@ -3720,11 +3723,11 @@ function mxCpSyncSliders(){
   f.channels.forEach(function(ch,ci){
     var v=ch.currentValue||0;
     var el;
-    el=document.getElementById('hs_'+ci);if(el)el.value=v;
+    el=document.getElementById('hs_'+ci);if(el){el.value=v;sfill(el);}
     el=document.getElementById('chv'+ci);if(el)el.textContent=v;
-    el=document.getElementById('vs_'+f.idx+'_'+ci);if(el)el.value=v;
+    el=document.getElementById('vs_'+f.idx+'_'+ci);if(el){el.value=v;sfill(el);}
     el=document.getElementById('cv_'+f.idx+'_'+ci);if(el)el.textContent=v;
-    el=document.getElementById('fvs_'+f.idx+'_'+ci);if(el)el.value=v;
+    el=document.getElementById('fvs_'+f.idx+'_'+ci);if(el){el.value=v;sfill(el);}
     el=document.getElementById('fcv_'+f.idx+'_'+ci);if(el)el.textContent=v;
     consLastVal[mxCpFi+'_'+ci]=v;
   });
