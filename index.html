@@ -2685,17 +2685,17 @@ function bindBeamHandle(handle,fi,g){
 }
 function bindFixtureCircle(circle,fi,g){
   var moved=false,startPt,startPos;
+  g.addEventListener('contextmenu',function(e){e.preventDefault();});
   circle.addEventListener('pointerdown',function(e){
     if(layStageEdit)return;
     e.preventDefault();e.stopPropagation();
     circle.setPointerCapture(e.pointerId);
     moved=false;startPt=laySvgPt(e);
     startPos={x:layData.fixturePositions[fi].x,y:layData.fixturePositions[fi].y};
-    layDragTrashShow(true);
     function onMove(ev){
       var cur=laySvgPt(ev);
       var dx=cur.x-startPt.x,dy=cur.y-startPt.y;
-      if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
+      if(Math.abs(dx)>3||Math.abs(dy)>3){if(!moved){moved=true;layDragTrashShow(true);}}
       if(!moved)return;
       var nx=startPos.x+dx,ny=startPos.y+dy;
       nx=Math.max(2,Math.min(layVbW-2,nx));ny=Math.max(2,Math.min(layVbH-2,ny));
@@ -2711,11 +2711,14 @@ function bindFixtureCircle(circle,fi,g){
     }
     function onUp(ev){
       circle.removeEventListener('pointermove',onMove);circle.removeEventListener('pointerup',onUp);
-      var inTrash=layDragTrashCheck(ev.clientX,ev.clientY);
-      layDragTrashShow(false);
-      if(inTrash){delete layData.fixturePositions[fi];renderLayLayout();return;}
-      if(!moved)openLxPopup(fi,ev.clientX,ev.clientY);
-      else renderLayFixtures();
+      if(moved){
+        var inTrash=layDragTrashCheck(ev.clientX,ev.clientY);
+        layDragTrashShow(false);
+        if(inTrash){delete layData.fixturePositions[fi];renderLayLayout();return;}
+        renderLayFixtures();
+      }else{
+        openLxPopup(fi,ev.clientX,ev.clientY);
+      }
     }
     circle.addEventListener('pointermove',onMove);circle.addEventListener('pointerup',onUp);
   },{passive:false});
