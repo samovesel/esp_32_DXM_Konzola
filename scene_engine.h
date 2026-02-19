@@ -38,7 +38,7 @@ public:
   bool updateCrossfade(uint8_t* outDmx);
 
 private:
-  Scene _scenes[MAX_SCENES];
+  Scene* _scenes = nullptr;
   CrossfadeState _cf;
 
   String slotPath(int slot) const;

@@ -5,7 +5,12 @@
 
 void FixtureEngine::begin() {
   _profileCount = 0;
-  memset(_profiles, 0, sizeof(_profiles));
+  // Alociraj profile v PSRAM (~51 KB)
+  if (!_profiles) {
+    _profiles = (FixtureProfile*)psramPreferMalloc(sizeof(FixtureProfile) * MAX_PROFILES);
+    if (!_profiles) { Serial.println("[FIX] NAPAKA: ne morem alocirati _profiles!"); return; }
+  }
+  memset(_profiles, 0, sizeof(FixtureProfile) * MAX_PROFILES);
   memset(_patch, 0, sizeof(_patch));
   memset(_groups, 0, sizeof(_groups));
 
