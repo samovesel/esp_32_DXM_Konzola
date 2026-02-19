@@ -528,6 +528,7 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
     </div>
   </div>
   <div class="lay-canvas" id="layCanvas">
+    <div id="layZoomInd" onclick="resetLayZoom()" style="display:none;position:absolute;top:8px;left:8px;z-index:10;background:rgba(0,170,255,0.2);border:1px solid #0af;border-radius:6px;padding:3px 10px;color:#0af;font-size:0.8em;cursor:pointer;user-select:none">100%</div>
     <div id="layTrash" style="display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(192,57,43,0.25);border:2px dashed #c0392b;border-radius:12px;padding:10px 24px;pointer-events:none;transition:background 0.15s,transform 0.15s;font-size:1.4em;color:#e74c3c;text-align:center;white-space:nowrap">&#128465; Odstrani z odra</div>
     <svg id="laySvg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" style="position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none;background:#0d0d0d">
       <defs>
@@ -2415,13 +2416,24 @@ var layActive=false,layStageEdit=false;
 var layData={name:'',date:'',stageRects:[],fixturePositions:{}};
 var layRectId=1,lxFxIdx=-1,lxH=0,lxS=1,lxV=1;
 var layVbW=1000,layVbH=600;
+var layZoom=1,layPanX=0,layPanY=0;
+function applyLayZoom(){
+  var svg=document.getElementById('laySvg');if(!svg)return;
+  var w=layVbW/layZoom,h=layVbH/layZoom;
+  layPanX=Math.max(0,Math.min(layVbW-w,layPanX));
+  layPanY=Math.max(0,Math.min(layVbH-h,layPanY));
+  svg.setAttribute('viewBox',layPanX.toFixed(1)+' '+layPanY.toFixed(1)+' '+w.toFixed(1)+' '+h.toFixed(1));
+  var zi=document.getElementById('layZoomInd');
+  if(zi){if(layZoom>1.05){zi.style.display='block';zi.textContent=Math.round(layZoom*100)+'%';}else{zi.style.display='none';}}
+}
+function resetLayZoom(){layZoom=1;layPanX=0;layPanY=0;applyLayZoom();}
 function updateLayViewBox(){
   var canvas=document.getElementById('layCanvas'),svg=document.getElementById('laySvg');
   if(!canvas||!svg)return;
   var cr=canvas.getBoundingClientRect();
   if(cr.width<1||cr.height<1)return;
   layVbH=600;layVbW=Math.max(1000,Math.round(layVbH*cr.width/cr.height));
-  svg.setAttribute('viewBox','0 0 '+layVbW+' '+layVbH);
+  applyLayZoom();
 }
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
@@ -2440,7 +2452,7 @@ function enterLayoutEditor(){
     updateLayColors();
   });
 }
-function exitLayoutEditor(){layActive=false;document.getElementById('layEditor').classList.remove('active')}
+function exitLayoutEditor(){layActive=false;resetLayZoom();document.getElementById('layEditor').classList.remove('active')}
 
 function toggleLayStageEdit(){
   layStageEdit=!layStageEdit;
@@ -2784,6 +2796,70 @@ var layEvtsBound=false;
 function bindLaySvgEvents(){
   if(layEvtsBound)return;layEvtsBound=true;
   var svg=document.getElementById('laySvg'),dg=document.getElementById('layDrawG'),ds=null;
+  // ---- Pinch-to-zoom & two-finger pan ----
+  var pinchDist0=0,pinchZoom0=1,pinchMidSvg0=null,pinchPanX0=0,pinchPanY0=0,isPinch=false;
+  function touchDist(t){var dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
+  function touchMidClient(t){return{x:(t[0].clientX+t[1].clientX)/2,y:(t[0].clientY+t[1].clientY)/2};}
+  function clientToSvgAt(cx,cy,zoom,px,py){
+    var svg=document.getElementById('laySvg');if(!svg)return{x:0,y:0};
+    var cr=svg.getBoundingClientRect();
+    var vw=layVbW/zoom,vh=layVbH/zoom;
+    return{x:px+(cx-cr.left)/cr.width*vw,y:py+(cy-cr.top)/cr.height*vh};
+  }
+  svg.addEventListener('touchstart',function(e){
+    if(e.touches.length===2){
+      isPinch=true;ds=null;dg.innerHTML='';
+      pinchDist0=touchDist(e.touches);pinchZoom0=layZoom;
+      pinchPanX0=layPanX;pinchPanY0=layPanY;
+      var mid=touchMidClient(e.touches);
+      pinchMidSvg0=clientToSvgAt(mid.x,mid.y,layZoom,layPanX,layPanY);
+      e.preventDefault();
+    }
+  },{passive:false});
+  svg.addEventListener('touchmove',function(e){
+    if(e.touches.length===2&&isPinch){
+      e.preventDefault();
+      var d=touchDist(e.touches);
+      var scale=d/pinchDist0;
+      var newZoom=Math.max(1,Math.min(6,pinchZoom0*scale));
+      var mid=touchMidClient(e.touches);
+      var svg=document.getElementById('laySvg');if(!svg)return;
+      var cr=svg.getBoundingClientRect();
+      var vw=layVbW/newZoom,vh=layVbH/newZoom;
+      layZoom=newZoom;
+      layPanX=pinchMidSvg0.x-(mid.x-cr.left)/cr.width*vw;
+      layPanY=pinchMidSvg0.y-(mid.y-cr.top)/cr.height*vh;
+      applyLayZoom();
+    }
+  },{passive:false});
+  svg.addEventListener('touchend',function(e){
+    if(e.touches.length<2)isPinch=false;
+  });
+  // ---- Wheel zoom (PC) ----
+  svg.addEventListener('wheel',function(e){
+    if(e.defaultPrevented)return;
+    if(e.target.closest&&e.target.closest('.lay-zoom-handle,.lay-beam-handle'))return;
+    e.preventDefault();
+    var factor=e.deltaY<0?1.15:1/1.15;
+    var newZoom=Math.max(1,Math.min(6,layZoom*factor));
+    var pt=clientToSvgAt(e.clientX,e.clientY,layZoom,layPanX,layPanY);
+    var vw=layVbW/newZoom,vh=layVbH/newZoom;
+    var cr=svg.getBoundingClientRect();
+    layZoom=newZoom;
+    layPanX=pt.x-(e.clientX-cr.left)/cr.width*vw;
+    layPanY=pt.y-(e.clientY-cr.top)/cr.height*vh;
+    applyLayZoom();
+  },{passive:false});
+  // ---- Double-tap to reset zoom ----
+  var lastTapTime=0;
+  svg.addEventListener('touchstart',function(e){
+    if(e.touches.length===1&&layZoom>1.05){
+      var now=Date.now();
+      if(now-lastTapTime<350){resetLayZoom();e.preventDefault();lastTapTime=0;return;}
+      lastTapTime=now;
+    }
+  },{passive:false});
+  // ---- Stage drawing ----
   svg.addEventListener('pointerdown',function(e){
     if(!layStageEdit)return;
     if(e.target.closest('.lay-fx-grp')||e.target.closest('[data-del]'))return;
