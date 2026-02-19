@@ -2271,7 +2271,150 @@ function removeFx(slotIdx){const f=fixtures.find(x=>x.idx===slotIdx);if(!f)retur
 function delProfile(id){fetch('/api/profile?id='+id,{method:'DELETE'}).then(()=>loadFixtures())}
 function uploadProfile(input){if(!input.files[0])return;uploadProfileFile(input.files[0])}
 function dropProfile(e){const f=e.dataTransfer.files[0];if(!f)return;if(!f.name.endsWith('.json')){showMsg('Samo .json datoteke',false);return}uploadProfileFile(f)}
-function uploadProfileFile(file){const fd=new FormData();fd.append('file',file);fetch('/api/profile/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{showMsg(d.ok?'Naložen: '+file.name:'Napaka',d.ok);loadFixtures()})}
+function uploadProfileFile(file){
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var json=JSON.parse(ev.target.result);
+      if(json.availableChannels){
+        var converted=convertOFL(json,file.name);
+        if(!converted){showMsg('OFL pretvorba ni uspela',false);return;}
+        var blob=new Blob([JSON.stringify(converted)],{type:'application/json'});
+        var cf=new File([blob],file.name,{type:'application/json'});
+        doUploadProfile(cf,'(OFL) '+json.name);
+      }else{doUploadProfile(file,file.name);}
+    }catch(ex){showMsg('Neveljaven JSON: '+ex.message,false);}
+  };
+  reader.readAsText(file);
+}
+function doUploadProfile(file,displayName){var fd=new FormData();fd.append('file',file);fetch('/api/profile/upload',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){showMsg(d.ok?'Naložen: '+displayName:'Napaka',d.ok);loadFixtures()})}
+// ---- OFL range grouping ----
+function groupRanges(ranges,maxN){
+  if(ranges.length<=maxN)return ranges;
+  var r=ranges.map(function(x){return{from:x.from,to:x.to,label:x.label};});
+  while(r.length>maxN){
+    var bestI=0,bestSpan=Infinity;
+    for(var i=0;i<r.length-1;i++){var span=r[i+1].to-r[i].from;if(span<bestSpan){bestSpan=span;bestI=i;}}
+    var combo=r[bestI].label+'/'+r[bestI+1].label;
+    r.splice(bestI,2,{from:r[bestI].from,to:r[bestI+1].to,label:combo.length>15?combo.substring(0,15):combo});
+  }
+  return r;
+}
+// ---- OFL converter ----
+function convertOFL(ofl,filename){
+  function mapType(cap){
+    var t=cap.type;
+    if(t==='Pan'||t==='PanContinuous')return'pan';
+    if(t==='Tilt'||t==='TiltContinuous')return'tilt';
+    if(t==='Intensity')return'intensity';
+    if(t==='ColorIntensity'){
+      var c=(cap.color||'').replace(/\s+/g,'').toLowerCase();
+      if(c==='red')return'color_r';if(c==='green')return'color_g';if(c==='blue')return'color_b';
+      if(c==='white'||c==='coldwhite')return'color_w';if(c==='warmwhite')return'color_ww';
+      if(c==='amber')return'color_a';if(c==='uv')return'color_uv';
+      if(c==='lime')return'color_l';if(c==='cyan')return'color_c';return'generic';
+    }
+    if(t==='Zoom'||t==='BeamAngle')return'zoom';if(t==='Focus')return'focus';
+    if(t==='ShutterStrobe'||t==='StrobeSpeed'||t==='StrobeDuration')return'strobe';
+    if(t==='PanTiltSpeed'||t==='EffectSpeed'||t==='Speed')return'speed';
+    if(t==='ColorTemperature')return'cct';
+    if(t==='Prism'||t==='PrismRotation')return'prism';
+    if(t==='WheelSlot'||t==='WheelRotation'||t==='WheelShake'||t==='WheelSlotRotation')return'gobo';
+    if(t==='ColorPreset'||t==='Effect'||t==='Fog'||t==='FogOutput'||t==='FogType')return'macro';
+    if(t==='Maintenance'||t==='NoFunction'||t==='Rotation'||t==='BladeInsertion'||t==='BladeRotation'||t==='BladeSystemRotation')return'preset';
+    return'generic';
+  }
+  function capLabel(cap){
+    var l=cap.comment||cap.shutterEffect||cap.effectName||cap.effectPreset||cap.type||'?';
+    return l.length>15?l.substring(0,15):l;
+  }
+  var avail=ofl.availableChannels||{};
+  // Merge templateChannels (matrix fixtures) — treat them as regular channels
+  if(ofl.templateChannels){
+    Object.keys(ofl.templateChannels).forEach(function(tk){
+      var tch=ofl.templateChannels[tk];
+      // Remove $pixelKey placeholder from name, keep channel definition
+      var cleanName=tk.replace(/\$pixelKey/g,'Px');
+      if(!avail[cleanName]&&!avail[tk])avail[cleanName]=tch;
+    });
+  }
+  var fineMap={};
+  var chDefs={};
+  Object.keys(avail).forEach(function(chName){
+    var ch=avail[chName];
+    if(ch.fineChannelAliases){
+      ch.fineChannelAliases.forEach(function(alias){
+        var pt='generic';
+        var firstCap=ch.capability||(ch.capabilities&&ch.capabilities[0]);
+        if(firstCap){var mt=mapType(firstCap);if(mt==='pan')pt='pan_fine';else if(mt==='tilt')pt='tilt_fine';}
+        fineMap[alias]={parent:chName,type:pt};
+      });
+    }
+    var chType='generic',ranges=[],defVal=0;
+    if(ch.defaultValue!==undefined){
+      var dv=ch.defaultValue;
+      if(typeof dv==='string'&&dv.endsWith('%'))defVal=Math.round(parseFloat(dv)/100*255);
+      else if(typeof dv==='number')defVal=dv;
+    }
+    if(ch.capability){
+      chType=mapType(ch.capability);
+    }else if(ch.capabilities){
+      var tc={};
+      ch.capabilities.forEach(function(c){var mt=mapType(c);tc[mt]=(tc[mt]||0)+1;});
+      var best='generic',bestN=0;
+      Object.keys(tc).forEach(function(t){if(t!=='generic'&&t!=='preset'&&tc[t]>=bestN){best=t;bestN=tc[t];}});
+      if(best==='generic'){
+        Object.keys(tc).forEach(function(t){if(t!=='generic'&&tc[t]>bestN){best=t;bestN=tc[t];}});
+      }
+      chType=best||'generic';
+      var rawR=ch.capabilities.map(function(c){
+        var r=c.dmxRange||[0,255];
+        return{from:r[0],to:r[1],label:capLabel(c)};
+      });
+      ranges=groupRanges(rawR,6);
+    }
+    var safeName=chName.length>19?chName.substring(0,19):chName;
+    chDefs[chName]={name:safeName,type:chType,ranges:ranges,defVal:defVal};
+  });
+  Object.keys(fineMap).forEach(function(alias){
+    var safeName=alias.length>19?alias.substring(0,19):alias;
+    chDefs[alias]={name:safeName,type:fineMap[alias].type,ranges:[],defVal:0};
+  });
+  var zoomRange=null;
+  if(ofl.physical&&ofl.physical.lens&&ofl.physical.lens.degreesMinMax){
+    var mm=ofl.physical.lens.degreesMinMax;
+    if(mm.length>=2)zoomRange=[Math.round(mm[0]),Math.round(mm[1])];
+  }
+  var modes=(ofl.modes||[]).map(function(mode){
+    // Mode-level physical override for zoomRange (first mode wins if top-level missing)
+    if(!zoomRange&&mode.physical&&mode.physical.lens&&mode.physical.lens.degreesMinMax){
+      var mmm=mode.physical.lens.degreesMinMax;
+      if(mmm.length>=2)zoomRange=[Math.round(mmm[0]),Math.round(mmm[1])];
+    }
+    var channels=(mode.channels||[]).map(function(ref){
+      if(!ref||typeof ref!=='string')return null;
+      var def=chDefs[ref];
+      if(!def)return{name:ref.substring(0,19),type:'generic'};
+      var ch={name:def.name,type:def.type};
+      if(def.defVal)ch['default']=def.defVal;
+      if(def.ranges&&def.ranges.length>0){
+        ch.ranges=def.ranges.map(function(r){return{range:[r.from,r.to],label:r.label};});
+      }
+      return ch;
+    }).filter(Boolean);
+    return{name:(mode.shortName||mode.name||'?').substring(0,19),channels:channels};
+  });
+  var result={name:(ofl.name||filename.replace('.json','')).substring(0,31),modes:modes};
+  if(zoomRange)result.zoomRange=zoomRange;
+  var jsonStr=JSON.stringify(result);
+  if(jsonStr.length>4096){
+    modes.forEach(function(m){m.channels.forEach(function(ch){
+      if(ch.ranges&&ch.ranges.length>4)ch.ranges=groupRanges(ch.ranges.map(function(r){return{from:r.range[0],to:r.range[1],label:r.label};}),4).map(function(r){return{range:[r.from,r.to],label:r.label};});
+    });});
+    result.modes=modes;
+  }
+  return result;
+}
 function saveGroupName(i,name){fetch('/api/groups',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i,name:name})}).then(()=>loadFixtures())}
 
 // Settings
@@ -2523,7 +2666,8 @@ function calcBeam(f,cx,cy){
   var pan=getFxChVal(f,8),tilt=getFxChVal(f,10),zoom=getFxChVal(f,18);
   var ang=(pan/255*360-180)*Math.PI/180;
   var alen=30+tilt/255*140;
-  var zoomDeg=hasChType(f,18)?(10+zoom/255*50):35;
+  var zMin=f.zoomMin||10,zMax=f.zoomMax||60;
+  var zoomDeg=hasChType(f,18)?(zMin+zoom/255*(zMax-zMin)):((zMin&&zMax)?(zMin+zMax)/2:35);
   var halfRad=zoomDeg/2*Math.PI/180;
   var hs=Math.tan(halfRad)*alen;
   var bdx=Math.sin(ang),bdy=-Math.cos(ang);
@@ -2537,9 +2681,11 @@ function calcBeam(f,cx,cy){
   alen=Math.max(25,maxA);
   hs=Math.tan(halfRad)*alen;
   var ex=cx+bdx*alen,ey=cy+bdy*alen;
-  // Zoom handle: opposite side of fixture, distance based on zoom value
-  var zhDist=28+zoom/255*25;
+  // Zoom handle: opposite side of fixture, 120px travel (as tilt)
+  var zhDist=28+zoom/255*120;
   var zhx=cx-bdx*zhDist,zhy=cy-bdy*zhDist;
+  // Clamp zoom handle to viewbox
+  zhx=Math.max(6,Math.min(layVbW-6,zhx));zhy=Math.max(6,Math.min(layVbH-6,zhy));
   return{ex:ex,ey:ey,x1:ex+pdx*hs,y1:ey+pdy*hs,x2:ex-pdx*hs,y2:ey-pdy*hs,hs:hs,pdx:pdx,pdy:pdy,zhx:zhx,zhy:zhy};
 }
 function calcPanTiltFromPos(cx,cy,tx,ty){
@@ -2609,7 +2755,7 @@ function calcZoomFromDrag(f,cx,cy,mx,my){
   var bdx=Math.sin(ang),bdy=-Math.cos(ang);
   var dx=mx-cx,dy=my-cy;
   var dist=-(dx*bdx+dy*bdy);
-  var zoom=Math.round(((dist-28)/25)*255);
+  var zoom=Math.round(((dist-28)/120)*255);
   return Math.max(0,Math.min(255,zoom));
 }
 function bindZoomHandle(zh,fi,g){

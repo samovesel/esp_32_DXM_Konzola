@@ -1,8 +1,8 @@
 # Specifikacija fixture profilov — ESP32 ArtNet/DMX Node
 
-**Verzija:** 2.0  
-**Datum:** 2026-02-15  
-**Kompatibilnost:** Nazaj kompatibilno z v1.0 profili
+**Verzija:** 2.1
+**Datum:** 2026-02-19
+**Kompatibilnost:** Nazaj kompatibilno z v1.0 in v2.0 profili
 
 ---
 
@@ -10,7 +10,7 @@
 
 Fixture profil je JSON datoteka, ki opisuje DMX kanale svetlobne naprave. Vsaka naprava ima lahko **več načinov** (modes), ki definirajo različne DMX konfiguracije.
 
-Profili se naložijo na ESP32 prek web vmesnika (drag & drop) ali pa se obnovijo iz konfiguracijskega backup-a.
+Profili se naložijo na ESP32 prek web vmesnika (drag & drop) ali pa se obnovijo iz konfiguracijskega backup-a. Podprt je tudi **uvoz iz Open Fixture Library (OFL)** — OFL JSON se avtomatično pretvori v naš format ob nalogu.
 
 ---
 
@@ -19,7 +19,7 @@ Profili se naložijo na ESP32 prek web vmesnika (drag & drop) ali pa se obnovijo
 | Parameter             | Vrednost | Opomba                                           |
 |----------------------|----------|--------------------------------------------------|
 | Kanalov na način     | **24**   | Pokrije moving heade, segmentirane naprave        |
-| Obsegov na kanal     | **4**    | Za kanale z več funkcijami — grupiraj če > 4   |
+| Obsegov na kanal     | **6**    | Za kanale z več funkcijami — grupiraj če > 6   |
 | Hkratno naloženih    | **16**   | Vsak fixture 1 aktiven mode; 14 naprav + 2 extra |
 | Dolžina imena profila | 32 znakov | Ime naprave + način (npr. "Hero Wash 300 TW")   |
 | Dolžina imena kanala  | 20 znakov | Kratko in jasno (npr. "CW Seg1")                |
@@ -34,6 +34,7 @@ Profili se naložijo na ESP32 prek web vmesnika (drag & drop) ali pa se obnovijo
 {
   "name": "Ime naprave",
   "comment": "Opcijski komentar (proizvajalec, model, opis)",
+  "zoomRange": [4, 45],
   "modes": [
     {
       "name": "16ch",
@@ -54,9 +55,10 @@ Profili se naložijo na ESP32 prek web vmesnika (drag & drop) ali pa se obnovijo
 
 | Polje     | Obvezno | Tip    | Opis                                           |
 |-----------|---------|--------|-------------------------------------------------|
-| `name`    | Da      | string | Ime naprave (max 32 znakov)                     |
-| `comment` | Ne      | string | Komentar za dokumentacijo (se ne prikaže v UI)  |
-| `modes`   | Da      | array  | Seznam DMX načinov                              |
+| `name`      | Da      | string | Ime naprave (max 32 znakov)                     |
+| `comment`   | Ne      | string | Komentar za dokumentacijo (se ne prikaže v UI)  |
+| `zoomRange` | Ne      | array  | Zoom kot v stopinjah [min, max], npr. [4, 45]. Uporablja se v 2D layout editorju za realistično vizualizacijo žarka. |
+| `modes`     | Da      | array  | Seznam DMX načinov                              |
 
 ### Polja za način (mode)
 
@@ -141,15 +143,15 @@ Profili se naložijo na ESP32 prek web vmesnika (drag & drop) ali pa se obnovijo
 
 ## Pravila za obsege (ranges)
 
-1. **Največ 4 obsegov na kanal.** Če ima naprava več funkcij, jih grupirajte.
+1. **Največ 6 obsegov na kanal.** Če ima naprava več funkcij, jih grupirajte.
 2. Obsegi morajo pokriti celoten razpon 0-255 brez vrzeli in prekrivanj.
 3. Vsak obseg ima `[od, do]` kjer je `od <= do`.
 4. Labeli morajo biti kratki in jasni (max 16 znakov).
 5. Kanali brez obsegov (npr. `color_r` 0-255) ne potrebujejo `ranges` polja.
 
-### Strategija grupiranja (ko ima naprava > 4 funkcij na kanalu)
+### Strategija grupiranja (ko ima naprava > 6 funkcij na kanalu)
 
-Kadar ima naprava več kot 4 razdelkov na enem kanalu, jih združite v smiselne skupine:
+Kadar ima naprava več kot 6 razdelkov na enem kanalu, jih združite v smiselne skupine:
 
 **Primer: Segment pattern kanal z 18 vzorci**
 ```json
@@ -402,6 +404,14 @@ Kadar ima naprava več kot 4 razdelkov na enem kanalu, jih združite v smiselne 
 
 ---
 
+## Spremembe glede na v2.0
+
+| Sprememba                  | Staro (v2.0) | Novo (v2.1) |
+|---------------------------|-------------|-------------|
+| Max obsegov na kanal       | 4           | **6**       |
+| Novo polje: `zoomRange`    | —           | Zoom kot [min, max] v stopinjah |
+| OFL uvoz                   | —           | Avtomatska pretvorba OFL JSON   |
+
 ## Spremembe glede na v1.0
 
 | Sprememba                  | Staro (v1.0) | Novo (v2.0) |
@@ -414,4 +424,4 @@ Kadar ima naprava več kot 4 razdelkov na enem kanalu, jih združite v smiselne 
 | Novi tipi: `color_c`       | —           | Cyan        |
 | Novi tipi: `cct`           | —           | Barvna temp.|
 
-**Nazaj kompatibilnost:** Vsi obstoječi v1.0 profili delujejo brez sprememb. Kanali, ki so bili tip `generic` za lime/cyan/warm white/CCT, jih je priporočljivo posodobiti na nove tipe za boljšo gang kontrolo in prikaz v UI.
+**Nazaj kompatibilnost:** Vsi obstoječi profili (v1.0 in v2.0) delujejo brez sprememb. Profili brez `zoomRange` uporabljajo privzete vrednosti (10-60°) v 2D layout editorju.

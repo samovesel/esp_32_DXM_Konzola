@@ -14,7 +14,7 @@
 #define MAX_FIXTURES        24
 #define MAX_PROFILES        16    // 14 fixturov + 2 rezerva; vsak fixture 1 aktiven mode
 #define MAX_CHANNELS_PER_FX 24    // Pokrije 19ch moving heade in segmentirane naprave
-#define MAX_RANGES_PER_CH    4    // Pokrije vse trenutne profile; grupiraj če > 4
+#define MAX_RANGES_PER_CH    6    // Pokrije OFL importe; grupiraj če > 6
 #define MAX_GROUPS           8
 #define MAX_STATE_SNAPSHOTS  3    // Zmanjšano iz 5 — prihranek ~1KB
 #define MAX_SCENES          20
@@ -163,6 +163,8 @@ struct FixtureProfile {
   uint8_t channelCount;
   ChannelDef channels[MAX_CHANNELS_PER_FX];
   bool loaded;
+  uint8_t zoomMin;        // Min zoom kot v stopinjah (0=ni nastavljen, default 10)
+  uint8_t zoomMax;        // Max zoom kot v stopinjah (0=ni nastavljen, default 60)
 };
 
 // ============================================================================

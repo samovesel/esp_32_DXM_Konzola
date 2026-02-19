@@ -70,6 +70,11 @@ bool FixtureEngine::loadProfile(const char* filename) {
         p.channelCount++;
       }
 
+      // Zoom range iz profila (top-level)
+      if (doc["zoomRange"].is<JsonArray>()) {
+        JsonArray zr = doc["zoomRange"].as<JsonArray>();
+        if (zr.size() >= 2) { p.zoomMin = zr[0] | 0; p.zoomMax = zr[1] | 0; }
+      }
       p.loaded = true;
       _profileCount++;
       Serial.printf("[FIX] Profil naložen: %s — %d ch\n", p.name, p.channelCount);
@@ -92,6 +97,11 @@ bool FixtureEngine::loadProfile(const char* filename) {
     p.channelCount++;
   }
 
+  // Zoom range iz profila (top-level)
+  if (doc["zoomRange"].is<JsonArray>()) {
+    JsonArray zr = doc["zoomRange"].as<JsonArray>();
+    if (zr.size() >= 2) { p.zoomMin = zr[0] | 0; p.zoomMax = zr[1] | 0; }
+  }
   p.loaded = true;
   _profileCount++;
   Serial.printf("[FIX] Profil naložen: %s (%s) — %d kanalov\n", p.name, p.id, p.channelCount);
