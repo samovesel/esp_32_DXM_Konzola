@@ -49,7 +49,7 @@ public:
   int getFixturesInGroup(int groupBit, int* outIndices, int maxOut) const;
 
 private:
-  FixtureProfile _profiles[MAX_PROFILES];
+  FixtureProfile* _profiles = nullptr;
   int _profileCount = 0;
 
   PatchEntry _patch[MAX_FIXTURES];

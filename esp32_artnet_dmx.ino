@@ -47,6 +47,7 @@
 #include <LittleFS.h>
 #include "esp_bt.h"
 #include "esp_task_wdt.h"
+#include <esp_heap_caps.h>
 
 #include "config.h"
 #include "config_store.h"
@@ -449,6 +450,11 @@ void setup() {
   // Pošlji ArtPollReply takoj ob zagonu
   sendArtPollReply();
   lastPollReply = millis();
+
+  // Poročilo o pomnilniku po inicializaciji
+  Serial.printf("[SYS] Prosti heap: %d KB (interni: %d KB)\n",
+                ESP.getFreeHeap() / 1024,
+                heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024);
 
   // --- Watchdog: rekonfiguriraj obstoječi TWDT (Arduino core ga že inicializira) ---
   const esp_task_wdt_config_t wdtCfg = {

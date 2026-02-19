@@ -489,4 +489,14 @@ static const NodeConfig DEFAULT_CONFIG = {
 #define PATH_CONFIGS_DIR  "/configs"
 #define PATH_SOUND_CFG    "/sound.bin"
 
+// ============================================================================
+//  PSRAM HELPER
+// ============================================================================
+inline void* psramPreferMalloc(size_t size) {
+#if HAS_PSRAM
+  if (psramFound()) { void* p = ps_malloc(size); if (p) return p; }
+#endif
+  return malloc(size);
+}
+
 #endif // CONFIG_H

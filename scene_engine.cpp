@@ -2,7 +2,12 @@
 #include <LittleFS.h>
 
 void SceneEngine::begin() {
-  memset(_scenes, 0, sizeof(_scenes));
+  // Alociraj scene v PSRAM (~10.7 KB)
+  if (!_scenes) {
+    _scenes = (Scene*)psramPreferMalloc(sizeof(Scene) * MAX_SCENES);
+    if (!_scenes) { Serial.println("[SCN] NAPAKA: ne morem alocirati _scenes!"); return; }
+  }
+  memset(_scenes, 0, sizeof(Scene) * MAX_SCENES);
   memset(&_cf, 0, sizeof(_cf));
 
   // Ustvari mapo za scene
