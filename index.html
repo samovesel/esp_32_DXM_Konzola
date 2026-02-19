@@ -576,15 +576,20 @@ input[orient=vertical]::-moz-range-thumb{width:22px;height:14px;border-radius:4p
   </div>
   <div class="lx-pal" id="lxPal"></div>
   <div id="lxPanTilt" style="display:none;margin-top:6px">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+    <div id="lxPanRow" style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
       <span style="font-size:0.78em;color:#888;width:28px">Pan</span>
       <input type="range" id="lxPan" min="0" max="255" value="128" style="flex:1;accent-color:#999" oninput="lxPanTiltChange()">
       <span id="lxPanV" style="font-size:0.82em;color:#999;width:26px;text-align:right;flex-shrink:0">128</span>
     </div>
-    <div style="display:flex;align-items:center;gap:6px">
+    <div id="lxTiltRow" style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
       <span style="font-size:0.78em;color:#888;width:28px">Tilt</span>
       <input type="range" id="lxTilt" min="0" max="255" value="0" style="flex:1;accent-color:#999" oninput="lxPanTiltChange()">
       <span id="lxTiltV" style="font-size:0.82em;color:#999;width:26px;text-align:right;flex-shrink:0">0</span>
+    </div>
+    <div id="lxZoomRow" style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:0.78em;color:#888;width:28px">Zoom</span>
+      <input type="range" id="lxZoom" min="0" max="255" value="128" style="flex:1;accent-color:#999" oninput="lxZoomChange()">
+      <span id="lxZoomV" style="font-size:0.82em;color:#999;width:26px;text-align:right;flex-shrink:0">128</span>
     </div>
   </div>
   <div style="display:flex;gap:6px;margin-top:6px">
@@ -2897,14 +2902,18 @@ function openLxPopup(fi,cx,cy){
   var pop=document.getElementById('lxPopup');pop.style.display='block';
   document.getElementById('lxOverlay').style.display='block';
   bindLxCanvas();bindLxFoBo();
-  // Pan/Tilt sliderji za moving heade
-  var isMH=hasChType(f,8)||hasChType(f,10);
+  // Pan/Tilt/Zoom sliderji
+  var hasPan=hasChType(f,8),hasTilt=hasChType(f,10),hasZoom=hasChType(f,18);
   var ptDiv=document.getElementById('lxPanTilt');
-  if(isMH&&ptDiv){
+  if((hasPan||hasTilt||hasZoom)&&ptDiv){
     ptDiv.style.display='block';
-    var panVal=getFxChVal(f,8),tiltVal=getFxChVal(f,10);
-    document.getElementById('lxPan').value=panVal;document.getElementById('lxPanV').textContent=panVal;
-    document.getElementById('lxTilt').value=tiltVal;document.getElementById('lxTiltV').textContent=tiltVal;
+    var pr=document.getElementById('lxPanRow'),tr=document.getElementById('lxTiltRow'),zr=document.getElementById('lxZoomRow');
+    if(pr)pr.style.display=hasPan?'flex':'none';
+    if(tr)tr.style.display=hasTilt?'flex':'none';
+    if(zr)zr.style.display=hasZoom?'flex':'none';
+    if(hasPan){var pv=getFxChVal(f,8);document.getElementById('lxPan').value=pv;document.getElementById('lxPanV').textContent=pv;}
+    if(hasTilt){var tv=getFxChVal(f,10);document.getElementById('lxTilt').value=tv;document.getElementById('lxTiltV').textContent=tv;}
+    if(hasZoom){var zv=getFxChVal(f,18);document.getElementById('lxZoom').value=zv;document.getElementById('lxZoomV').textContent=zv;}
   }else if(ptDiv){ptDiv.style.display='none';}
   // Position
   var pw=pop.offsetWidth||265,ph=pop.offsetHeight||310;
@@ -2922,6 +2931,15 @@ function lxPanTiltChange(){
   f.channels.forEach(function(ch,ci){
     if(ch.type===8){ch.currentValue=panV;wsSend({cmd:'fxch',f:f.idx,c:ci,v:panV});}
     if(ch.type===10){ch.currentValue=tiltV;wsSend({cmd:'fxch',f:f.idx,c:ci,v:tiltV});}
+  });
+  updateLayColors();
+}
+function lxZoomChange(){
+  var zv=+document.getElementById('lxZoom').value;
+  document.getElementById('lxZoomV').textContent=zv;
+  if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;
+  f.channels.forEach(function(ch,ci){
+    if(ch.type===18){ch.currentValue=zv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});}
   });
   updateLayColors();
 }
