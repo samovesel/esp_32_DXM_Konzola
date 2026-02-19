@@ -2510,12 +2510,12 @@ function hasChType(f,type){if(!f||!f.channels)return false;for(var i=0;i<f.chann
 function calcBeam(f,cx,cy){
   var pan=getFxChVal(f,8),tilt=getFxChVal(f,10),zoom=getFxChVal(f,18);
   var ang=(pan/255*360-180)*Math.PI/180;
-  var alen=22+tilt/255*45;
+  var alen=25+tilt/255*80;
   var hs=5+(hasChType(f,18)?(zoom/255*14):7);
   var bdx=Math.sin(ang),bdy=-Math.cos(ang);
   var pdx=Math.cos(ang),pdy=Math.sin(ang);
   var ex=cx+bdx*alen,ey=cy+bdy*alen;
-  return{ex:ex,ey:ey,x1:ex+pdx*hs,y1:ey+pdy*hs,x2:ex-pdx*hs,y2:ey-pdy*hs,hs:hs};
+  return{ex:ex,ey:ey,x1:ex+pdx*hs,y1:ey+pdy*hs,x2:ex-pdx*hs,y2:ey-pdy*hs,hs:hs,pdx:pdx,pdy:pdy};
 }
 function calcPanTiltFromPos(cx,cy,tx,ty){
   var dx=tx-cx,dy=ty-cy;
@@ -2524,7 +2524,7 @@ function calcPanTiltFromPos(cx,cy,tx,ty){
   var angDeg=angRad*180/Math.PI;
   var pan=Math.round(((angDeg+180)/360)*255);
   pan=Math.max(0,Math.min(255,pan));
-  var tilt=Math.round(((dist-22)/45)*255);
+  var tilt=Math.round(((dist-25)/80)*255);
   tilt=Math.max(0,Math.min(255,tilt));
   return{pan:pan,tilt:tilt};
 }
@@ -2541,6 +2541,7 @@ function renderLayFixtures(){
       h+='<path class="lay-beam" d="M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.12)')+'" stroke="'+bc.replace('rgb(','rgba(').replace(')',',0.3)')+'" stroke-width="0.5" pointer-events="none"/>';
       h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.35)')+'" pointer-events="none"/>';
       h+='<circle class="lay-beam-handle" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" r="12" fill="rgba(255,255,255,0.01)" stroke="rgba(39,174,96,0)" stroke-width="2" style="cursor:crosshair" pointer-events="all"/>';
+      if(hasChType(f,18)){h+='<circle class="lay-zoom-handle" cx="'+bm.x1.toFixed(1)+'" cy="'+bm.y1.toFixed(1)+'" r="5" fill="#2060ff" stroke="#0040cc" stroke-width="1" style="cursor:ew-resize" pointer-events="all" opacity="0.85"/>';}
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
     }else{
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="18" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
@@ -2557,8 +2558,83 @@ function bindLayFxGroup(g){
   var fi=+g.dataset.fi;
   var handle=g.querySelector('.lay-beam-handle');
   if(handle)bindBeamHandle(handle,fi,g);
+  var zhandle=g.querySelector('.lay-zoom-handle');
+  if(zhandle)bindZoomHandle(zhandle,fi,g);
   var circle=g.querySelector('.lay-fx-circle');
   if(circle)bindFixtureCircle(circle,fi,g);
+  // Scroll wheel na beam handle za zoom
+  if(handle){
+    handle.addEventListener('wheel',function(e){
+      if(layStageEdit)return;
+      var f=fixtures[fi];if(!f||!hasChType(f,18))return;
+      e.preventDefault();
+      var cur=getFxChVal(f,18);
+      var nv=cur+(e.deltaY<0?8:-8);
+      nv=Math.max(0,Math.min(255,nv));
+      f.channels.forEach(function(ch,ci){
+        if(ch.type===18){ch.currentValue=nv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:nv});}
+      });
+      updateLayColors();
+    },{passive:false});
+  }
+}
+function calcZoomFromDrag(f,cx,cy,mx,my){
+  var bm=calcBeam(f,cx,cy);
+  var dist=Math.abs((mx-bm.ex)*bm.pdx+(my-bm.ey)*bm.pdy);
+  var zoom=Math.round((Math.max(0,dist-5)/14)*255);
+  return Math.max(0,Math.min(255,zoom));
+}
+function bindZoomHandle(zh,fi,g){
+  var zThrottle=null;
+  zh.addEventListener('pointerdown',function(e){
+    if(layStageEdit)return;
+    e.preventDefault();e.stopPropagation();
+    zh.setPointerCapture(e.pointerId);
+    zh.setAttribute('stroke','#00aaff');zh.setAttribute('r','6');
+    var f=fixtures[fi],pos=layData.fixturePositions[fi];
+    if(!f||!pos)return;
+    var cx=pos.x,cy=pos.y;
+    function onMove(ev){
+      var pt=laySvgPt(ev);
+      var zv=calcZoomFromDrag(f,cx,cy,pt.x,pt.y);
+      f.channels.forEach(function(ch){if(ch.type===18)ch.currentValue=zv;});
+      var bm=calcBeam(f,cx,cy);
+      var beam=g.querySelector('.lay-beam');
+      if(beam)beam.setAttribute('d','M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');
+      var spot=g.querySelector('.lay-spot');
+      if(spot){spot.setAttribute('rx',Math.max(3,bm.hs*0.6).toFixed(1));spot.setAttribute('ry',Math.max(2,bm.hs*0.4).toFixed(1));}
+      zh.setAttribute('cx',bm.x1.toFixed(1));zh.setAttribute('cy',bm.y1.toFixed(1));
+      if(!zThrottle){
+        zThrottle=setTimeout(function(){zThrottle=null;},30);
+        f.channels.forEach(function(ch,ci){
+          if(ch.type===18)wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});
+        });
+      }
+    }
+    function onUp(ev){
+      zh.removeEventListener('pointermove',onMove);zh.removeEventListener('pointerup',onUp);zh.removeEventListener('pointercancel',onUp);
+      zh.setAttribute('stroke','#0040cc');zh.setAttribute('r','5');
+      var pt=laySvgPt(ev);
+      var zv=calcZoomFromDrag(f,cx,cy,pt.x,pt.y);
+      f.channels.forEach(function(ch,ci){
+        if(ch.type===18){ch.currentValue=zv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});}
+      });
+      renderLayFixtures();
+    }
+    zh.addEventListener('pointermove',onMove);zh.addEventListener('pointerup',onUp);zh.addEventListener('pointercancel',onUp);
+  },{passive:false});
+  zh.addEventListener('wheel',function(e){
+    if(layStageEdit)return;
+    var f=fixtures[fi];if(!f)return;
+    e.preventDefault();
+    var cur=getFxChVal(f,18);
+    var nv=cur+(e.deltaY<0?8:-8);
+    nv=Math.max(0,Math.min(255,nv));
+    f.channels.forEach(function(ch,ci){
+      if(ch.type===18){ch.currentValue=nv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:nv});}
+    });
+    updateLayColors();
+  },{passive:false});
 }
 function bindBeamHandle(handle,fi,g){
   var beamThrottle=null;
@@ -2583,6 +2659,8 @@ function bindBeamHandle(handle,fi,g){
       var spot=g.querySelector('.lay-spot');
       if(spot){spot.setAttribute('cx',bm.ex.toFixed(1));spot.setAttribute('cy',bm.ey.toFixed(1));spot.setAttribute('rx',Math.max(3,bm.hs*0.6).toFixed(1));spot.setAttribute('ry',Math.max(2,bm.hs*0.4).toFixed(1));}
       handle.setAttribute('cx',bm.ex.toFixed(1));handle.setAttribute('cy',bm.ey.toFixed(1));
+      var zh=g.querySelector('.lay-zoom-handle');
+      if(zh){zh.setAttribute('cx',bm.x1.toFixed(1));zh.setAttribute('cy',bm.y1.toFixed(1));}
       if(!beamThrottle){
         beamThrottle=setTimeout(function(){beamThrottle=null;},30);
         f.channels.forEach(function(ch,ci){
@@ -2628,7 +2706,7 @@ function bindFixtureCircle(circle,fi,g){
       var txt=g.querySelector('text');
       if(txt){txt.setAttribute('x',rnx);txt.setAttribute('y',rny+30);}
       var beam=g.querySelector('.lay-beam');
-      if(beam){var ff=fixtures[fi];if(ff){var bm=calcBeam(ff,rnx,rny);beam.setAttribute('d','M '+rnx+' '+rny+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');var spt=g.querySelector('.lay-spot');if(spt){spt.setAttribute('cx',bm.ex.toFixed(1));spt.setAttribute('cy',bm.ey.toFixed(1));}var hdl=g.querySelector('.lay-beam-handle');if(hdl){hdl.setAttribute('cx',bm.ex.toFixed(1));hdl.setAttribute('cy',bm.ey.toFixed(1));}}}
+      if(beam){var ff=fixtures[fi];if(ff){var bm=calcBeam(ff,rnx,rny);beam.setAttribute('d','M '+rnx+' '+rny+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');var spt=g.querySelector('.lay-spot');if(spt){spt.setAttribute('cx',bm.ex.toFixed(1));spt.setAttribute('cy',bm.ey.toFixed(1));}var hdl=g.querySelector('.lay-beam-handle');if(hdl){hdl.setAttribute('cx',bm.ex.toFixed(1));hdl.setAttribute('cy',bm.ey.toFixed(1));}var zhl=g.querySelector('.lay-zoom-handle');if(zhl){zhl.setAttribute('cx',bm.x1.toFixed(1));zhl.setAttribute('cy',bm.y1.toFixed(1));}}}
       layDragTrashHover(ev.clientX,ev.clientY);
     }
     function onUp(ev){
@@ -2739,6 +2817,8 @@ function updateLayColors(){
           }
           var hdl=g.querySelector('.lay-beam-handle');
           if(hdl){hdl.setAttribute('cx',bm.ex.toFixed(1));hdl.setAttribute('cy',bm.ey.toFixed(1));}
+          var zh=g.querySelector('.lay-zoom-handle');
+          if(zh){zh.setAttribute('cx',bm.x1.toFixed(1));zh.setAttribute('cy',bm.y1.toFixed(1));}
         }
       }
     });
