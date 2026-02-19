@@ -2510,11 +2510,17 @@ function hasChType(f,type){if(!f||!f.channels)return false;for(var i=0;i<f.chann
 function calcBeam(f,cx,cy){
   var pan=getFxChVal(f,8),tilt=getFxChVal(f,10),zoom=getFxChVal(f,18);
   var ang=(pan/255*360-180)*Math.PI/180;
-  var alen=25+tilt/255*80;
+  var alen=30+tilt/255*140;
   var hs=5+(hasChType(f,18)?(zoom/255*14):7);
   var bdx=Math.sin(ang),bdy=-Math.cos(ang);
   var pdx=Math.cos(ang),pdy=Math.sin(ang);
   var ex=cx+bdx*alen,ey=cy+bdy*alen;
+  // Clamp endpoint to viewbox with margin
+  var m=hs+4;
+  if(ex<m){alen=Math.max(25,(m-cx)/bdx||alen);ex=cx+bdx*alen;ey=cy+bdy*alen;}
+  if(ex>layVbW-m){alen=Math.max(25,((layVbW-m)-cx)/bdx||alen);ex=cx+bdx*alen;ey=cy+bdy*alen;}
+  if(ey<m){alen=Math.max(25,(m-cy)/bdy||alen);ex=cx+bdx*alen;ey=cy+bdy*alen;}
+  if(ey>layVbH-m){alen=Math.max(25,((layVbH-m)-cy)/bdy||alen);ex=cx+bdx*alen;ey=cy+bdy*alen;}
   return{ex:ex,ey:ey,x1:ex+pdx*hs,y1:ey+pdy*hs,x2:ex-pdx*hs,y2:ey-pdy*hs,hs:hs,pdx:pdx,pdy:pdy};
 }
 function calcPanTiltFromPos(cx,cy,tx,ty){
@@ -2524,7 +2530,7 @@ function calcPanTiltFromPos(cx,cy,tx,ty){
   var angDeg=angRad*180/Math.PI;
   var pan=Math.round(((angDeg+180)/360)*255);
   pan=Math.max(0,Math.min(255,pan));
-  var tilt=Math.round(((dist-25)/80)*255);
+  var tilt=Math.round(((dist-30)/140)*255);
   tilt=Math.max(0,Math.min(255,tilt));
   return{pan:pan,tilt:tilt};
 }
@@ -2541,7 +2547,7 @@ function renderLayFixtures(){
       h+='<path class="lay-beam" d="M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.12)')+'" stroke="'+bc.replace('rgb(','rgba(').replace(')',',0.3)')+'" stroke-width="0.5" pointer-events="none"/>';
       h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.35)')+'" pointer-events="none"/>';
       h+='<circle class="lay-beam-handle" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" r="12" fill="rgba(255,255,255,0.01)" stroke="rgba(39,174,96,0)" stroke-width="2" style="cursor:crosshair" pointer-events="all"/>';
-      if(hasChType(f,18)){h+='<circle class="lay-zoom-handle" cx="'+bm.x1.toFixed(1)+'" cy="'+bm.y1.toFixed(1)+'" r="5" fill="#2060ff" stroke="#0040cc" stroke-width="1" style="cursor:ew-resize" pointer-events="all" opacity="0.85"/>';}
+      if(hasChType(f,18)){h+='<circle class="lay-zoom-handle" cx="'+bm.x1.toFixed(1)+'" cy="'+bm.y1.toFixed(1)+'" r="10" fill="rgba(32,96,255,0.5)" stroke="#0060ff" stroke-width="1.5" style="cursor:ew-resize" pointer-events="all"/>';}
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
     }else{
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="18" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
@@ -2590,7 +2596,7 @@ function bindZoomHandle(zh,fi,g){
     if(layStageEdit)return;
     e.preventDefault();e.stopPropagation();
     zh.setPointerCapture(e.pointerId);
-    zh.setAttribute('stroke','#00aaff');zh.setAttribute('r','6');
+    zh.setAttribute('stroke','#00aaff');zh.setAttribute('r','12');
     var f=fixtures[fi],pos=layData.fixturePositions[fi];
     if(!f||!pos)return;
     var cx=pos.x,cy=pos.y;
@@ -2613,7 +2619,7 @@ function bindZoomHandle(zh,fi,g){
     }
     function onUp(ev){
       zh.removeEventListener('pointermove',onMove);zh.removeEventListener('pointerup',onUp);zh.removeEventListener('pointercancel',onUp);
-      zh.setAttribute('stroke','#0040cc');zh.setAttribute('r','5');
+      zh.setAttribute('stroke','#0060ff');zh.setAttribute('r','10');
       var pt=laySvgPt(ev);
       var zv=calcZoomFromDrag(f,cx,cy,pt.x,pt.y);
       f.channels.forEach(function(ch,ci){
@@ -2971,7 +2977,9 @@ var LX_PAL=[
   {css:'#0000ff',r:0,g:0,b:255},{css:'#aa00ff',r:170,g:0,b:255},{css:'#ff00cc',r:255,g:0,b:204},
   {css:'#ffffff',r:255,g:255,b:255},{css:'#ffd0a0',r:255,g:208,b:160},{css:'#ff8080',r:255,g:128,b:128}
 ];
+var lxOpenTime=0;
 function openLxPopup(fi,cx,cy){
+  lxOpenTime=Date.now();
   lxFxIdx=fi;var f=fixtures[fi];if(!f)return;
   document.getElementById('lxTitle').textContent=f.name+' (A'+(f.dmxAddress||'?')+')';
   var dv=getFxChVal(f,1);
@@ -3005,7 +3013,7 @@ function openLxPopup(fi,cx,cy){
   if(py+ph>window.innerHeight-8)py=window.innerHeight-ph-8;
   pop.style.left=Math.max(8,px)+'px';pop.style.top=Math.max(8,py)+'px';
 }
-function closeLxPopup(){document.getElementById('lxPopup').style.display='none';document.getElementById('lxOverlay').style.display='none';lxFxIdx=-1;}
+function closeLxPopup(){if(Date.now()-lxOpenTime<400)return;document.getElementById('lxPopup').style.display='none';document.getElementById('lxOverlay').style.display='none';lxFxIdx=-1;}
 function lxDimChange(v){document.getElementById('lxDimV').textContent=v;if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=+v;wsSend({cmd:'fxch',f:f.idx,c:ci,v:+v});}});lxUpdatePrev();updateLayColors();}
 function lxPanTiltChange(){
   var panV=+document.getElementById('lxPan').value,tiltV=+document.getElementById('lxTilt').value;
