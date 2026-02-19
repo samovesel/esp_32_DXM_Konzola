@@ -2304,7 +2304,9 @@ function groupRanges(ranges,maxN){
 function convertOFL(ofl,filename){
   function mapType(cap){
     var t=cap.type;
-    if(t==='Pan')return'pan';if(t==='Tilt')return'tilt';if(t==='Intensity')return'intensity';
+    if(t==='Pan'||t==='PanContinuous')return'pan';
+    if(t==='Tilt'||t==='TiltContinuous')return'tilt';
+    if(t==='Intensity')return'intensity';
     if(t==='ColorIntensity'){
       var c=(cap.color||'').replace(/\s+/g,'').toLowerCase();
       if(c==='red')return'color_r';if(c==='green')return'color_g';if(c==='blue')return'color_b';
@@ -2312,13 +2314,14 @@ function convertOFL(ofl,filename){
       if(c==='amber')return'color_a';if(c==='uv')return'color_uv';
       if(c==='lime')return'color_l';if(c==='cyan')return'color_c';return'generic';
     }
-    if(t==='Zoom')return'zoom';if(t==='Focus')return'focus';
-    if(t==='ShutterStrobe')return'strobe';if(t==='PanTiltSpeed')return'speed';
-    if(t==='ColorTemperature')return'cct';if(t==='Prism'||t==='PrismRotation')return'prism';
-    if(t==='WheelSlot'||t==='WheelRotation')return'gobo';
-    if(t==='ColorPreset')return'macro';
-    if(t==='Effect')return'macro';
-    if(t==='Maintenance'||t==='NoFunction')return'preset';
+    if(t==='Zoom'||t==='BeamAngle')return'zoom';if(t==='Focus')return'focus';
+    if(t==='ShutterStrobe'||t==='StrobeSpeed'||t==='StrobeDuration')return'strobe';
+    if(t==='PanTiltSpeed'||t==='EffectSpeed'||t==='Speed')return'speed';
+    if(t==='ColorTemperature')return'cct';
+    if(t==='Prism'||t==='PrismRotation')return'prism';
+    if(t==='WheelSlot'||t==='WheelRotation'||t==='WheelShake'||t==='WheelSlotRotation')return'gobo';
+    if(t==='ColorPreset'||t==='Effect'||t==='Fog'||t==='FogOutput'||t==='FogType')return'macro';
+    if(t==='Maintenance'||t==='NoFunction'||t==='Rotation'||t==='BladeInsertion'||t==='BladeRotation'||t==='BladeSystemRotation')return'preset';
     return'generic';
   }
   function capLabel(cap){
@@ -2326,6 +2329,15 @@ function convertOFL(ofl,filename){
     return l.length>15?l.substring(0,15):l;
   }
   var avail=ofl.availableChannels||{};
+  // Merge templateChannels (matrix fixtures) — treat them as regular channels
+  if(ofl.templateChannels){
+    Object.keys(ofl.templateChannels).forEach(function(tk){
+      var tch=ofl.templateChannels[tk];
+      // Remove $pixelKey placeholder from name, keep channel definition
+      var cleanName=tk.replace(/\$pixelKey/g,'Px');
+      if(!avail[cleanName]&&!avail[tk])avail[cleanName]=tch;
+    });
+  }
   var fineMap={};
   var chDefs={};
   Object.keys(avail).forEach(function(chName){
@@ -2339,7 +2351,11 @@ function convertOFL(ofl,filename){
       });
     }
     var chType='generic',ranges=[],defVal=0;
-    if(ch.defaultValue!==undefined)defVal=ch.defaultValue;
+    if(ch.defaultValue!==undefined){
+      var dv=ch.defaultValue;
+      if(typeof dv==='string'&&dv.endsWith('%'))defVal=Math.round(parseFloat(dv)/100*255);
+      else if(typeof dv==='number')defVal=dv;
+    }
     if(ch.capability){
       chType=mapType(ch.capability);
     }else if(ch.capabilities){
@@ -2370,6 +2386,11 @@ function convertOFL(ofl,filename){
     if(mm.length>=2)zoomRange=[Math.round(mm[0]),Math.round(mm[1])];
   }
   var modes=(ofl.modes||[]).map(function(mode){
+    // Mode-level physical override for zoomRange (first mode wins if top-level missing)
+    if(!zoomRange&&mode.physical&&mode.physical.lens&&mode.physical.lens.degreesMinMax){
+      var mmm=mode.physical.lens.degreesMinMax;
+      if(mmm.length>=2)zoomRange=[Math.round(mmm[0]),Math.round(mmm[1])];
+    }
     var channels=(mode.channels||[]).map(function(ref){
       if(!ref||typeof ref!=='string')return null;
       var def=chDefs[ref];
