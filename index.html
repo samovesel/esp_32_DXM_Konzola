@@ -4253,12 +4253,26 @@ function xyPopBindCanvas(){
   var cv=document.getElementById('xyPopCanvas');if(!cv||_xyPopCanvasBound)return;
   _xyPopCanvasBound=true;
   var active=false,lastSend=0;
-  function onXY(clientX,clientY){
+  var startTouch=null,startNx=0,startNy=0;
+  // Trenutna normalizirana pozicija pike (0-1)
+  function getCurNorm(){
+    var f=fixtures[xyPopFi];if(!f)return{nx:0.5,ny:0.5};
+    var pV=0,tV=0,maxP=255,maxT=255;
+    if(xyPopPanC>=0){
+      if(xyPopPanF>=0){maxP=65535;pV=combine16bit(f.channels[xyPopPanC].currentValue||0,f.channels[xyPopPanF].currentValue||0)}
+      else pV=f.channels[xyPopPanC].currentValue||0;
+    }
+    if(xyPopTiltC>=0){
+      if(xyPopTiltF>=0){maxT=65535;tV=combine16bit(f.channels[xyPopTiltC].currentValue||0,f.channels[xyPopTiltF].currentValue||0)}
+      else tV=f.channels[xyPopTiltC].currentValue||0;
+    }
+    return{nx:pV/maxP,ny:tV/maxT};
+  }
+  // Pošlji novo pozicijo (nx, ny v razponu 0-1)
+  function sendXY(nx,ny){
     if(!xyPopOpen||xyPopFi<0)return;
     var now=Date.now();if(now-lastSend<33)return;lastSend=now;
-    var rect=cv.getBoundingClientRect();
-    var nx=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
-    var ny=Math.max(0,Math.min(1,(clientY-rect.top)/rect.height));
+    nx=Math.max(0,Math.min(1,nx));ny=Math.max(0,Math.min(1,ny));
     var f=fixtures[xyPopFi];if(!f||!f.channels)return;
     if(xyPopPanC>=0){
       if(xyPopPanF>=0){var pv=Math.round(nx*65535);var ps=split16bit(pv);f.channels[xyPopPanC].currentValue=ps.hi;f.channels[xyPopPanF].currentValue=ps.lo;wsSend({cmd:'fxch',f:f.idx,c:xyPopPanC,v:ps.hi});wsSend({cmd:'fxch',f:f.idx,c:xyPopPanF,v:ps.lo})}
@@ -4271,14 +4285,28 @@ function xyPopBindCanvas(){
     xyPopSyncSliders();
     xyPopDraw();
   }
-  cv.addEventListener('touchstart',function(e){e.preventDefault();active=true;var t=e.touches[0];onXY(t.clientX,t.clientY);},{passive:false});
-  cv.addEventListener('touchmove',function(e){if(!active)return;e.preventDefault();var t=e.touches[0];onXY(t.clientX,t.clientY);},{passive:false});
-  cv.addEventListener('touchend',function(){active=false;});
-  cv.addEventListener('touchcancel',function(){active=false;});
-  cv.onpointerdown=function(e){if(e.pointerType==='touch')return;e.preventDefault();cv.setPointerCapture(e.pointerId);active=true;onXY(e.clientX,e.clientY);};
-  cv.onpointermove=function(e){if(!active||e.pointerType==='touch')return;onXY(e.clientX,e.clientY);};
-  cv.onpointerup=function(e){if(e.pointerType!=='touch')active=false;};
-  cv.onpointercancel=function(e){if(e.pointerType!=='touch')active=false;};
+  function onDragStart(cx,cy){
+    active=true;startTouch={x:cx,y:cy};
+    var c=getCurNorm();startNx=c.nx;startNy=c.ny;
+  }
+  function onDragMove(cx,cy){
+    if(!active||!startTouch)return;
+    var rect=cv.getBoundingClientRect();
+    var dx=(cx-startTouch.x)/rect.width;
+    var dy=(cy-startTouch.y)/rect.height;
+    sendXY(startNx+dx,startNy+dy);
+  }
+  function onDragEnd(){active=false;startTouch=null;}
+  // Touch events (tablice)
+  cv.addEventListener('touchstart',function(e){e.preventDefault();var t=e.touches[0];onDragStart(t.clientX,t.clientY);},{passive:false});
+  cv.addEventListener('touchmove',function(e){if(!active)return;e.preventDefault();var t=e.touches[0];onDragMove(t.clientX,t.clientY);},{passive:false});
+  cv.addEventListener('touchend',function(){onDragEnd();});
+  cv.addEventListener('touchcancel',function(){onDragEnd();});
+  // Pointer events (miška, stylus)
+  cv.onpointerdown=function(e){if(e.pointerType==='touch')return;e.preventDefault();cv.setPointerCapture(e.pointerId);onDragStart(e.clientX,e.clientY);};
+  cv.onpointermove=function(e){if(!active||e.pointerType==='touch')return;onDragMove(e.clientX,e.clientY);};
+  cv.onpointerup=function(e){if(e.pointerType!=='touch')onDragEnd();};
+  cv.onpointercancel=function(e){if(e.pointerType!=='touch')onDragEnd();};
 }
 function xyPopSyncSliders(){
   if(xyPopFi<0)return;
