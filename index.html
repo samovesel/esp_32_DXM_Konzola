@@ -367,6 +367,207 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <!-- TAB 2: SOUND -->
 <div class="tab" id="tab2">
+  <div class="card" id="stlGuideCard">
+    <h3 style="cursor:pointer;user-select:none" onclick="var b=document.getElementById('stlGuideBody');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('span').textContent=b.style.display==='none'?'+':'-'">Uporabniški priročnik <span style="float:right;font-size:0.8em;color:#0af">+</span></h3>
+    <div id="stlGuideBody" style="display:none;font-size:0.82em;line-height:1.55;color:#ccc">
+
+<p style="color:#0af;font-weight:bold;margin:10px 0 4px">1. KAKO DELUJE SOUND-TO-LIGHT (STL)?</p>
+<p>Naprava zajema zvok prek mikrofona (INMP441) ali line-in vhoda (WM8782S), ga analizira s FFT (Fast Fourier Transform) in razdeli v <b>8 frekvenčnih pasov</b>. Energija v vsakem pasu poganja svetlobne efekte na lučeh, ki imajo v patchu vklopljeno opcijo <b>"Zvok"</b> (Sound Reactive).</p>
+<p>Signal potuje skozi verigo: <span style="color:#0af">Mikrofon → FFT → AGC (ojačanje) → EQ (per-band gain) → Noise gate → Frekvenčni pasovi (Bass/Mid/High) → Mapiranje na DMX kanale</span></p>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">2. FFT SPEKTER (vizualizacija)</p>
+<p>Zgornja kartica prikazuje 8 stolpcev — po enega za vsak frekvenčni pas:</p>
+<table style="font-size:0.9em;margin:4px 0 8px"><tr><th>Pas</th><th>Obseg</th><th>Opis</th></tr>
+<tr><td style="color:#f33">Sub</td><td>30–60 Hz</td><td>Globoki bas (bas bobna, sub-bass)</td></tr>
+<tr><td style="color:#f33">Bass</td><td>60–120 Hz</td><td>Bas kitara, kick drum</td></tr>
+<tr><td style="color:#f33">Low</td><td>120–250 Hz</td><td>Spodnji mid, toplina vokala</td></tr>
+<tr><td style="color:#fc0">Mid</td><td>250–500 Hz</td><td>Sredina — vokal, kitare</td></tr>
+<tr><td style="color:#fc0">Hi-M</td><td>500–1000 Hz</td><td>Zgornji mid, jasnost</td></tr>
+<tr><td style="color:#fc0">Pres</td><td>1–2 kHz</td><td>Presence, razločnost</td></tr>
+<tr><td style="color:#0af">Bril</td><td>2–4 kHz</td><td>Brilliance, činele</td></tr>
+<tr><td style="color:#0af">Air</td><td>4–11 kHz</td><td>Zrak, hi-hat, sibilanti</td></tr>
+</table>
+<p>Merilci <span style="color:#f33">Bass</span> / <span style="color:#fc0">Mid</span> / <span style="color:#0af">High</span> pod spektrom prikazujejo povprečje spodnjih 3, srednjih 3 in zgornjih 2 pasov. <b>Peak</b> = trenutni vršni nivo vhoda, <b>BPM</b> = samodejno zaznani tempo, <b>Beat</b> = "!" ob zaznavi udarca.</p>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">3. EASY MODE</p>
+<p>Najhitrejši način za zagon sound-to-light. Vklopi stikalo <b>"Vklopljeno"</b> in sistem samodejno mapira zvok na luči.</p>
+<p><b>Preseti:</b></p>
+<table style="font-size:0.9em;margin:4px 0 8px"><tr><th>Preset</th><th>Opis</th><th>Najboljše za</th></tr>
+<tr><td>Pulse</td><td>Samo bas → dimmer + beat bump</td><td>Minimalistični efekt, eden LED par</td></tr>
+<tr><td>Rainbow</td><td>Mid → barvna rotacija, beat sync ON</td><td>Počasna atmosfera z barvami</td></tr>
+<tr><td>Storm</td><td>Samo high → strobe + beat bump</td><td>Agresiven strobe na činele</td></tr>
+<tr><td>Ambient</td><td>Bass + mid, nizka jakost (30%)</td><td>Ozadje, lounge, restavracija</td></tr>
+<tr><td>Club</td><td>Vse vklopljeno, 60%, beat sync ON</td><td>Splošen klubski efekt</td></tr>
+<tr><td>Custom</td><td>Ročna nastavitev vseh opcij</td><td>Ko noben preset ne ustreza</td></tr>
+</table>
+
+<p><b>Parametri:</b></p>
+<ul style="margin:4px 0">
+<li><b>Občutljivost</b> (0.1–5.0): Množilnik na vrhu AGC. Pri 1.0 izhod sledi vršni glasnosti. Pod 1.0 manj občutljivo, nad 1.0 bolj občutljivo.</li>
+<li><b>Jakost</b> (0–100%): Koliko zvok prispeva k DMX izhodu. Pri 50% se zvočni efekt sešteje z ročnimi fader vrednostmi napol.</li>
+<li><b>Bass → Dimmer</b>: Bass energija upravlja svetilnost (dimmer kanal). Glasnejši bas = svetlejše.</li>
+<li><b>Mid → Barve</b>: Mid energija poganja barvno rotacijo (rainbow). Hue se vrti na vsakem fixture-u s 45° zamikom za raznolikost.</li>
+<li><b>High → Strobe</b>: Visoke frekvence (činele, hi-hat) sprožijo strobe/shutter kanal.</li>
+<li><b>Beat → Bump</b>: Ob zaznavi beata (bas udarec) se jakost poveča za 50% — ustvari pulz.</li>
+<li><b>Beat Sync</b>: Efekti se sinhronizirajo z zaznano BPM. Brez: zvezna odzivnost. Z: pulziranje v ritmu.</li>
+</ul>
+
+<p style="color:#f90;margin:6px 0"><b>Primer — enostaven "club" efekt:</b></p>
+<ol style="margin:4px 0;padding-left:18px">
+<li>V zavihku Fixtures označi luči kot "Zvok" (Sound Reactive)</li>
+<li>Odpri Sound → Easy Mode → vklopi "Vklopljeno"</li>
+<li>Izberi preset <b>Club</b></li>
+<li>Nastavi občutljivost na 1.0, jakost na 60%</li>
+<li>Poženi glasbo — luči reagirajo na bas, barve se vrtijo, strobe utripa na činele</li>
+</ol>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">4. AUDIO EQ &amp; AGC</p>
+<p><b>AGC (Automatic Gain Control)</b> samodejno prilagaja ojačanje glede na glasnost okolja. Brez AGC bi tiha glasba komaj ustvarila efekt, glasna pa bi vse saturirala.</p>
+<p><b>Okoljski preseti:</b></p>
+<table style="font-size:0.9em;margin:4px 0 8px"><tr><th>Preset</th><th>Glasnost</th><th>AGC</th><th>Gate</th><th>Uporaba</th></tr>
+<tr><td>Tiha soba</td><td>~50 dB</td><td>Hiter (0.8)</td><td>Nizek (0.1)</td><td>Testiranje doma, studijsko delo, govor</td></tr>
+<tr><td>Club / bar</td><td>~80 dB</td><td>Srednji (0.5)</td><td>Zmeren (0.3)</td><td>Manjši prostori z glasbo iz zvočnikov</td></tr>
+<tr><td>Koncert</td><td>~100 dB</td><td>Počasen (0.2)</td><td>Visok (0.6)</td><td>Veliki odri, močen PA sistem</td></tr>
+<tr><td>Po meri</td><td>—</td><td>—</td><td>—</td><td>Ročna nastavitev vseh parametrov</td></tr>
+</table>
+
+<p><b>EQ drsniki (8 pasov):</b> Grafični izenačevalnik, ki množilnik (0.0–3.0) na vsakem frekvenčnem pasu. Privzeto 1.0 = brez spremembe.</p>
+<ul style="margin:4px 0">
+<li>Povečaj <b>Sub + Bass</b> na 2.0 → močnejši odziv na bas boben</li>
+<li>Zmanjšaj <b>Air</b> na 0.3 → manj šumenja od visokih frekvenc</li>
+<li>Povečaj <b>Mid</b> na 1.5 → bolj izrazita barvna rotacija pri vokalu</li>
+</ul>
+
+<p><b>AGC hitrost</b> (0–1.0): Kako hitro se sistem prilagodi spremembi glasnosti. <b>Počasi (0.1–0.3)</b> = stabilno za šov, glasnost se ne spreminja hitro. <b>Hitro (0.7–1.0)</b> = odzivno za testiranje pri različnih glasnostih.</p>
+<p><b>Noise gate</b> (0–1.0): Filtrira šum ko ni glasbe. <b>0</b> = izključen (vedno reagira — tudi na šum klime). <b>0.3</b> = zmeren (ignorira tihe zvoke). <b>0.8+</b> = agresiven (samo glasna glasba gre skozi).</p>
+
+<p style="color:#f90;margin:6px 0"><b>Primer — nastavi za tiho sobo doma:</b></p>
+<ol style="margin:4px 0;padding-left:18px">
+<li>Odpri Audio EQ &amp; AGC → klikni <b>Tiha soba</b></li>
+<li>Sub in Bass se postavita na 2.0 (dvojno ojačanje za šibek bas iz telefona)</li>
+<li>AGC hitrost: 0.8 (hitro prilagajanje)</li>
+<li>Noise gate: 0.1 (nizek, da prepusti tudi tihe signale)</li>
+<li>Poženi glasbo s telefona — luči morajo reagirati</li>
+</ol>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">5. MANUAL BEAT</p>
+<p>Ritmični efekti <b>brez zvočnega vira</b> — za situacije ko mikrofon ne deluje ali ko hočeš natančen tempo. Lahko deluje samostojno ali kot fallback za audio.</p>
+
+<p><b>Vir beata:</b></p>
+<ul style="margin:4px 0">
+<li><b>Manual</b>: Tempo določiš s TAP gumbom ali BPM drsnikom. Vedno aktiven.</li>
+<li><b>Auto (fallback)</b>: Ko je zvočni signal prisoten, se uporabi avdio beat detekcija. Ko signal izgine (tišina), se preklopi na manual tempo. <span style="color:#0af">Priporočeno za žive nastope!</span></li>
+<li><b>Samo avdio</b>: Samo avdio beat detekcija. Ko ni signala, efekti utihnejo.</li>
+</ul>
+
+<p><b>TAP TEMPO:</b> Pritisni gumb 4-krat v ritmu glasbe. Sistem izračuna BPM iz intervalov med pritiski. Lahko tudi ročno vpišeš BPM z drsnikom (30–300).</p>
+
+<p><b>Programi:</b></p>
+<table style="font-size:0.9em;margin:4px 0 8px"><tr><th>Program</th><th>Opis</th><th>Efekt</th></tr>
+<tr><td>Pulse</td><td>Intenziteta pada od beata</td><td>Blisk na beat, nato postopno ugasne</td></tr>
+<tr><td>Chase</td><td>Zaporedna aktivacija</td><td>Ena luč naenkrat, po vrsti</td></tr>
+<tr><td>Sine</td><td>Gladka sinusoidna oscilacija</td><td>Počasno dihanje svetlobe</td></tr>
+<tr><td>Strobe</td><td>Ostro vklop/izklop na beat</td><td>Kratki blisk (15% faze) nato tema</td></tr>
+<tr><td>Rainbow</td><td>Barvna rotacija sinhrona z beatom</td><td>Barve se vrtijo v tempu</td></tr>
+<tr><td>Build</td><td>Gradnja čez N beatov</td><td>Intenziteta raste z vsakim beatom, nato reset</td></tr>
+<tr><td>Random</td><td>Naključne barve ob beatu</td><td>Vsaka luč dobi naključno barvo</td></tr>
+<tr><td>Alternate</td><td>Sode/lihe izmenjujejo</td><td>Luči 1,3,5 → beat 1; luči 2,4,6 → beat 2</td></tr>
+<tr><td>Wave</td><td>Sinusni val s faznim zamikom</td><td>Val svetlobe potuje čez luči</td></tr>
+<tr><td>Stack</td><td>Vsak beat doda luč</td><td>Postopno prižiganje, nato reset</td></tr>
+<tr><td>Sparkle</td><td>Naključno utripanje</td><td>Naključne luči kratko zasvetijo</td></tr>
+<tr><td>Scanner</td><td>Ena luč skenira levo-desno</td><td>Kot "Knight Rider" — ping-pong</td></tr>
+</table>
+
+<p><b>Subdivizija:</b> Množilnik tempa. <b>1/4x</b> = 4x počasneje od BPM. <b>1x</b> = normalen tempo. <b>4x</b> = 4x hitreje (npr. 120 BPM → 480 udarcev/min).</p>
+
+<p><b>Dodatni parametri:</b></p>
+<ul style="margin:4px 0">
+<li><b>Intenziteta</b> (0–100%): Maksimalna svetilnost efekta.</li>
+<li><b>Barvni efekti</b>: Vklopi barvno spreminjanje (pri programih z barvami). Izklopi za čisto belo.</li>
+<li><b>Build beatov</b> (4–32): Koliko beatov traja en cikel Build programa.</li>
+<li><b>Krivulja zatemnitve</b>: Linear = enakomerno, Exponential = bolj dramatično, Logarithmic = mehkejše.</li>
+<li><b>Attack</b> (0–500 ms): Čas od teme do polne svetilnosti. 0 = takojšen. 50+ ms = mehkejši vklop.</li>
+<li><b>Decay</b> (0–2000 ms): Čas od polne svetilnosti do ugasnitve. 0 = privzeto (po programu). 500+ ms = dolg rep.</li>
+<li><b>Paleta</b>: Izberi barvno shemo — Rainbow, Warm (rdeča/oranžna), Cool (modra/vijolična), Fire, Ocean, Party, ali Custom (4 barve po meri).</li>
+</ul>
+
+<p style="color:#f90;margin:6px 0"><b>Primer — chase efekt na 128 BPM:</b></p>
+<ol style="margin:4px 0;padding-left:18px">
+<li>Vklopi Manual Beat</li>
+<li>Vir: <b>Manual</b></li>
+<li>Nastavi BPM na 128 (drsnik ali 4x TAP)</li>
+<li>Program: <b>Chase</b></li>
+<li>Subdivizija: <b>1x</b></li>
+<li>Intenziteta: 80%, Barvni efekti: ON, Paleta: Rainbow</li>
+<li>Luči se po vrsti prižigajo v mavričnih barvah na vsak beat</li>
+</ol>
+
+<p style="color:#f90;margin:6px 0"><b>Primer — auto fallback za živi nastop:</b></p>
+<ol style="margin:4px 0;padding-left:18px">
+<li>Nastavi Easy Mode z željenim presetom (npr. Club)</li>
+<li>Vklopi Manual Beat z virom <b>Auto (fallback)</b></li>
+<li>Nastavi program Chase, BPM 120</li>
+<li>Ko igra glasba → luči reagirajo na zvok (Easy Mode)</li>
+<li>Ko nastane tišina (prehod med skladbami) → Manual Beat prevzame s Chaseom pri 120 BPM</li>
+<li>Ko glasba spet zaživi → samodejno nazaj na audio</li>
+</ol>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">6. PROGRAM CHAIN (Playlist)</p>
+<p>Avtomatsko zaporedje programov. Sistem samodejno preklopi program po zadanem številu beatov.</p>
+<p>Primer: Pulse (8 beatov) → Chase (16 beatov) → Rainbow (8 beatov) → ponovi.</p>
+<p>Vklopi <b>Chain</b>, dodaj vnose z gumbom "+", izberi program in trajanje za vsakega.</p>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">7. CONE (Per-fixture mapiranje)</p>
+<p>Določi, kateri frekvenčni pas poganja posamezen fixture v Easy Mode:</p>
+<ul style="margin:4px 0">
+<li><b>Vse (All)</b>: Fixture reagira na celoten spekter (privzeto)</li>
+<li><b>Bass</b>: Samo na bas</li>
+<li><b>Mid</b>: Samo na srednje frekvence</li>
+<li><b>High</b>: Samo na visoke frekvence</li>
+</ul>
+<p style="color:#f90;margin:6px 0"><b>Primer:</b> Postavi LED pare na <b>Bass</b>, moving heade na <b>Mid</b>, strobe na <b>High</b>. Rezultat: pari utripajo na bas boben, headi se vrtijo na vokal, strobe pa šika na činele.</p>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">8. PRO MODE — PRAVILA</p>
+<p>Za napredne uporabnike. Ročno definiraj mapiranje: kateri frekvenčni obseg poganja kateri DMX kanal na katerem fixture-u.</p>
+<p>Vsako pravilo ima:</p>
+<ul style="margin:4px 0">
+<li><b>Fixture + Kanal</b>: Kateri fixture in kateri kanal (dimmer, R, G, B...)</li>
+<li><b>Freq</b>: Frekvenčni obseg (npr. 60–250 Hz za bas)</li>
+<li><b>Izhod</b>: DMX razpon (npr. 0–255 za poln obseg, 50–200 za omejen)</li>
+<li><b>Krivulja</b>: Linear, Exponential (bolj dramatično), Logarithmic (mehko), Square (koren)</li>
+</ul>
+<p>Pro pravila delujejo neodvisno od Easy Mode — lahko imaš oboje hkrati.</p>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">9. LFO / FX GENERATOR</p>
+<p>Nizkofrekvenčni oscilator — ustvarja ponavljajoče vzorce na DMX kanalih <b>neodvisno od zvoka</b>.</p>
+<ul style="margin:4px 0">
+<li><b>Waveform</b>: Sine (gladko), Triangle (linearno), Square (ostro vklop/izklop), Saw (žagasto)</li>
+<li><b>Target</b>: Na kateri parameter vpliva (Dimmer, Pan, Tilt, R, G, B)</li>
+<li><b>Rate</b>: Hitrost oscilacije (Hz). 0.5 = en cikel na 2 sekundi, 2.0 = 2 cikla na sekundo.</li>
+<li><b>Depth</b>: Amplituda (0–1). 0.5 = nihanje za ±50% od središča.</li>
+<li><b>Phase</b>: Fazni zamik med fixture-i (0–1). 0.25 = vsak fixture zamaknjen za četrtino cikla → val.</li>
+</ul>
+<p style="color:#f90;margin:6px 0"><b>Primer — dihanje svetlobe:</b> Sine, Dimmer, Rate 0.3, Depth 0.8, Phase 0. Na vseh fixture-ih se svetilnost počasi dviguje in spušča.</p>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">10. SHAPE GENERATOR</p>
+<p>Ustvarja gibalne vzorce za <b>Pan/Tilt</b> na moving head lučeh.</p>
+<ul style="margin:4px 0">
+<li><b>Circle</b>: Krožno gibanje</li>
+<li><b>Figure-8</b>: Osmička</li>
+<li><b>Triangle / Square</b>: Geometrične oblike</li>
+<li><b>Line H / Line V</b>: Vodoravna ali navpična linija</li>
+<li><b>Speed</b>: Hitrost gibanja. <b>Size</b>: Velikost vzorca. <b>Spread</b>: Fazni zamik med fixture-i.</li>
+</ul>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">11. MASTER SPEED</p>
+<p>Globalni množilnik hitrosti za vse efekte (LFO, Shape, STL). <b>0.5x</b> = pol hitreje, <b>2.0x</b> = dvojna hitrost. Uporabno za hitro prilagoditev tempa vseh efektov hkrati.</p>
+
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">12. SHRANJEVANJE</p>
+<p>Gumb <b>"Shrani nastavitve"</b> v vsaki kartici zapiše konfiguracijo v flash pomnilnik ESP32. Ob restartu se nastavitve naložijo. Brez shranjevanja se nastavitve ob izklopu izgubijo.</p>
+
+    </div>
+  </div>
+
   <div class="card">
     <h3>FFT Spekter</h3>
     <div class="fft-box" id="fftBox"></div>
