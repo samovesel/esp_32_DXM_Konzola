@@ -2693,11 +2693,16 @@ var layZoom=1,layPanX=0,layPanY=0;
 function applyLayZoom(){
   var svg=document.getElementById('laySvg');if(!svg)return;
   var w=layVbW/layZoom,h=layVbH/layZoom;
-  layPanX=Math.max(0,Math.min(layVbW-w,layPanX));
-  layPanY=Math.max(0,Math.min(layVbH-h,layPanY));
+  if(layZoom>=1){
+    layPanX=Math.max(0,Math.min(layVbW-w,layPanX));
+    layPanY=Math.max(0,Math.min(layVbH-h,layPanY));
+  }else{
+    layPanX=Math.max(-(w-layVbW),Math.min(0,layPanX));
+    layPanY=Math.max(-(h-layVbH),Math.min(0,layPanY));
+  }
   svg.setAttribute('viewBox',layPanX.toFixed(1)+' '+layPanY.toFixed(1)+' '+w.toFixed(1)+' '+h.toFixed(1));
   var zi=document.getElementById('layZoomInd');
-  if(zi){if(layZoom>1.05){zi.style.display='block';zi.textContent=Math.round(layZoom*100)+'%';}else{zi.style.display='none';}}
+  if(zi){if(Math.abs(layZoom-1)>0.05){zi.style.display='block';zi.textContent=Math.round(layZoom*100)+'%';}else{zi.style.display='none';}}
 }
 function resetLayZoom(){layZoom=1;layPanX=0;layPanY=0;applyLayZoom();}
 function updateLayViewBox(){
@@ -3071,7 +3076,9 @@ function bindLaySidebarDrag(item,fi){
 var layEvtsBound=false;
 function bindLaySvgEvents(){
   if(layEvtsBound)return;layEvtsBound=true;
-  var svg=document.getElementById('laySvg'),dg=document.getElementById('layDrawG'),ds=null;
+  var svg=document.getElementById('laySvg'),dg=document.getElementById('layDrawG'),ds=null,panDrag=null;
+  // ---- Disable context menu everywhere in layout editor ----
+  document.getElementById('layEditor').addEventListener('contextmenu',function(e){e.preventDefault();});
   // ---- Pinch-to-zoom & two-finger pan ----
   var pinchDist0=0,pinchZoom0=1,pinchMidSvg0=null,pinchPanX0=0,pinchPanY0=0,isPinch=false;
   function touchDist(t){var dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
@@ -3097,7 +3104,7 @@ function bindLaySvgEvents(){
       e.preventDefault();
       var d=touchDist(e.touches);
       var scale=d/pinchDist0;
-      var newZoom=Math.max(1,Math.min(6,pinchZoom0*scale));
+      var newZoom=Math.max(0.2,Math.min(6,pinchZoom0*scale));
       var mid=touchMidClient(e.touches);
       var svg=document.getElementById('laySvg');if(!svg)return;
       var cr=svg.getBoundingClientRect();
@@ -3117,7 +3124,7 @@ function bindLaySvgEvents(){
     if(e.target.closest&&e.target.closest('.lay-zoom-handle,.lay-beam-handle'))return;
     e.preventDefault();
     var factor=e.deltaY<0?1.15:1/1.15;
-    var newZoom=Math.max(1,Math.min(6,layZoom*factor));
+    var newZoom=Math.max(0.2,Math.min(6,layZoom*factor));
     var pt=clientToSvgAt(e.clientX,e.clientY,layZoom,layPanX,layPanY);
     var vw=layVbW/newZoom,vh=layVbH/newZoom;
     var cr=svg.getBoundingClientRect();
@@ -3129,12 +3136,30 @@ function bindLaySvgEvents(){
   // ---- Double-tap to reset zoom ----
   var lastTapTime=0;
   svg.addEventListener('touchstart',function(e){
-    if(e.touches.length===1&&layZoom>1.05){
+    if(e.touches.length===1&&Math.abs(layZoom-1)>0.05){
       var now=Date.now();
       if(now-lastTapTime<350){resetLayZoom();e.preventDefault();lastTapTime=0;return;}
       lastTapTime=now;
     }
   },{passive:false});
+  // ---- Drag-to-pan (hold + drag on empty surface) ----
+  svg.addEventListener('pointerdown',function(e){
+    if(layStageEdit)return;
+    if(e.target.closest('.lay-fx-grp,[data-del],.lay-sidebar,.lx-popup'))return;
+    e.preventDefault();svg.setPointerCapture(e.pointerId);
+    panDrag={sx:e.clientX,sy:e.clientY,px:layPanX,py:layPanY,id:e.pointerId};
+  },{passive:false});
+  svg.addEventListener('pointermove',function(e){
+    if(!panDrag||e.pointerId!==panDrag.id)return;
+    var cr=svg.getBoundingClientRect();
+    var spx=(layVbW/layZoom)/cr.width,spy=(layVbH/layZoom)/cr.height;
+    layPanX=panDrag.px-(e.clientX-panDrag.sx)*spx;
+    layPanY=panDrag.py-(e.clientY-panDrag.sy)*spy;
+    applyLayZoom();
+  });
+  svg.addEventListener('pointerup',function(e){
+    if(panDrag&&e.pointerId===panDrag.id)panDrag=null;
+  });
   // ---- Stage drawing ----
   svg.addEventListener('pointerdown',function(e){
     if(!layStageEdit)return;
