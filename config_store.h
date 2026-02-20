@@ -41,7 +41,7 @@ inline bool configLoad(NodeConfig &cfg) {
   strlcpy(cfg.staticIp, doc["staticIp"] | DEFAULT_CONFIG.staticIp, sizeof(cfg.staticIp));
   strlcpy(cfg.staticGw, doc["staticGw"] | DEFAULT_CONFIG.staticGw, sizeof(cfg.staticGw));
   strlcpy(cfg.staticSn, doc["staticSn"] | DEFAULT_CONFIG.staticSn, sizeof(cfg.staticSn));
-  cfg.audioSource = doc["audioSource"] | 0;
+  cfg.audioSource = doc["audioSource"] | 2;  // default: I2S mikrofon (INMP441)
 
   // Avtentikacija
   cfg.authEnabled = doc["authEnabled"] | false;

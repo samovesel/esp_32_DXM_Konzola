@@ -44,12 +44,14 @@
 
 #define RESET_BTN_PIN      14    // Drži LOW ob zagonu = factory reset
 
-// Audio
-#define AUDIO_ADC_PIN       4    // Line-in (ADC1_CH3 na S3)
-#define AUDIO_ADC_CHANNEL  ADC1_CHANNEL_3
-#define I2S_BCK_PIN        12    // I2S mikrofon
-#define I2S_WS_PIN         11
-#define I2S_DATA_PIN       10
+// Audio — WM8782S I2S ADC (line-in, ESP32 slave)
+#define I2S_LINE_BCK_PIN    4    // WM8782S BCLK
+#define I2S_LINE_WS_PIN     5    // WM8782S LRCK
+#define I2S_LINE_DATA_PIN   6    // WM8782S DOUT
+// Audio — INMP441 I2S MEMS mikrofon (ESP32 master)
+#define I2S_MIC_BCK_PIN    12    // INMP441 BCLK
+#define I2S_MIC_WS_PIN     11    // INMP441 WS
+#define I2S_MIC_DATA_PIN   10    // INMP441 DATA
 
 #define HAS_PSRAM           1
 
@@ -66,12 +68,14 @@
 
 #define RESET_BTN_PIN      14    // Drži LOW ob zagonu = factory reset
 
-// Audio
-#define AUDIO_ADC_PIN      36    // Line-in (ADC1_CH0)
-#define AUDIO_ADC_CHANNEL  ADC1_CHANNEL_0
-#define I2S_BCK_PIN        22    // I2S mikrofon
-#define I2S_WS_PIN         21
-#define I2S_DATA_PIN       34
+// Audio — WM8782S I2S ADC (line-in, ESP32 slave)
+#define I2S_LINE_BCK_PIN   32    // WM8782S BCLK
+#define I2S_LINE_WS_PIN    33    // WM8782S LRCK
+#define I2S_LINE_DATA_PIN  36    // WM8782S DOUT (input-only GPIO)
+// Audio — INMP441 I2S MEMS mikrofon (ESP32 master)
+#define I2S_MIC_BCK_PIN    22    // INMP441 BCLK
+#define I2S_MIC_WS_PIN     21    // INMP441 WS
+#define I2S_MIC_DATA_PIN   34    // INMP441 DATA
 
 #define HAS_PSRAM           0
 #endif
@@ -83,6 +87,8 @@
 #define FFT_SAMPLES        512     // Konservativno za ESP32 DRAM (~21.5 Hz/bin)
 #endif
 #define FFT_SAMPLE_RATE    22050   // Hz — dovolj za do 11kHz analizo
+#define WM8782S_SAMPLE_RATE 48000  // WM8782S z 12.288MHz MCLK
+#define WM8782S_DECIMATION  2      // 48kHz / 2 ≈ 24kHz (blizu FFT_SAMPLE_RATE)
 #define FFT_BINS           (FFT_SAMPLES / 2)
 #define STL_MAX_RULES      8      // Zmanjšano iz 16
 #define STL_BAND_COUNT     8      // Število frekvenčnih pasov za vizualizacijo
@@ -457,7 +463,7 @@ struct NodeConfig {
   char staticSn[16];
 
   // Audio
-  uint8_t audioSource;      // 0=off, 1=line-in (ADC), 2=I2S mic
+  uint8_t audioSource;      // 0=off, 1=I2S line-in (WM8782S), 2=I2S mic (INMP441)
 
   // Avtentikacija
   bool authEnabled;
@@ -483,7 +489,7 @@ static const NodeConfig DEFAULT_CONFIG = {
   "192.168.1.100",
   "192.168.1.1",
   "255.255.255.0",
-  0,               // audioSource: off
+  2,               // audioSource: I2S mikrofon (INMP441)
   false,           // authEnabled
   "admin",         // authUser
   "",              // authPass (prazno = brez gesla)

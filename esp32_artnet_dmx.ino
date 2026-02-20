@@ -477,7 +477,7 @@ void setup() {
     if (nodeCfg.audioSource > 0) {
       if (audioIn.begin(nodeCfg.audioSource)) {
         Serial.printf("[AUD] Audio vhod aktiven: %s\n",
-                      nodeCfg.audioSource == 1 ? "ADC line-in" : "I2S mikrofon");
+                      nodeCfg.audioSource == 1 ? "I2S line-in (WM8782S)" : "I2S mikrofon (INMP441)");
       }
     } else {
       Serial.println("[AUD] Audio vhod izklopljen");

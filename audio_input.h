@@ -5,7 +5,7 @@
 
 // ============================================================================
 //  AudioInput
-//  Zbira audio vzorce iz ADC (line-in) ali I2S (MEMS mikrofon).
+//  Zbira audio vzorce iz I2S WM8782S (line-in) ali I2S INMP441 (MEMS mikrofon).
 //  Teče na jedru 0 v svojem FreeRTOS tasku.
 //  Ko je FFT_SAMPLES vzorcev pripravljenih, postavi zastavico.
 // ============================================================================
@@ -13,7 +13,7 @@
 class AudioInput {
 public:
   // Inicializacija — zaženi task na jedru 0
-  bool begin(uint8_t source);  // 0=off, 1=ADC, 2=I2S
+  bool begin(uint8_t source);  // 0=off, 1=I2S line-in (WM8782S), 2=I2S mic (INMP441)
   void stop();
 
   // Dostop do vzorcev — kliče FFT procesiranje
@@ -38,7 +38,7 @@ private:
 
   static void audioTask(void* param);
   void taskLoop();
-  bool setupI2S();
+  bool setupI2S(uint8_t source);
 };
 
 #endif
