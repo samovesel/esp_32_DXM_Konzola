@@ -87,8 +87,8 @@
 #define FFT_SAMPLES        512     // Konservativno za ESP32 DRAM (~21.5 Hz/bin)
 #endif
 #define FFT_SAMPLE_RATE    22050   // Hz — dovolj za do 11kHz analizo
-#define WM8782S_SAMPLE_RATE 48000  // WM8782S z 12.288MHz MCLK
-#define WM8782S_DECIMATION  2      // 48kHz / 2 ≈ 24kHz (blizu FFT_SAMPLE_RATE)
+#define WM8782S_SAMPLE_RATE 96000  // WM8782S master mode z 24.576MHz MCLK (jumper 96K)
+#define WM8782S_DECIMATION  4      // 96kHz / 4 = 24kHz (blizu FFT_SAMPLE_RATE)
 #define FFT_BINS           (FFT_SAMPLES / 2)
 #define STL_MAX_RULES      8      // Zmanjšano iz 16
 #define STL_BAND_COUNT     8      // Število frekvenčnih pasov za vizualizacijo
