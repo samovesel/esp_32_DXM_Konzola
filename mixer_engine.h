@@ -7,11 +7,13 @@
 #include <freertos/semphr.h>
 
 class SoundEngine;  // Forward declaration
+class LfoEngine;    // Forward declaration
 
 class MixerEngine {
 public:
   void begin(FixtureEngine* fixtures, SceneEngine* scenes);
   void setSoundEngine(SoundEngine* sound) { _sound = sound; }
+  void setLfoEngine(LfoEngine* lfo) { _lfo = lfo; }
 
   // --- Thread safety ---
   void lock()   { if (_mtx) xSemaphoreTake(_mtx, portMAX_DELAY); }
@@ -67,6 +69,11 @@ public:
   bool undo();           // Obnovi zadnje shranjeno stanje
   bool hasUndo() const { return _undoValid; }
 
+  // --- Locate ---
+  void locateFixture(int fixtureIdx, bool on);
+  bool isFixtureLocated(int fixtureIdx) const;
+  uint32_t getLocateMask() const;
+
   // --- Izhod ---
   const uint8_t* getDmxOutput() const { return _dmxOut; }
   const uint8_t* getManualValues() const { return _manualValues; }
@@ -87,6 +94,7 @@ private:
   FixtureEngine* _fixtures = nullptr;
   SceneEngine*   _scenes = nullptr;
   SoundEngine*   _sound = nullptr;
+  LfoEngine*     _lfo = nullptr;
 
   // Bufferji
   uint8_t _dmxOut[DMX_MAX_CHANNELS];         // Končni izhod → DMX
@@ -127,6 +135,10 @@ private:
   uint8_t _undoBuffer[DMX_MAX_CHANNELS];
   uint8_t _undoMaster = 255;
   bool    _undoValid = false;
+
+  // Locate
+  struct LocateState { bool active; uint8_t saved[MAX_CHANNELS_PER_FX]; };
+  LocateState _locateStates[MAX_FIXTURES];
 
   // Thread safety
   SemaphoreHandle_t _mtx = nullptr;

@@ -59,6 +59,8 @@
 #include "sound_engine.h"
 #include "led_status.h"
 #include "web_ui.h"
+#include "osc_server.h"
+#include "lfo_engine.h"
 
 // ============================================================================
 //  GLOBALNI OBJEKTI
@@ -76,6 +78,8 @@ ArtnetWifi     artnet;
 AsyncWebServer webServer(80);
 AsyncWebSocket webSocket("/ws");
 WiFiUDP        pollReplyUdp;   // Za ArtPollReply broadcast
+OscServer      oscServer;
+LfoEngine      lfoEngine;
 
 // DMX output timing
 static unsigned long lastDmxSend = 0;
@@ -447,6 +451,16 @@ void setup() {
   // Web server
   webBegin(&webServer, &webSocket, &nodeCfg, &fixtures, &mixer, &scenes, &soundEng, &audioIn);
 
+  // LFO engine
+  lfoEngine.begin(&fixtures);
+  mixer.setLfoEngine(&lfoEngine);
+
+  // LFO engine → web UI
+  webSetLfoEngine(&lfoEngine);
+
+  // OSC server
+  oscServer.begin(&mixer, &fixtures);
+
   // Pošlji ArtPollReply takoj ob zagonu
   sendArtPollReply();
   lastPollReply = millis();
@@ -495,6 +509,9 @@ void loop() {
 
   // ArtNet — branje UDP paketov
   artnet.read();
+
+  // OSC — branje UDP paketov
+  oscServer.update();
 
   // Mixer update — timeout logika, sestavi izhod (+ sound overlay)
   mixer.update();

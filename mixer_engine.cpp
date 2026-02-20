@@ -1,5 +1,6 @@
 #include "mixer_engine.h"
 #include "sound_engine.h"
+#include "lfo_engine.h"
 #include <LittleFS.h>
 
 #define MIXER_STATE_FILE   "/mixer.bin"
@@ -26,6 +27,7 @@ void MixerEngine::begin(FixtureEngine* fixtures, SceneEngine* scenes) {
   _dirty = false;
   _undoValid = false;
   memset(_undoBuffer, 0, sizeof(_undoBuffer));
+  memset(_locateStates, 0, sizeof(_locateStates));
   _lastUpdateMs = millis();
 
   // Mutex za thread-safe dostop med jedroma
@@ -357,6 +359,72 @@ bool MixerEngine::undo() {
 }
 
 // ============================================================================
+//  LOCATE
+// ============================================================================
+
+void MixerEngine::locateFixture(int fi, bool on) {
+  if (!_fixtures || fi < 0 || fi >= MAX_FIXTURES) return;
+  if (_mode == CTRL_ARTNET) return;
+
+  const PatchEntry* fx = _fixtures->getFixture(fi);
+  if (!fx || !fx->active || fx->profileIndex < 0) return;
+
+  uint8_t chCount = _fixtures->fixtureChannelCount(fi);
+
+  if (on && !_locateStates[fi].active) {
+    _locateStates[fi].active = true;
+    if (_scenes && _scenes->isCrossfading()) _scenes->cancelCrossfade();
+
+    for (int c = 0; c < chCount && c < MAX_CHANNELS_PER_FX; c++) {
+      uint16_t addr = fx->dmxAddress + c;  // dmxAddress je 1-based
+      if (addr < 1 || addr > DMX_MAX_CHANNELS) continue;
+      _locateStates[fi].saved[c] = _manualValues[addr - 1];
+
+      const ChannelDef* def = _fixtures->fixtureChannel(fi, c);
+      if (!def) continue;
+
+      switch (def->type) {
+        case CH_INTENSITY:  _manualValues[addr - 1] = 255; break;
+        case CH_COLOR_R:    _manualValues[addr - 1] = 255; break;
+        case CH_COLOR_G:    _manualValues[addr - 1] = 255; break;
+        case CH_COLOR_B:    _manualValues[addr - 1] = 255; break;
+        case CH_COLOR_W:    _manualValues[addr - 1] = 255; break;
+        case CH_PAN:        _manualValues[addr - 1] = 128; break;
+        case CH_TILT:       _manualValues[addr - 1] = 128; break;
+        case CH_FOCUS:      _manualValues[addr - 1] = 128; break;
+        case CH_ZOOM:       _manualValues[addr - 1] = 255; break;
+        case CH_GOBO:       _manualValues[addr - 1] = 0;   break;
+        case CH_PRISM:      _manualValues[addr - 1] = 0;   break;
+        default: break;
+      }
+    }
+    markDirty();
+  }
+  else if (!on && _locateStates[fi].active) {
+    for (int c = 0; c < chCount && c < MAX_CHANNELS_PER_FX; c++) {
+      uint16_t addr = fx->dmxAddress + c;
+      if (addr < 1 || addr > DMX_MAX_CHANNELS) continue;
+      _manualValues[addr - 1] = _locateStates[fi].saved[c];
+    }
+    _locateStates[fi].active = false;
+    markDirty();
+  }
+}
+
+bool MixerEngine::isFixtureLocated(int fi) const {
+  if (fi < 0 || fi >= MAX_FIXTURES) return false;
+  return _locateStates[fi].active;
+}
+
+uint32_t MixerEngine::getLocateMask() const {
+  uint32_t mask = 0;
+  for (int i = 0; i < MAX_FIXTURES && i < 24; i++) {
+    if (_locateStates[i].active) mask |= (1UL << i);
+  }
+  return mask;
+}
+
+// ============================================================================
 //  SCENE OPERACIJE
 // ============================================================================
 
@@ -465,6 +533,12 @@ void MixerEngine::update() {
     // Sound-to-light overlay
     if (_sound) {
       _sound->applyToOutput(_manualValues, _dmxOut, dt);
+    }
+
+    // LFO overlay
+    if (_lfo && _lfo->isActive()) {
+      _lfo->update(dt);
+      _lfo->applyToOutput(_manualValues, _dmxOut);
     }
 
     applyMasterDimmer();

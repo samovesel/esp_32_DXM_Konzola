@@ -249,6 +249,12 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 .mx-cp h4{color:#0af;margin:0 0 10px;font-size:0.88em;padding-right:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mx-cp .lx-x{position:absolute;top:10px;right:10px}
 .mx-cp-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:249}
+.lfo-item{display:flex;align-items:center;gap:6px;padding:4px 8px;background:#1a1a2e;border:1px solid #333;border-radius:4px;margin-bottom:4px;font-size:0.82em;flex-wrap:wrap}
+.lfo-item .lfo-wave{color:#0af;font-weight:bold;min-width:50px}
+.lfo-item .lfo-tgt{color:#f90;min-width:45px}
+.lfo-item .lfo-info{color:#888;flex:1}
+.lfo-item button{padding:2px 8px;font-size:0.8em}
+.cue-cur{background:#1a3020!important;border-left:3px solid #27ae60}
 </style></head><body>
 
 <header>
@@ -271,6 +277,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <button onclick="showTab(3,this)">Fixtures</button>
   <button onclick="showTab(4,this)">Nastavitve</button>
   <button onclick="showTab(5,this)">Konfig</button>
+  <button onclick="showTab(6,this)">DMX Mon</button>
 </nav>
 
 <div id="msg"></div>
@@ -323,6 +330,22 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <div class="cf-bar"><div class="cf-fill" id="cfBar"></div></div><div id="cfStatus" style="font-size:0.8em;color:#666;height:1.2em"></div>
   </div>
   <div class="card"><h3>Scene</h3><div class="scene-grid" id="sceneGrid"></div><div style="margin-top:10px"><button onclick="saveNewScene()">Shrani trenutno stanje</button></div></div>
+  <div class="card"><h3>Cue List</h3>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button onclick="cueGo()" style="background:#27ae60;color:#fff;font-size:1.1em;padding:10px 22px">&#9654; GO</button>
+      <button onclick="cueBack()" style="background:#e67e22;color:#fff;padding:8px 14px">&#9664; BACK</button>
+      <button onclick="cueStop()" style="background:#c0392b;color:#fff;padding:8px 14px">&#9632; STOP</button>
+    </div>
+    <div id="cueStatus" style="font-size:0.8em;color:#888;margin-bottom:6px"></div>
+    <table><thead><tr><th>#</th><th>Scena</th><th>Fade</th><th>Auto</th><th>Label</th><th></th></tr></thead><tbody id="cueTable"></tbody></table>
+    <div style="margin-top:8px;display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+      <select id="cueSceneSel" style="flex:1;min-width:100px"></select>
+      <input id="cueFadeIn" type="number" min="0" max="10000" step="100" value="1500" style="width:70px" placeholder="Fade ms">
+      <input id="cueAutoMs" type="number" min="0" max="60000" step="500" value="0" style="width:70px" placeholder="Auto ms">
+      <input id="cueLabel" placeholder="Label" maxlength="23" style="width:90px">
+      <button onclick="cueAdd()">+ Dodaj</button>
+    </div>
+  </div>
 </div>
 
 <!-- TAB 2: SOUND -->
@@ -434,6 +457,18 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <tbody id="ruleTable"></tbody></table>
     <button onclick="addRule()" style="margin-top:8px">+ Dodaj pravilo</button>
   </div>
+  <div class="card"><h3>LFO / FX Generator</h3>
+    <div id="lfoList"></div>
+    <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+      <select id="lfoWave" style="width:90px"><option value="0">Sine</option><option value="1">Triangle</option><option value="2">Square</option><option value="3">Saw</option></select>
+      <select id="lfoTarget" style="width:80px"><option value="0">Dimmer</option><option value="1">Pan</option><option value="2">Tilt</option><option value="3">Red</option><option value="4">Green</option><option value="5">Blue</option></select>
+      <label style="display:inline;margin:0;font-size:0.75em;color:#888">Rate</label><input id="lfoRate" type="number" min="0.1" max="10" step="0.1" value="1.0" style="width:55px">
+      <label style="display:inline;margin:0;font-size:0.75em;color:#888">Depth</label><input id="lfoDepth" type="number" min="0" max="1" step="0.05" value="0.5" style="width:55px">
+      <label style="display:inline;margin:0;font-size:0.75em;color:#888">Phase</label><input id="lfoPhase" type="number" min="0" max="1" step="0.05" value="0" style="width:55px">
+    </div>
+    <div style="margin-top:4px"><label style="display:inline;margin:0;font-size:0.75em;color:#888">Fixtures:</label><span id="lfoFxSel" style="display:inline-flex;flex-wrap:wrap;gap:2px;margin-left:4px"></span></div>
+    <div style="margin-top:6px;display:flex;gap:4px"><button onclick="lfoAdd()">+ Dodaj LFO</button><button onclick="lfoClearAll()" class="danger" style="font-size:0.8em;padding:4px 10px">Zbriši vse</button></div>
+  </div>
 </div>
 
 <!-- TAB 3: FIXTURES -->
@@ -491,6 +526,26 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <select id="s_audio"><option value="0">Izklopljeno</option><option value="1">Line-in (ADC GPIO36)</option><option value="2">I2S mikrofon (INMP441)</option></select>
     <p style="font-size:0.75em;color:#666;margin-top:4px">Sprememba zahteva ponovni zagon.</p>
   </div>
+  <div class="card"><h3>Web MIDI</h3>
+    <div id="midiStatus" style="font-size:0.8em;color:#888;margin-bottom:6px">MIDI ni podprt v tem brskalniku.</div>
+    <div id="midiSection" style="display:none">
+      <div class="toggle"><input type="checkbox" id="midiEnabled" onchange="midiToggle(this.checked)"><label>Omogoči MIDI</label></div>
+      <div id="midiDevices" style="margin:6px 0;font-size:0.8em;color:#aaa"></div>
+      <div id="midiLearnBox" style="display:none;background:#1a2e1a;border:1px solid #27ae60;border-radius:6px;padding:8px;margin:6px 0">
+        <div style="font-size:0.85em;color:#27ae60;margin-bottom:4px">MIDI Learn aktiven</div>
+        <div id="midiLearnTarget" style="font-size:0.8em;color:#888">Čakam MIDI vhod...</div>
+        <button onclick="midiLearnCancel()" style="margin-top:4px;background:#555;font-size:0.8em">Prekliči</button>
+      </div>
+      <div id="midiMappingList" style="font-size:0.8em;color:#aaa;margin-top:6px"></div>
+      <button onclick="midiLearnStart()" style="margin-top:4px;font-size:0.85em">MIDI Learn</button>
+      <button onclick="midiClearAll()" style="margin-top:4px;font-size:0.85em;background:#555">Zbriši mapiranja</button>
+    </div>
+    <p style="font-size:0.7em;color:#555;margin-top:4px">Podprto v Chrome/Edge. CC → fader, Note → scene recall.</p>
+  </div>
+  <div class="card"><h3>OSC Server</h3>
+    <p style="font-size:0.8em;color:#aaa">UDP port <strong style="color:#0af">8000</strong></p>
+    <p style="font-size:0.7em;color:#666;margin-top:4px">/dmx/N (float 0-1), /fixture/N/dimmer (float), /fixture/N/color (fff), /scene/N, /master (float), /blackout (int)</p>
+  </div>
   <button onclick="saveSettings()">Shrani in ponovni zagon</button>
   <button class="danger" onclick="if(confirm('Res ponastaviti?'))factoryReset()" style="margin-top:6px">Tovarniška ponastavitev</button>
   <p style="font-size:0.75em;color:#555;margin-top:12px;text-align:center" id="verInfo"></p>
@@ -510,6 +565,19 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     </div>
     <div id="cfgStorage" style="margin-top:10px;font-size:0.7em;color:#666"></div>
     <div id="cfgWarn" style="display:none;background:#a33;color:#fff;padding:6px 10px;border-radius:4px;margin-top:6px;font-size:0.8em"></div>
+  </div>
+</div>
+
+<!-- TAB 6: DMX MONITOR -->
+<div class="tab" id="tab6">
+  <div class="card">
+    <h3>DMX Output Monitor</h3>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <button id="dmxMonBtn" onclick="toggleDmxMon()">Start Monitor</button>
+      <span style="font-size:0.8em;color:#888">Kanal: <span id="dmxMonHover">-</span></span>
+      <select id="dmxMonRange" onchange="renderDmxGrid()" style="width:120px"><option value="0">1-512</option><option value="0">1-128</option><option value="128">129-256</option><option value="256">257-384</option><option value="384">385-512</option></select>
+    </div>
+    <canvas id="dmxCanvas" width="640" height="400" style="width:100%;max-width:640px;background:#0a0a1e;border-radius:6px;cursor:crosshair;image-rendering:pixelated"></canvas>
   </div>
 </div>
 
@@ -625,6 +693,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <div style="display:flex;gap:6px;margin-top:6px">
     <button id="lxFoBtn" style="flex:1;background:#e67e22;color:#000;font-size:0.82em;padding:6px;font-weight:bold;user-select:none;touch-action:none">Full On</button>
     <button id="lxBoBtn" style="flex:1;background:#1a1a1a;border:1px solid #444;color:#aaa;font-size:0.82em;padding:6px;user-select:none;touch-action:none">Blackout</button>
+    <button id="lxLocBtn" onclick="if(typeof lxFxIdx!=='undefined'&&lxFxIdx>=0)toggleLocate(lxFxIdx)" style="flex:1;background:#555;border:1px solid #444;color:#fff;font-size:0.82em;padding:6px;user-select:none">Locate</button>
   </div>
   <button onclick="lxToConsole()" style="width:100%;margin-top:6px;background:#0d1a0d;border:1px solid #1e3a1e;color:#0af;font-size:0.78em;padding:5px">Podrobnosti → konzola</button>
 </div>
@@ -654,7 +723,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <script>
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0,currentMode=0;
-var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,lastFxo=null,fsGroupOrder=null,fsGroupDimmers={};
+var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,lastFxo=null,fsGroupOrder=null,fsGroupDimmers={},locateMask=0;
 // Posodobi --ch-pct za barvni fill na track sliderja
 function sfill(el){if(!el)return;var pct=((+el.value-+el.min)/(+el.max-+el.min))*100;el.style.setProperty('--ch-pct',pct+'%');}
 function sfillAll(container){if(!container)return;container.querySelectorAll('input[type=range]').forEach(sfill);}
@@ -693,6 +762,7 @@ function handleWs(d){
     return;
   }
   if(d.t==='artnet_detected'){showArtnetBanner();return}
+  if(d.t==='dmx'){handleDmxData(d.d);return}
   if(d.t==='status'){
     currentMode=d.mode;
     const modes=['ARTNET','LOKALNO (auto)','LOKALNO (ročno)','LOKALNO (prim.)'];
@@ -733,6 +803,13 @@ function handleWs(d){
       else fsBar.style.width='0%';
     }
     if(layActive&&d.cf){const lf=document.getElementById('layCfFill');if(lf)lf.style.width=d.cf.active?(d.cf.progress*100)+'%':'0%'}
+    // Locate mask
+    var newLoc=d.loc||0;
+    if(newLoc!==locateMask){locateMask=newLoc;updateLocateButtons()}
+    // Cue list status
+    if(d.cl)updateCueStatus(d.cl);
+    // LFO status
+    if(d.lfos){lfoData=d.lfos;renderLfoList();}else if(lfoData.length>0){lfoData=[];renderLfoList()}
     // Layout editor sync
     if(layActive){
       var lbo=document.getElementById('layBoBtn');if(lbo)lbo.style.background=boState?'#f33':'#555';
@@ -769,7 +846,7 @@ function handleWs(d){
   }
 }
 
-function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1)loadScenes();if(n===2){loadRules();renderZoneList();renderFxPreviewInit();renderPalBtns();renderChainList()}if(n===5)loadConfigs()}
+function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1){loadScenes();loadCueList();updateCueSceneSel()}if(n===2){loadRules();renderZoneList();renderFxPreviewInit();renderPalBtns();renderChainList();renderLfoFxSel()}if(n===5)loadConfigs()}
 function toggleMode(){if(currentMode===0)wsSend({cmd:'mode',v:'local'});else if(currentMode===3)wsSend({cmd:'mode',v:'local'});else wsSend({cmd:'mode',v:'artnet'})}
 function showOtaDialog(){
   if(!confirm('Firmware posodobitev (OTA).\nIzberi .bin datoteko za nalaganje.\nNaprava se bo po uspešnem nalaganju resetirala.'))return;
@@ -1514,6 +1591,7 @@ function renderFsConsole(){
     h+='<div class="fx-addr">'+f.dmxAddress+'</div>';
     h+='<div class="fx-group-hdr" style="color:'+lbl+';max-width:'+hdrMax+'" onclick="toggleCollapsed('+fi+');renderFsConsole()" title="Skrij/pokazi skrcene kanale">'+colIcon+' '+f.name+'</div>';
     h+='<button class="fullon-btn phone-hide" data-fi="'+fi+'">FULL ON</button>';
+    h+='<button class="locate-btn phone-hide" data-fi="'+fi+'" style="background:'+(locateMask&(1<<fi)?'#9b59b6':'#555')+';color:#fff;font-size:0.7em;padding:3px 6px;border:1px solid '+(locateMask&(1<<fi)?'#9b59b6':'#444')+';border-radius:4px;cursor:pointer">'+(locateMask&(1<<fi)?'LOC ON':'LOCATE')+'</button>';
     h+='</div>';
     h+='<div class="fx-group-body">';
     f.channels.forEach((ch,ci)=>{
@@ -1554,6 +1632,10 @@ function renderFsConsole(){
     btn.addEventListener('touchstart',e=>{e.preventDefault();press()},{passive:false});
     btn.addEventListener('touchend',e=>{e.preventDefault();release()});
     btn.addEventListener('touchcancel',release);
+  });
+  // Bind Locate gumbov (toggle click)
+  grid.querySelectorAll('.locate-btn[data-fi]').forEach(btn=>{
+    btn.addEventListener('click',e=>{e.preventDefault();toggleLocate(+btn.dataset.fi)});
   });
   // Bind Group FULL ON buttons (press & hold)
   grid.querySelectorAll('.fs-gdim-fo').forEach(btn=>{
@@ -1713,6 +1795,27 @@ function fsFullOn(fi,press){
       wsSend({cmd:'fxch',f:f.idx,c:+ci,v:val});
     });
     delete fsFullOnState[fi];
+  }
+}
+function toggleLocate(fi){
+  var isOn=!!(locateMask&(1<<fi));
+  wsSend({cmd:'locate',f:fi,on:isOn?0:1});
+}
+function updateLocateButtons(){
+  document.querySelectorAll('.locate-btn').forEach(function(btn){
+    var fi=+btn.dataset.fi;
+    var isOn=!!(locateMask&(1<<fi));
+    btn.style.background=isOn?'#9b59b6':'#555';
+    btn.style.borderColor=isOn?'#9b59b6':'#444';
+    btn.textContent=isOn?'LOC ON':'LOCATE';
+  });
+  // Layout popup Locate gumb
+  var lb=document.getElementById('lxLocBtn');
+  if(lb&&typeof lxFxIdx!=='undefined'&&lxFxIdx>=0){
+    var isOn=!!(locateMask&(1<<lxFxIdx));
+    lb.style.background=isOn?'#9b59b6':'#555';
+    lb.style.borderColor=isOn?'#9b59b6':'#444';
+    lb.textContent=isOn?'LOC ON':'Locate';
   }
 }
 function renderFsScenes(){
@@ -3879,5 +3982,235 @@ renderFsConsole=function(){
   });
 };
 
-wsConnect();loadFixtures();loadSettings();loadScenes();updateFadeLabel();
+// ============ CUE LIST ============
+var cueList=[], cueCurrent=-1, cueRunning=false;
+function cueGo(){wsSend({cmd:'cue_go'})}
+function cueBack(){wsSend({cmd:'cue_back'})}
+function cueStop(){wsSend({cmd:'cue_stop'})}
+function cueAdd(){
+  var ss=document.getElementById('cueSceneSel');
+  var slot=+ss.value; if(isNaN(slot)||slot<0)return;
+  var fade=+(document.getElementById('cueFadeIn').value)||1500;
+  var auto=+(document.getElementById('cueAutoMs').value)||0;
+  var label=document.getElementById('cueLabel').value||'';
+  wsSend({cmd:'cue_add',s:slot,f:fade,a:auto,l:label});
+  setTimeout(loadCueList,300);
+}
+function cueRemove(i){wsSend({cmd:'cue_rm',i:i});setTimeout(loadCueList,300)}
+function loadCueList(){
+  fetch('/api/cuelist').then(function(r){return r.json()}).then(function(d){
+    cueList=d.cues||[];renderCueTable();
+  }).catch(function(){});
+}
+function renderCueTable(){
+  var tb=document.getElementById('cueTable');if(!tb)return;
+  var h='';
+  cueList.forEach(function(c,i){
+    var sceneName='?';
+    if(scenes){var sc=scenes.find(function(s){return s&&s.slot===c.s});if(sc)sceneName=sc.name}
+    var cls=i===cueCurrent&&cueRunning?' class="cue-cur"':'';
+    h+='<tr'+cls+'><td>'+(i+1)+'</td><td>'+sceneName+'</td><td>'+(c.f/1000).toFixed(1)+'s</td><td>'+(c.a>0?(c.a/1000).toFixed(1)+'s':'-')+'</td><td>'+(c.l||'')+'</td><td><button onclick="cueRemove('+i+')" style="background:#c0392b;color:#fff;padding:2px 6px;font-size:0.75em">X</button></td></tr>';
+  });
+  tb.innerHTML=h;
+}
+function updateCueSceneSel(){
+  var sel=document.getElementById('cueSceneSel');if(!sel)return;
+  var h='<option value="-1">— izb. sceno —</option>';
+  if(scenes)scenes.forEach(function(s){if(s)h+='<option value="'+s.slot+'">'+s.name+'</option>'});
+  sel.innerHTML=h;
+}
+function updateCueStatus(cl){
+  if(!cl)return;
+  cueCurrent=cl.cur; cueRunning=cl.run;
+  var st=document.getElementById('cueStatus');
+  if(st){
+    if(cl.run&&cl.cur>=0)st.textContent='Cue '+(cl.cur+1)+'/'+cl.cnt+' aktivna';
+    else if(cl.cnt>0)st.textContent=cl.cnt+' cue-jev';
+    else st.textContent='Prazno';
+  }
+  renderCueTable();
+}
+
+// ============ LFO ============
+var lfoData=[];
+function lfoAdd(){
+  var mask=0;
+  document.querySelectorAll('#lfoFxSel input[type=checkbox]:checked').forEach(function(cb){mask|=(1<<(+cb.value))});
+  if(mask===0){showMsg('Izberi vsaj 1 fixture','err');return}
+  wsSend({cmd:'lfo_add',w:+(document.getElementById('lfoWave').value),tgt:+(document.getElementById('lfoTarget').value),
+    rate:+(document.getElementById('lfoRate').value),depth:+(document.getElementById('lfoDepth').value),
+    phase:+(document.getElementById('lfoPhase').value),mask:mask});
+}
+function lfoRemove(i){wsSend({cmd:'lfo_rm',i:i})}
+function lfoClearAll(){wsSend({cmd:'lfo_clear'})}
+function renderLfoList(){
+  var el=document.getElementById('lfoList');if(!el)return;
+  var waves=['Sine','Tri','Sqr','Saw'];
+  var tgts=['Dim','Pan','Tilt','R','G','B'];
+  var h='';
+  lfoData.forEach(function(l,i){
+    if(!l)return;
+    h+='<div class="lfo-item"><span class="lfo-wave">'+(waves[l.w]||'?')+'</span><span class="lfo-tgt">'+(tgts[l.tgt]||'?')+'</span><span class="lfo-info">'+l.rate+'Hz d:'+l.depth+' ph:'+l.phase+'</span><button onclick="lfoRemove('+i+')" style="background:#c0392b;color:#fff">X</button></div>';
+  });
+  if(!h)h='<div style="font-size:0.8em;color:#555">Ni aktivnih LFO-jev</div>';
+  el.innerHTML=h;
+}
+function renderLfoFxSel(){
+  var el=document.getElementById('lfoFxSel');if(!el||!fixtures)return;
+  var h='';
+  fixtures.forEach(function(f,i){
+    if(!f)return;
+    h+='<label style="font-size:0.75em;display:inline-flex;align-items:center;gap:2px;background:#222;padding:1px 5px;border-radius:3px;cursor:pointer"><input type="checkbox" value="'+f.idx+'" style="width:auto;margin:0"> '+f.name+'</label>';
+  });
+  el.innerHTML=h;
+}
+
+// ============ DMX MONITOR ============
+var dmxMonActive=false, dmxMonData=null;
+function toggleDmxMon(){
+  dmxMonActive=!dmxMonActive;
+  wsSend({cmd:'dmxmon',on:dmxMonActive?1:0});
+  document.getElementById('dmxMonBtn').textContent=dmxMonActive?'Stop Monitor':'Start Monitor';
+  document.getElementById('dmxMonBtn').style.background=dmxMonActive?'#c0392b':'#0af';
+  document.getElementById('dmxMonBtn').style.color=dmxMonActive?'#fff':'#000';
+  if(!dmxMonActive){dmxMonData=null;var cv=document.getElementById('dmxCanvas');var ctx=cv.getContext('2d');ctx.fillStyle='#0a0a1e';ctx.fillRect(0,0,cv.width,cv.height)}
+}
+function handleDmxData(b64){
+  var bin=atob(b64);var arr=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+  dmxMonData=arr;renderDmxGrid();
+}
+function renderDmxGrid(){
+  if(!dmxMonData)return;
+  var cv=document.getElementById('dmxCanvas');if(!cv)return;
+  var ctx=cv.getContext('2d');
+  var sel=document.getElementById('dmxMonRange');
+  var start=+(sel.value)||0;var count=128; if(sel.selectedIndex===0)count=512;
+  var cols=count<=128?16:32;
+  var rows=Math.ceil(count/cols);
+  var cw=cv.width/cols, ch=cv.height/rows;
+  ctx.fillStyle='#0a0a1e';ctx.fillRect(0,0,cv.width,cv.height);
+  for(var i=0;i<count&&(start+i)<512;i++){
+    var v=dmxMonData[start+i]||0;
+    var x=(i%cols)*cw, y=Math.floor(i/cols)*ch;
+    var r=0,g=Math.round(v*0.7),b=Math.round(v*0.85);
+    if(v>0){r=Math.round(v*0.1);g=Math.round(40+v*0.65);b=Math.round(60+v*0.75)}
+    ctx.fillStyle='rgb('+r+','+g+','+b+')';
+    ctx.fillRect(x+1,y+1,cw-2,ch-2);
+    if(ch>14){
+      ctx.fillStyle=v>128?'#000':'#888';ctx.font='9px sans-serif';ctx.textAlign='center';
+      ctx.fillText(''+(start+i+1),x+cw/2,y+ch/2-3);
+      ctx.fillStyle=v>128?'#000':'#aaa';ctx.font='bold 10px sans-serif';
+      ctx.fillText(''+v,x+cw/2,y+ch/2+8);
+    }
+  }
+}
+(function(){
+  var cv=document.getElementById('dmxCanvas');if(!cv)return;
+  cv.addEventListener('mousemove',function(e){
+    if(!dmxMonData)return;
+    var rect=cv.getBoundingClientRect();
+    var sel=document.getElementById('dmxMonRange');
+    var start=+(sel.value)||0;var count=128;if(sel.selectedIndex===0)count=512;
+    var cols=count<=128?16:32;
+    var cw=cv.width/cols,ch=cv.height/Math.ceil(count/cols);
+    var mx=(e.clientX-rect.left)*(cv.width/rect.width);
+    var my=(e.clientY-rect.top)*(cv.height/rect.height);
+    var col=Math.floor(mx/cw),row=Math.floor(my/ch);
+    var idx=row*cols+col+start;
+    if(idx>=0&&idx<512){var v=dmxMonData[idx]||0;document.getElementById('dmxMonHover').textContent='Ch '+(idx+1)+': '+v}
+  });
+})();
+
+// ============ WEB MIDI ============
+var midiAccess=null, midiMappings={}, midiLearnActive=false, midiLearnCb=null;
+function midiInit(){
+  if(!navigator.requestMIDIAccess){return}
+  document.getElementById('midiStatus').textContent='MIDI podprt.';
+  document.getElementById('midiSection').style.display='block';
+  var saved=localStorage.getItem('midiMappings');
+  if(saved)try{midiMappings=JSON.parse(saved)}catch(e){}
+  renderMidiMappings();
+}
+function midiToggle(on){
+  if(on){
+    navigator.requestMIDIAccess().then(function(acc){
+      midiAccess=acc;
+      midiAccess.inputs.forEach(function(input){input.onmidimessage=onMidiMsg});
+      midiAccess.onstatechange=function(){
+        midiAccess.inputs.forEach(function(input){input.onmidimessage=onMidiMsg});
+        renderMidiDevices();
+      };
+      renderMidiDevices();
+    }).catch(function(e){document.getElementById('midiStatus').textContent='MIDI napaka: '+e});
+  } else {
+    if(midiAccess)midiAccess.inputs.forEach(function(input){input.onmidimessage=null});
+    midiAccess=null;
+    document.getElementById('midiDevices').textContent='';
+  }
+}
+function renderMidiDevices(){
+  if(!midiAccess)return;
+  var h='Naprave: ';var cnt=0;
+  midiAccess.inputs.forEach(function(inp){h+='<span style="color:#0af">'+inp.name+'</span> ';cnt++});
+  if(!cnt)h+='<span style="color:#666">nobena</span>';
+  document.getElementById('midiDevices').innerHTML=h;
+}
+function onMidiMsg(e){
+  var data=e.data;if(!data||data.length<3)return;
+  var status=data[0]&0xF0, ch=data[0]&0x0F, cc=data[1], val=data[2];
+  if(midiLearnActive){
+    if(status===0xB0){// CC
+      var key='cc_'+ch+'_'+cc;
+      if(midiLearnCb)midiLearnCb(key,'CC '+cc+' Ch '+(ch+1));
+    } else if(status===0x90&&val>0){// Note On
+      var key='note_'+ch+'_'+cc;
+      if(midiLearnCb)midiLearnCb(key,'Note '+cc+' Ch '+(ch+1));
+    }
+    return;
+  }
+  // Apply mappings
+  if(status===0xB0){
+    var key='cc_'+ch+'_'+cc;
+    var map=midiMappings[key];
+    if(map){
+      var v=Math.round(val*2); if(v>255)v=255;
+      if(map.type==='master')wsSend({cmd:'master',v:v});
+      else if(map.type==='fxch')wsSend({cmd:'fxch',f:map.f,c:map.c,v:v});
+      else if(map.type==='grpdim')wsSend({cmd:'grpdim',g:map.g,v:v});
+    }
+  } else if(status===0x90&&val>0){
+    var key='note_'+ch+'_'+cc;
+    var map=midiMappings[key];
+    if(map&&map.type==='scene')wsSend({cmd:'scene_recall',slot:map.slot,fade:1500});
+  }
+}
+function midiLearnStart(){
+  midiLearnActive=true;
+  document.getElementById('midiLearnBox').style.display='block';
+  document.getElementById('midiLearnTarget').textContent='Premakni MIDI kontroler...';
+  midiLearnCb=function(key,label){
+    midiLearnActive=false;
+    document.getElementById('midiLearnBox').style.display='none';
+    var target=prompt('Funkcija za '+label+'?\nmaster / scene:SLOT / grpdim:GROUP');
+    if(!target)return;
+    if(target==='master')midiMappings[key]={type:'master',label:label};
+    else if(target.startsWith('scene:')){var s=+target.split(':')[1];midiMappings[key]={type:'scene',slot:s,label:label}}
+    else if(target.startsWith('grpdim:')){var g=+target.split(':')[1];midiMappings[key]={type:'grpdim',g:g,label:label}}
+    localStorage.setItem('midiMappings',JSON.stringify(midiMappings));
+    renderMidiMappings();
+  };
+}
+function midiLearnCancel(){midiLearnActive=false;document.getElementById('midiLearnBox').style.display='none'}
+function midiClearAll(){midiMappings={};localStorage.removeItem('midiMappings');renderMidiMappings()}
+function renderMidiMappings(){
+  var el=document.getElementById('midiMappingList');if(!el)return;
+  var keys=Object.keys(midiMappings);
+  if(keys.length===0){el.innerHTML='<span style="color:#555">Ni mapiranj</span>';return}
+  var h='';
+  keys.forEach(function(k){var m=midiMappings[k];h+='<div>'+m.label+' → '+m.type+(m.slot!==undefined?':'+m.slot:'')+(m.g!==undefined?':'+m.g:'')+'</div>'});
+  el.innerHTML=h;
+}
+
+wsConnect();loadFixtures();loadSettings();loadScenes();updateFadeLabel();midiInit();
 </script></body></html>

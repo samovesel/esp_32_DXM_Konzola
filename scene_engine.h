@@ -10,6 +10,8 @@
 //  Kompaktni binarni format: 24B ime + 512B DMX = 536B na sceno.
 // ============================================================================
 
+class MixerEngine;  // Forward declaration
+
 class SceneEngine {
 public:
   void begin();
@@ -37,9 +39,33 @@ public:
   // Vrne true če je crossfade aktiven, in zapiše rezultat v outDmx
   bool updateCrossfade(uint8_t* outDmx);
 
+  // --- Cue List ---
+  bool loadCueList();
+  bool saveCueList();
+  bool addCue(int8_t sceneSlot, uint16_t fadeMs, uint16_t autoFollowMs, const char* label);
+  bool removeCue(int index);
+  bool updateCue(int index, int8_t sceneSlot, uint16_t fadeMs, uint16_t autoFollowMs, const char* label);
+  int  getCueCount() const { return _cueCount; }
+  const CueEntry* getCue(int idx) const;
+  int  getCurrentCue() const { return _cueCurrent; }
+  bool isCueRunning() const { return _cueRunning; }
+  void cueGo(MixerEngine* mixer);
+  void cueBack(MixerEngine* mixer);
+  void cueGoTo(int idx, MixerEngine* mixer);
+  void cueStop();
+  void cueUpdateAutoFollow(MixerEngine* mixer);
+
 private:
   Scene* _scenes = nullptr;
   CrossfadeState _cf;
+
+  // Cue List
+  CueEntry _cues[MAX_CUES];
+  uint8_t  _cueCount = 0;
+  int8_t   _cueCurrent = -1;
+  bool     _cueRunning = false;
+  bool     _cueWaitAutoFollow = false;
+  unsigned long _cueAutoFollowAt = 0;
 
   String slotPath(int slot) const;
   bool loadSlot(int slot);
