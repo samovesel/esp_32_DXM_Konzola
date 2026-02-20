@@ -6,14 +6,20 @@
 #include "scene_engine.h"
 #include <freertos/semphr.h>
 
-class SoundEngine;  // Forward declaration
-class LfoEngine;    // Forward declaration
+class SoundEngine;      // Forward declaration
+class LfoEngine;        // Forward declaration
+class ShapeGenerator;   // Forward declaration
 
 class MixerEngine {
 public:
   void begin(FixtureEngine* fixtures, SceneEngine* scenes);
   void setSoundEngine(SoundEngine* sound) { _sound = sound; }
   void setLfoEngine(LfoEngine* lfo) { _lfo = lfo; }
+  void setShapeGenerator(ShapeGenerator* shapes) { _shapes = shapes; }
+
+  // --- Master Speed ---
+  void setMasterSpeed(float speed);
+  float getMasterSpeed() const { return _masterSpeed; }
 
   // --- Thread safety ---
   void lock()   { if (_mtx) xSemaphoreTake(_mtx, portMAX_DELAY); }
@@ -95,6 +101,7 @@ private:
   SceneEngine*   _scenes = nullptr;
   SoundEngine*   _sound = nullptr;
   LfoEngine*     _lfo = nullptr;
+  ShapeGenerator* _shapes = nullptr;
 
   // Bufferji
   uint8_t _dmxOut[DMX_MAX_CHANNELS];         // Končni izhod → DMX
@@ -145,6 +152,7 @@ private:
 
   // Timing za sound dt
   unsigned long _lastUpdateMs = 0;
+  float _masterSpeed = 1.0f;
 
   // Mode crossfade (prehod med ArtNet ↔ Local)
   bool     _modeFading = false;

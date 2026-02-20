@@ -1,6 +1,7 @@
 #include "mixer_engine.h"
 #include "sound_engine.h"
 #include "lfo_engine.h"
+#include "shape_engine.h"
 #include <LittleFS.h>
 
 #define MIXER_STATE_FILE   "/mixer.bin"
@@ -153,6 +154,12 @@ bool MixerEngine::consumeArtNetDetected() {
 // ============================================================================
 //  MIXER OPERACIJE
 // ============================================================================
+
+void MixerEngine::setMasterSpeed(float speed) {
+  if (speed < 0.1f) speed = 0.1f;
+  if (speed > 4.0f) speed = 4.0f;
+  _masterSpeed = speed;
+}
 
 void MixerEngine::setChannel(uint16_t addr, uint8_t value) {
   if (_mode == CTRL_ARTNET) return;
@@ -486,6 +493,7 @@ void MixerEngine::update() {
   float dt = (now - _lastUpdateMs) / 1000.0f;
   _lastUpdateMs = now;
   if (dt <= 0 || dt > 1.0f) dt = 0.05f;
+  float scaledDt = dt * _masterSpeed;  // Master Speed vpliva na efekte
 
   // --- FPS izračun ---
   if (now - _fpsLastCalc >= 1000) {
@@ -532,13 +540,19 @@ void MixerEngine::update() {
 
     // Sound-to-light overlay
     if (_sound) {
-      _sound->applyToOutput(_manualValues, _dmxOut, dt);
+      _sound->applyToOutput(_manualValues, _dmxOut, scaledDt);
     }
 
     // LFO overlay
     if (_lfo && _lfo->isActive()) {
-      _lfo->update(dt);
+      _lfo->update(scaledDt);
       _lfo->applyToOutput(_manualValues, _dmxOut);
+    }
+
+    // Shape overlay
+    if (_shapes && _shapes->isActive()) {
+      _shapes->update(scaledDt);
+      _shapes->applyToOutput(_manualValues, _dmxOut);
     }
 
     applyMasterDimmer();

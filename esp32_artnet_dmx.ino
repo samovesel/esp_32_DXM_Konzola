@@ -61,6 +61,8 @@
 #include "web_ui.h"
 #include "osc_server.h"
 #include "lfo_engine.h"
+#include "shape_engine.h"
+#include "sacn_output.h"
 
 // ============================================================================
 //  GLOBALNI OBJEKTI
@@ -80,6 +82,8 @@ AsyncWebSocket webSocket("/ws");
 WiFiUDP        pollReplyUdp;   // Za ArtPollReply broadcast
 OscServer      oscServer;
 LfoEngine      lfoEngine;
+ShapeGenerator shapeGen;
+SacnOutput     sacnOut;
 
 // DMX output timing
 static unsigned long lastDmxSend = 0;
@@ -187,6 +191,45 @@ void onArtNetDmx(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* 
   if (universe == nodeCfg.universe) {
     mixer.onArtNetData(data, length);
   }
+}
+
+// ============================================================================
+//  ARTNET OUT — oddajanje DMX kot ArtNet broadcast
+// ============================================================================
+
+static uint8_t artnetOutSeq = 0;
+
+void sendArtNetOut() {
+  if (!nodeCfg.artnetOutEnabled) return;
+  if (mixer.getMode() == CTRL_ARTNET) return;  // Prepreči feedback loop
+
+  const uint8_t* dmxData = mixer.getDmxOutput();
+  uint16_t dmxLen = nodeCfg.channelCount;
+  if (dmxLen > 512) dmxLen = 512;
+  if (dmxLen & 1) dmxLen++;  // ArtDmx zahteva sodo dolžino
+
+  uint8_t packet[18 + 512];
+  memset(packet, 0, 18);
+
+  memcpy(packet, "Art-Net\0", 8);
+  packet[8] = 0x00; packet[9] = 0x50;  // OpDmx (0x5000) little-endian
+  packet[10] = 0x00; packet[11] = 0x0e; // Protocol version 14 big-endian
+  packet[12] = ++artnetOutSeq;           // Sequence
+  packet[13] = 0;                        // Physical port
+  packet[14] = nodeCfg.universe & 0xFF;  // Universe little-endian
+  packet[15] = (nodeCfg.universe >> 8) & 0xFF;
+  packet[16] = (dmxLen >> 8) & 0xFF;    // Length big-endian
+  packet[17] = dmxLen & 0xFF;
+  memcpy(packet + 18, dmxData, dmxLen);
+
+  IPAddress ip = WiFi.getMode() == WIFI_AP ? WiFi.softAPIP() : WiFi.localIP();
+  IPAddress subnet = WiFi.getMode() == WIFI_AP ? IPAddress(255,255,255,0) : WiFi.subnetMask();
+  IPAddress broadcast;
+  for (int i = 0; i < 4; i++) broadcast[i] = ip[i] | ~subnet[i];
+
+  pollReplyUdp.beginPacket(broadcast, 6454);
+  pollReplyUdp.write(packet, 18 + dmxLen);
+  pollReplyUdp.endPacket();
 }
 
 // ============================================================================
@@ -458,6 +501,16 @@ void setup() {
   // LFO engine → web UI
   webSetLfoEngine(&lfoEngine);
 
+  // Shape generator
+  shapeGen.begin(&fixtures);
+  mixer.setShapeGenerator(&shapeGen);
+  webSetShapeGenerator(&shapeGen);
+
+  // sACN (E1.31) output
+  if (nodeCfg.sacnEnabled) {
+    sacnOut.begin(nodeCfg.universe);
+  }
+
   // OSC server
   oscServer.begin(&mixer, &fixtures);
 
@@ -521,6 +574,10 @@ void loop() {
   if (now - lastDmxSend >= DMX_INTERVAL_US) {
     lastDmxSend = now;
     dmxOut.sendFrame(mixer.getDmxOutput(), nodeCfg.channelCount);
+    sendArtNetOut();
+    if (nodeCfg.sacnEnabled && mixer.getMode() != CTRL_ARTNET) {
+      sacnOut.sendFrame(mixer.getDmxOutput(), nodeCfg.channelCount);
+    }
   }
 
   // Web — periodično pošiljanje stanja prek WebSocket (mora biti na core 1, ker AsyncTCP ni thread-safe)

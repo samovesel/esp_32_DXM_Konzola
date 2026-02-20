@@ -66,6 +66,21 @@ void LfoEngine::applyToOutput(const uint8_t* manualValues, uint8_t* dmxOut) {
       float mod = computeWave(lfo.waveform, fiPhase);
 
       uint8_t chCount = _fixtures->fixtureChannelCount(fi);
+
+      // Za Pan/Tilt: poišči fine kanal za 16-bit modulacijo
+      int fineAddr = -1;
+      if (chType == CH_PAN || chType == CH_TILT) {
+        ChannelType fineType = (chType == CH_PAN) ? CH_PAN_FINE : CH_TILT_FINE;
+        for (int fc = 0; fc < chCount; fc++) {
+          const ChannelDef* fd = _fixtures->fixtureChannel(fi, fc);
+          if (fd && fd->type == fineType) {
+            int fa = fx->dmxAddress + fc;
+            if (fa >= 1 && fa <= DMX_MAX_CHANNELS) fineAddr = fa - 1;
+            break;
+          }
+        }
+      }
+
       for (int c = 0; c < chCount; c++) {
         const ChannelDef* def = _fixtures->fixtureChannel(fi, c);
         if (!def || def->type != chType) continue;
@@ -74,12 +89,24 @@ void LfoEngine::applyToOutput(const uint8_t* manualValues, uint8_t* dmxOut) {
         if (addr < 1 || addr > DMX_MAX_CHANNELS) continue;
         addr--;  // 0-based index
 
-        float base = (float)manualValues[addr];
-        float modVal = mod * lfo.depth * 127.5f;
-        int result = (int)(base + modVal);
-        if (result < 0) result = 0;
-        if (result > 255) result = 255;
-        dmxOut[addr] = (uint8_t)result;
+        if (fineAddr >= 0 && (chType == CH_PAN || chType == CH_TILT)) {
+          // 16-bit modulacija: coarse+fine
+          uint16_t base16 = ((uint16_t)manualValues[addr] << 8) | manualValues[fineAddr];
+          float modVal16 = mod * lfo.depth * 32767.5f;
+          int result16 = (int)((float)base16 + modVal16);
+          if (result16 < 0) result16 = 0;
+          if (result16 > 65535) result16 = 65535;
+          dmxOut[addr] = (uint8_t)((result16 >> 8) & 0xFF);
+          dmxOut[fineAddr] = (uint8_t)(result16 & 0xFF);
+        } else {
+          // 8-bit modulacija
+          float base = (float)manualValues[addr];
+          float modVal = mod * lfo.depth * 127.5f;
+          int result = (int)(base + modVal);
+          if (result < 0) result = 0;
+          if (result > 255) result = 255;
+          dmxOut[addr] = (uint8_t)result;
+        }
       }
       fxIdx++;
     }

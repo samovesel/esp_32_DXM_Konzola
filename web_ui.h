@@ -9,11 +9,13 @@
 #include "sound_engine.h"
 #include "audio_input.h"
 #include "lfo_engine.h"
+#include "shape_engine.h"
 
 void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
               NodeConfig* cfg, FixtureEngine* fixtures, MixerEngine* mixer,
               SceneEngine* scenes, SoundEngine* sound, AudioInput* audio);
 void webSetLfoEngine(LfoEngine* lfo);
+void webSetShapeGenerator(ShapeGenerator* shapes);
 void webLoop();   // Periodično pošilja status prek WebSocket
 
 #endif
