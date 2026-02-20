@@ -937,6 +937,8 @@ function sendMaster(v){
 var CH_COLORS={1:'#0af',2:'#ff2020',3:'#20ff20',4:'#2060ff',5:'#ffffff',6:'#ffaa00',7:'#cc00ff',19:'#ffff00',14:'#ffff00',8:'#999',9:'#999',10:'#999',11:'#999',12:'#777',13:'#cc8800',0:'#0af',21:'#aaff00',22:'#00ffcc',23:'#ffd070',24:'#ffe0a0'};
 var CH_LIGHT_TYPES=new Set([1,2,3,4,5,6,7,21,22,24]); // intensity + vsi barvni kanali
 var CH_MOVEMENT_TYPES=new Set([8,9,10,11]); // pan, pan_fine, tilt, tilt_fine
+// Konstante tipov kanalov (namesto magičnih številk)
+var CT={DIM:1,R:2,G:3,B:4,W:5,A:6,UV:7,PAN:8,PANF:9,TILT:10,TILTF:11,ZOOM:18,LIME:21,CYAN:22,WW:24};
 function chColor(t){return CH_COLORS[t]||'#0af'}
 // Podlage fixture-ov
 var FX_BG=['#1a1a2e','#1e2a1a','#2a1a2a','#2a261a','#1a2a2a','#2a1a1a','#1e1e30','#2a1e1a'];
@@ -1113,7 +1115,7 @@ function syncFxValues(fxv){
     if(lxf){
       var ldim=document.getElementById('lxDim');
       if(ldim&&document.activeElement!==ldim){
-        var dv=getFxChVal(lxf,1);ldim.value=dv;
+        var dv=getFxChVal(lxf,CT.DIM);ldim.value=dv;
         var ldv=document.getElementById('lxDimV');if(ldv)ldv.textContent=dv;
         lxUpdatePrev();
       }
@@ -1129,8 +1131,8 @@ function find16bitPairs(channels){
   var pairs=[];
   if(!channels)return pairs;
   channels.forEach(function(ch,i){
-    if(ch.type===8){var fi=channels.findIndex(function(c){return c.type===9});if(fi>=0)pairs.push({coarseIdx:i,fineIdx:fi,label:'Pan',type:'pan'})}
-    if(ch.type===10){var fi=channels.findIndex(function(c){return c.type===11});if(fi>=0)pairs.push({coarseIdx:i,fineIdx:fi,label:'Tilt',type:'tilt'})}
+    if(ch.type===CT.PAN){var fi=channels.findIndex(function(c){return c.type===CT.PANF});if(fi>=0)pairs.push({coarseIdx:i,fineIdx:fi,label:'Pan',type:'pan'})}
+    if(ch.type===CT.TILT){var fi=channels.findIndex(function(c){return c.type===CT.TILTF});if(fi>=0)pairs.push({coarseIdx:i,fineIdx:fi,label:'Tilt',type:'tilt'})}
   });
   return pairs;
 }
@@ -1148,7 +1150,7 @@ function sendFader16(coarseCh,fineCh,val16,chType){
       var fx=fixtures[f];if(!fx||!fx.channels)return;
       var cc=coarseCh,fc=fineCh;
       if(f!==firstIdx){
-        cc=findChByType(fx,chType);fc=findChByType(fx,chType===8?9:11);
+        cc=findChByType(fx,chType);fc=findChByType(fx,chType===CT.PAN?CT.PANF:CT.TILTF);
         if(cc<0||fc<0)return;
       }
       if(fx.channels[cc])fx.channels[cc].currentValue=s.hi;
@@ -1158,7 +1160,7 @@ function sendFader16(coarseCh,fineCh,val16,chType){
     });
   }
   // Sync XY pads when Pan/Tilt changes
-  if(chType===8||chType===10){if(xyPopOpen)xyPopDraw()}
+  if(chType===CT.PAN||chType===CT.TILT){if(xyPopOpen)xyPopDraw()}
 }
 
 function renderFaders(){
@@ -1228,7 +1230,7 @@ function sendFader(ch,val){
     });
   }
   // Sync XY pads when Pan/Tilt changes
-  if(chType===8||chType===10){if(xyPopOpen)xyPopDraw()}
+  if(chType===CT.PAN||chType===CT.TILT){if(xyPopOpen)xyPopDraw()}
 }
 
 // ---- Konzola (vertikalni) — vsaka fixture ima svoje sliderje ----
@@ -1345,7 +1347,7 @@ function sendCGang(fxIdx,fi,ci,val){
   if(f&&f.channels&&f.channels[ci])f.channels[ci].currentValue=val;
   wsSend({cmd:'fxch',f:fxIdx,c:ci,v:val});
   // Sync XY pads
-  if(f&&f.channels&&f.channels[ci]&&(f.channels[ci].type===8||f.channels[ci].type===10)){if(xyPopOpen)xyPopDraw()}
+  if(f&&f.channels&&f.channels[ci]&&(f.channels[ci].type===CT.PAN||f.channels[ci].type===CT.TILT)){if(xyPopOpen)xyPopDraw()}
 
   // Gang: apliciraj delta na VSE oznacene kanale (razen tega)
   if(consGang.has(myKey)&&consGang.size>1&&delta!==0){
@@ -1381,7 +1383,7 @@ function sendCGang16(fxIdx,fi,ci,fineCi,val16){
   wsSend({cmd:'fxch',f:fxIdx,c:ci,v:s.hi});
   wsSend({cmd:'fxch',f:fxIdx,c:fineCi,v:s.lo});
   // Sync XY pads
-  if(f&&f.channels&&f.channels[ci]&&(f.channels[ci].type===8||f.channels[ci].type===10)){if(xyPopOpen)xyPopDraw()}
+  if(f&&f.channels&&f.channels[ci]&&(f.channels[ci].type===CT.PAN||f.channels[ci].type===CT.TILT)){if(xyPopOpen)xyPopDraw()}
 }
 
 // ---- Celozaslonska konzola ----
@@ -1459,7 +1461,7 @@ function bindFsSliderTouch(container){
               var rect=sl.getBoundingClientRect();
               if(CP_COLOR_TYPES.has(chType)){
                 openMxCp(fi,rect.right+5,rect.top+rect.height/2);
-              } else if(chType===8||chType===10){
+              } else if(chType===CT.PAN||chType===CT.TILT){
                 openXyPop(fi,rect.right+5,rect.top+rect.height/2);
               }
             }
@@ -2154,7 +2156,7 @@ function fsGrpBlackout(gi,press){
       if(!f.channels)return;
       fsGrpBoState[gi][i]={};
       f.channels.forEach((ch,ci)=>{
-        if(ch.type===1){
+        if(ch.type===CT.DIM){
           fsGrpBoState[gi][i][ci]=ch.currentValue||0;
           wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});
         }
@@ -2180,7 +2182,7 @@ function fsGrpSolo(gi,press){
       if(!f.channels)return;
       fsGrpSoloState[gi][i]={};
       f.channels.forEach((ch,ci)=>{
-        if(ch.type===1){
+        if(ch.type===CT.DIM){
           fsGrpSoloState[gi][i][ci]=ch.currentValue||0;
           wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});
         }
@@ -3092,11 +3094,11 @@ function getFxChVal(f,type){if(!f||!f.channels)return 0;for(var i=0;i<f.channels
 function hasChType(f,type){if(!f||!f.channels)return false;for(var i=0;i<f.channels.length;i++){if(f.channels[i].type===type)return true;}return false;}
 
 function calcBeam(f,cx,cy){
-  var pan=getFxChVal(f,8),tilt=getFxChVal(f,10),zoom=getFxChVal(f,18);
+  var pan=getFxChVal(f,CT.PAN),tilt=getFxChVal(f,CT.TILT),zoom=getFxChVal(f,CT.ZOOM);
   var ang=(pan/255*360-180)*Math.PI/180;
   var alen=30+tilt/255*140;
   var zMin=f.zoomMin||10,zMax=f.zoomMax||60;
-  var zoomDeg=hasChType(f,18)?(zMin+zoom/255*(zMax-zMin)):((zMin&&zMax)?(zMin+zMax)/2:35);
+  var zoomDeg=hasChType(f,CT.ZOOM)?(zMin+zoom/255*(zMax-zMin)):((zMin&&zMax)?(zMin+zMax)/2:35);
   var halfRad=zoomDeg/2*Math.PI/180;
   var hs=Math.tan(halfRad)*alen;
   var bdx=Math.sin(ang),bdy=-Math.cos(ang);
@@ -3133,7 +3135,7 @@ function renderLayFixtures(){
   Object.keys(layData.fixturePositions).forEach(function(idx){
     var fi=+idx,pos=layData.fixturePositions[idx],f=fixtures[fi];if(!f)return;
     var cx=pos.x,cy=pos.y,col=getFxLayColor(fi),bcol=getFxBorderColor(fi);
-    var isMH=hasChType(f,8)||hasChType(f,10);
+    var isMH=hasChType(f,CT.PAN)||hasChType(f,CT.TILT);
     h+='<g class="lay-fx-grp" data-fi="'+fi+'" style="cursor:pointer">';
     if(isMH){
       var bm=calcBeam(f,cx,cy);
@@ -3141,7 +3143,7 @@ function renderLayFixtures(){
       h+='<path class="lay-beam" d="M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.25)')+'" stroke="'+bc.replace('rgb(','rgba(').replace(')',',0.5)')+'" stroke-width="0.5" pointer-events="none"/>';
       h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.5)')+'" pointer-events="none"/>';
       h+='<circle class="lay-beam-handle" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" r="12" fill="rgba(255,255,255,0.01)" stroke="rgba(39,174,96,0)" stroke-width="2" style="cursor:crosshair" pointer-events="all"/>';
-      if(hasChType(f,18)){h+='<circle class="lay-zoom-handle" cx="'+bm.zhx.toFixed(1)+'" cy="'+bm.zhy.toFixed(1)+'" r="10" fill="rgba(32,96,255,0.5)" stroke="#0060ff" stroke-width="1.5" style="cursor:pointer" pointer-events="all"/>';}
+      if(hasChType(f,CT.ZOOM)){h+='<circle class="lay-zoom-handle" cx="'+bm.zhx.toFixed(1)+'" cy="'+bm.zhy.toFixed(1)+'" r="10" fill="rgba(32,96,255,0.5)" stroke="#0060ff" stroke-width="1.5" style="cursor:pointer" pointer-events="all"/>';}
       // Zelena pika za odprtje XY Pad popupa
       var xydx=cx+bm.pdx*32,xydy=cy+bm.pdy*32;
       xydx=Math.max(12,Math.min(layVbW-12,xydx));xydy=Math.max(12,Math.min(layVbH-12,xydy));
@@ -3179,20 +3181,20 @@ function bindLayFxGroup(g){
   if(handle){
     handle.addEventListener('wheel',function(e){
       if(layStageEdit)return;
-      var f=fixtures[fi];if(!f||!hasChType(f,18))return;
+      var f=fixtures[fi];if(!f||!hasChType(f,CT.ZOOM))return;
       e.preventDefault();
-      var cur=getFxChVal(f,18);
+      var cur=getFxChVal(f,CT.ZOOM);
       var nv=cur+(e.deltaY<0?8:-8);
       nv=Math.max(0,Math.min(255,nv));
       f.channels.forEach(function(ch,ci){
-        if(ch.type===18){ch.currentValue=nv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:nv});}
+        if(ch.type===CT.ZOOM){ch.currentValue=nv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:nv});}
       });
       updateLayColors();
     },{passive:false});
   }
 }
 function calcZoomFromDrag(f,cx,cy,mx,my){
-  var pan=getFxChVal(f,8);
+  var pan=getFxChVal(f,CT.PAN);
   var ang=(pan/255*360-180)*Math.PI/180;
   var bdx=Math.sin(ang),bdy=-Math.cos(ang);
   var dx=mx-cx,dy=my-cy;
@@ -3213,7 +3215,7 @@ function bindZoomHandle(zh,fi,g){
     function onMove(ev){
       var pt=laySvgPt(ev);
       var zv=calcZoomFromDrag(f,cx,cy,pt.x,pt.y);
-      f.channels.forEach(function(ch){if(ch.type===18)ch.currentValue=zv;});
+      f.channels.forEach(function(ch){if(ch.type===CT.ZOOM)ch.currentValue=zv;});
       var bm=calcBeam(f,cx,cy);
       var beam=g.querySelector('.lay-beam');
       if(beam)beam.setAttribute('d','M '+cx+' '+cy+' L '+bm.x1.toFixed(1)+' '+bm.y1.toFixed(1)+' L '+bm.x2.toFixed(1)+' '+bm.y2.toFixed(1)+' Z');
@@ -3223,7 +3225,7 @@ function bindZoomHandle(zh,fi,g){
       if(!zThrottle){
         zThrottle=setTimeout(function(){zThrottle=null;},30);
         f.channels.forEach(function(ch,ci){
-          if(ch.type===18)wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});
+          if(ch.type===CT.ZOOM)wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});
         });
       }
     }
@@ -3233,7 +3235,7 @@ function bindZoomHandle(zh,fi,g){
       var pt=laySvgPt(ev);
       var zv=calcZoomFromDrag(f,cx,cy,pt.x,pt.y);
       f.channels.forEach(function(ch,ci){
-        if(ch.type===18){ch.currentValue=zv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});}
+        if(ch.type===CT.ZOOM){ch.currentValue=zv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});}
       });
       renderLayFixtures();
     }
@@ -3243,11 +3245,11 @@ function bindZoomHandle(zh,fi,g){
     if(layStageEdit)return;
     var f=fixtures[fi];if(!f)return;
     e.preventDefault();
-    var cur=getFxChVal(f,18);
+    var cur=getFxChVal(f,CT.ZOOM);
     var nv=cur+(e.deltaY<0?8:-8);
     nv=Math.max(0,Math.min(255,nv));
     f.channels.forEach(function(ch,ci){
-      if(ch.type===18){ch.currentValue=nv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:nv});}
+      if(ch.type===CT.ZOOM){ch.currentValue=nv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:nv});}
     });
     updateLayColors();
   },{passive:false});
@@ -3272,8 +3274,8 @@ function bindBeamHandle(handle,fi,g){
       var pt=laySvgPt(ev);
       var result=calcPanTiltFromPos(cx,cy,pt.x,pt.y);
       f.channels.forEach(function(ch){
-        if(ch.type===8)ch.currentValue=result.pan;
-        if(ch.type===10)ch.currentValue=result.tilt;
+        if(ch.type===CT.PAN)ch.currentValue=result.pan;
+        if(ch.type===CT.TILT)ch.currentValue=result.tilt;
       });
       var bm=calcBeam(f,cx,cy);
       var beam=g.querySelector('.lay-beam');
@@ -3288,8 +3290,8 @@ function bindBeamHandle(handle,fi,g){
       if(!beamThrottle){
         beamThrottle=setTimeout(function(){beamThrottle=null;},30);
         f.channels.forEach(function(ch,ci){
-          if(ch.type===8)wsSend({cmd:'fxch',f:f.idx,c:ci,v:result.pan});
-          if(ch.type===10)wsSend({cmd:'fxch',f:f.idx,c:ci,v:result.tilt});
+          if(ch.type===CT.PAN)wsSend({cmd:'fxch',f:f.idx,c:ci,v:result.pan});
+          if(ch.type===CT.TILT)wsSend({cmd:'fxch',f:f.idx,c:ci,v:result.tilt});
         });
       }
     }
@@ -3305,8 +3307,8 @@ function bindBeamHandle(handle,fi,g){
       var pt=laySvgPt(ev);
       var result=calcPanTiltFromPos(cx,cy,pt.x,pt.y);
       f.channels.forEach(function(ch,ci){
-        if(ch.type===8){ch.currentValue=result.pan;wsSend({cmd:'fxch',f:f.idx,c:ci,v:result.pan});}
-        if(ch.type===10){ch.currentValue=result.tilt;wsSend({cmd:'fxch',f:f.idx,c:ci,v:result.tilt});}
+        if(ch.type===CT.PAN){ch.currentValue=result.pan;wsSend({cmd:'fxch',f:f.idx,c:ci,v:result.pan});}
+        if(ch.type===CT.TILT){ch.currentValue=result.tilt;wsSend({cmd:'fxch',f:f.idx,c:ci,v:result.tilt});}
       });
       renderLayFixtures();
     }
@@ -3691,7 +3693,7 @@ function openLxPopup(fi,cx,cy){
   lxOpenTime=Date.now();
   lxFxIdx=fi;var f=fixtures[fi];if(!f)return;
   document.getElementById('lxTitle').textContent=f.name+' (A'+(f.dmxAddress||'?')+')';
-  var dv=getFxChVal(f,1);
+  var dv=getFxChVal(f,CT.DIM);
   document.getElementById('lxDim').value=dv;document.getElementById('lxDimV').textContent=dv;
   var c=getFxColorNoDim(f),rgb=(c.css.match(/\d+/g)||['0','0','0']);
   var hsv=rgbToHsv(+rgb[0],+rgb[1],+rgb[2]);lxH=hsv[0];lxS=hsv[1];lxV=hsv[2];
@@ -3703,7 +3705,7 @@ function openLxPopup(fi,cx,cy){
   document.getElementById('lxOverlay').style.display='block';
   bindLxCanvas();bindLxFoBo();
   // Pan/Tilt/Zoom sliderji
-  var hasPan=hasChType(f,8),hasTilt=hasChType(f,10),hasZoom=hasChType(f,18);
+  var hasPan=hasChType(f,CT.PAN),hasTilt=hasChType(f,CT.TILT),hasZoom=hasChType(f,CT.ZOOM);
   var ptDiv=document.getElementById('lxPanTilt');
   if((hasPan||hasTilt||hasZoom)&&ptDiv){
     ptDiv.style.display='block';
@@ -3711,9 +3713,9 @@ function openLxPopup(fi,cx,cy){
     if(pr)pr.style.display=hasPan?'flex':'none';
     if(tr)tr.style.display=hasTilt?'flex':'none';
     if(zr)zr.style.display=hasZoom?'flex':'none';
-    if(hasPan){var pv=getFxChVal(f,8);document.getElementById('lxPan').value=pv;document.getElementById('lxPanV').textContent=pv;}
-    if(hasTilt){var tv=getFxChVal(f,10);document.getElementById('lxTilt').value=tv;document.getElementById('lxTiltV').textContent=tv;}
-    if(hasZoom){var zv=getFxChVal(f,18);document.getElementById('lxZoom').value=zv;document.getElementById('lxZoomV').textContent=zv;}
+    if(hasPan){var pv=getFxChVal(f,CT.PAN);document.getElementById('lxPan').value=pv;document.getElementById('lxPanV').textContent=pv;}
+    if(hasTilt){var tv=getFxChVal(f,CT.TILT);document.getElementById('lxTilt').value=tv;document.getElementById('lxTiltV').textContent=tv;}
+    if(hasZoom){var zv=getFxChVal(f,CT.ZOOM);document.getElementById('lxZoom').value=zv;document.getElementById('lxZoomV').textContent=zv;}
   }else if(ptDiv){ptDiv.style.display='none';}
   // Position
   var pw=pop.offsetWidth||265,ph=pop.offsetHeight||310;
@@ -3723,14 +3725,14 @@ function openLxPopup(fi,cx,cy){
   pop.style.left=Math.max(8,px)+'px';pop.style.top=Math.max(8,py)+'px';
 }
 function closeLxPopup(){if(Date.now()-lxOpenTime<400)return;document.getElementById('lxPopup').style.display='none';document.getElementById('lxOverlay').style.display='none';lxFxIdx=-1;}
-function lxDimChange(v){document.getElementById('lxDimV').textContent=v;if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;f.channels.forEach(function(ch,ci){if(ch.type===1){ch.currentValue=+v;wsSend({cmd:'fxch',f:f.idx,c:ci,v:+v});}});lxUpdatePrev();updateLayColors();}
+function lxDimChange(v){document.getElementById('lxDimV').textContent=v;if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;f.channels.forEach(function(ch,ci){if(ch.type===CT.DIM){ch.currentValue=+v;wsSend({cmd:'fxch',f:f.idx,c:ci,v:+v});}});lxUpdatePrev();updateLayColors();}
 function lxPanTiltChange(){
   var panV=+document.getElementById('lxPan').value,tiltV=+document.getElementById('lxTilt').value;
   document.getElementById('lxPanV').textContent=panV;document.getElementById('lxTiltV').textContent=tiltV;
   if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;
   f.channels.forEach(function(ch,ci){
-    if(ch.type===8){ch.currentValue=panV;wsSend({cmd:'fxch',f:f.idx,c:ci,v:panV});}
-    if(ch.type===10){ch.currentValue=tiltV;wsSend({cmd:'fxch',f:f.idx,c:ci,v:tiltV});}
+    if(ch.type===CT.PAN){ch.currentValue=panV;wsSend({cmd:'fxch',f:f.idx,c:ci,v:panV});}
+    if(ch.type===CT.TILT){ch.currentValue=tiltV;wsSend({cmd:'fxch',f:f.idx,c:ci,v:tiltV});}
   });
   updateLayColors();
 }
@@ -3739,7 +3741,7 @@ function lxZoomChange(){
   document.getElementById('lxZoomV').textContent=zv;
   if(lxFxIdx<0)return;var f=fixtures[lxFxIdx];if(!f)return;
   f.channels.forEach(function(ch,ci){
-    if(ch.type===18){ch.currentValue=zv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});}
+    if(ch.type===CT.ZOOM){ch.currentValue=zv;wsSend({cmd:'fxch',f:f.idx,c:ci,v:zv});}
   });
   updateLayColors();
 }
@@ -3764,7 +3766,7 @@ function lxFullOn(press){
       var v=saved[ci];f.channels[+ci].currentValue=v;
       wsSend({cmd:'fxch',f:f.idx,c:+ci,v:v});
     });
-    var dv=getFxChVal(f,1);
+    var dv=getFxChVal(f,CT.DIM);
     document.getElementById('lxDim').value=dv;document.getElementById('lxDimV').textContent=dv;
   }
   lxUpdatePrev();updateLayColors();
@@ -3775,7 +3777,7 @@ function lxBlackout(press){
     if(lxBoState)return; // Že pritisnjeno
     lxBoState={};
     f.channels.forEach(function(ch,ci){
-      if(ch.type===1){lxBoState[ci]=ch.currentValue||0;ch.currentValue=0;wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});}
+      if(ch.type===CT.DIM){lxBoState[ci]=ch.currentValue||0;ch.currentValue=0;wsSend({cmd:'fxch',f:f.idx,c:ci,v:0});}
     });
     document.getElementById('lxDim').value=0;document.getElementById('lxDimV').textContent='0';
   }else{
@@ -3785,7 +3787,7 @@ function lxBlackout(press){
       var v=saved[ci];f.channels[+ci].currentValue=v;
       wsSend({cmd:'fxch',f:f.idx,c:+ci,v:v});
     });
-    var dv=getFxChVal(f,1);
+    var dv=getFxChVal(f,CT.DIM);
     document.getElementById('lxDim').value=dv;document.getElementById('lxDimV').textContent=dv;
   }
   lxUpdatePrev();updateLayColors();
@@ -3817,8 +3819,8 @@ function lxSendColor(r,g,b){
   // Pametna pretvorba: izračunaj W, Amber, UV iz RGB
   var hasW=false,hasA=false,hasUV=false,hasL=false,hasC=false,hasWW=false;
   f.channels.forEach(function(ch){
-    if(ch.type===5)hasW=true;else if(ch.type===6)hasA=true;else if(ch.type===7)hasUV=true;
-    else if(ch.type===21)hasL=true;else if(ch.type===22)hasC=true;else if(ch.type===24)hasWW=true;
+    if(ch.type===CT.W)hasW=true;else if(ch.type===CT.A)hasA=true;else if(ch.type===CT.UV)hasUV=true;
+    else if(ch.type===CT.LIME)hasL=true;else if(ch.type===CT.CYAN)hasC=true;else if(ch.type===CT.WW)hasWW=true;
   });
   var wOut=0,aOut=0,uvOut=0,lOut=0,cOut=0,wwOut=0;
   if(hasW)wOut=Math.min(r,g,b);
@@ -3829,9 +3831,9 @@ function lxSendColor(r,g,b){
   if(hasWW){var warm=Math.min(r,g,Math.round(b*0.5));if(r>g&&r>100)wwOut=Math.round(warm*0.8);}
   f.channels.forEach(function(ch,ci){
     var v=-1;
-    if(ch.type===2)v=r;else if(ch.type===3)v=g;else if(ch.type===4)v=b;
-    else if(ch.type===5)v=wOut;else if(ch.type===6)v=aOut;else if(ch.type===7)v=uvOut;
-    else if(ch.type===21)v=lOut;else if(ch.type===22)v=cOut;else if(ch.type===24)v=wwOut;
+    if(ch.type===CT.R)v=r;else if(ch.type===CT.G)v=g;else if(ch.type===CT.B)v=b;
+    else if(ch.type===CT.W)v=wOut;else if(ch.type===CT.A)v=aOut;else if(ch.type===CT.UV)v=uvOut;
+    else if(ch.type===CT.LIME)v=lOut;else if(ch.type===CT.CYAN)v=cOut;else if(ch.type===CT.WW)v=wwOut;
     if(v>=0){ch.currentValue=Math.round(v);wsSend({cmd:'fxch',f:f.idx,c:ci,v:Math.round(v)});}
   });
   updateLayColors();
@@ -3941,7 +3943,7 @@ function bindHorizontalSliders(container){
           openMxCp(fi,rect.left+rect.width/2,rect.bottom+5);
         }
         // Tap brez premika na Pan/Tilt kanalu → odpri XY Pad popup
-        if((chType===8||chType===10)&&selComp.size>0){
+        if((chType===CT.PAN||chType===CT.TILT)&&selComp.size>0){
           var fi=[...selComp][0];
           var rect=sl.getBoundingClientRect();
           openXyPop(fi,rect.left+rect.width/2,rect.bottom+5);
@@ -3971,7 +3973,7 @@ function openMxCp(fi,cx,cy){
   mxCpFi=fi;mxCpOpen=true;
   document.getElementById('mxCpTitle').textContent=f.name+' (A'+(f.dmxAddress||'?')+')';
   // Dimmer
-  var dv=getFxChVal(f,1);
+  var dv=getFxChVal(f,CT.DIM);
   document.getElementById('mxCpDim').value=dv;
   document.getElementById('mxCpDimV').textContent=dv;
   // Barva iz fixture kanalov
@@ -4035,7 +4037,7 @@ function mxCpDimChange(v){
   document.getElementById('mxCpDimV').textContent=v;
   if(mxCpFi<0)return;var f=fixtures[mxCpFi];if(!f)return;
   f.channels.forEach(function(ch,ci){
-    if(ch.type===1){ch.currentValue=+v;mxCpSendCh(f,ci,+v);}
+    if(ch.type===CT.DIM){ch.currentValue=+v;mxCpSendCh(f,ci,+v);}
   });
   mxCpUpdatePrev();mxCpSyncSliders();
 }
@@ -4043,8 +4045,8 @@ function mxCpSendColor(r,g,b){
   if(mxCpFi<0)return;var f=fixtures[mxCpFi];if(!f||!f.channels)return;
   var hasW=false,hasA=false,hasUV=false,hasL=false,hasC=false,hasWW=false;
   f.channels.forEach(function(ch){
-    if(ch.type===5)hasW=true;else if(ch.type===6)hasA=true;else if(ch.type===7)hasUV=true;
-    else if(ch.type===21)hasL=true;else if(ch.type===22)hasC=true;else if(ch.type===24)hasWW=true;
+    if(ch.type===CT.W)hasW=true;else if(ch.type===CT.A)hasA=true;else if(ch.type===CT.UV)hasUV=true;
+    else if(ch.type===CT.LIME)hasL=true;else if(ch.type===CT.CYAN)hasC=true;else if(ch.type===CT.WW)hasWW=true;
   });
   var wOut=0,aOut=0,uvOut=0,lOut=0,cOut=0,wwOut=0;
   if(hasW)wOut=Math.min(r,g,b);
@@ -4055,9 +4057,9 @@ function mxCpSendColor(r,g,b){
   if(hasWW){var warm=Math.min(r,g,Math.round(b*0.5));if(r>g&&r>100)wwOut=Math.round(warm*0.8);}
   f.channels.forEach(function(ch,ci){
     var v=-1;
-    if(ch.type===2)v=r;else if(ch.type===3)v=g;else if(ch.type===4)v=b;
-    else if(ch.type===5)v=wOut;else if(ch.type===6)v=aOut;else if(ch.type===7)v=uvOut;
-    else if(ch.type===21)v=lOut;else if(ch.type===22)v=cOut;else if(ch.type===24)v=wwOut;
+    if(ch.type===CT.R)v=r;else if(ch.type===CT.G)v=g;else if(ch.type===CT.B)v=b;
+    else if(ch.type===CT.W)v=wOut;else if(ch.type===CT.A)v=aOut;else if(ch.type===CT.UV)v=uvOut;
+    else if(ch.type===CT.LIME)v=lOut;else if(ch.type===CT.CYAN)v=cOut;else if(ch.type===CT.WW)v=wwOut;
     if(v>=0){ch.currentValue=Math.round(v);mxCpSendCh(f,ci,Math.round(v));}
   });
   mxCpSyncSliders();
@@ -4184,11 +4186,11 @@ var _xyPopCanvasBound=false;
 
 function openXyPop(fi,cx,cy){
   var f=fixtures[fi];if(!f||!f.channels)return;
-  var pc=findChByType(f,8),tc=findChByType(f,10);
+  var pc=findChByType(f,CT.PAN),tc=findChByType(f,CT.TILT);
   if(pc<0&&tc<0)return;
   xyPopFi=fi;xyPopOpen=true;
   xyPopPanC=pc;xyPopTiltC=tc;
-  xyPopPanF=findChByType(f,9);xyPopTiltF=findChByType(f,11);
+  xyPopPanF=findChByType(f,CT.PANF);xyPopTiltF=findChByType(f,CT.TILTF);
   document.getElementById('xyPopTitle').textContent=f.name+' (A'+(f.dmxAddress||'?')+')';
   xyPopDraw();
   var pop=document.getElementById('xyPop');
@@ -4492,10 +4494,12 @@ function toggleDmxMon(){
   document.getElementById('dmxMonBtn').style.color=dmxMonActive?'#fff':'#000';
   if(!dmxMonActive){dmxMonData=null;var cv=document.getElementById('dmxCanvas');var ctx=cv.getContext('2d');ctx.fillStyle='#0a0a1e';ctx.fillRect(0,0,cv.width,cv.height)}
 }
+var _dmxRafPending=false;
 function handleDmxData(b64){
   var bin=atob(b64);var arr=new Uint8Array(bin.length);
   for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
-  dmxMonData=arr;renderDmxGrid();
+  dmxMonData=arr;
+  if(!_dmxRafPending){_dmxRafPending=true;requestAnimationFrame(function(){_dmxRafPending=false;renderDmxGrid();})}
 }
 function renderDmxGrid(){
   if(!dmxMonData)return;
