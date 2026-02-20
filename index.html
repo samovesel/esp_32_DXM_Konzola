@@ -809,7 +809,12 @@ function handleWs(d){
     // Cue list status
     if(d.cl)updateCueStatus(d.cl);
     // LFO status
-    if(d.lfos){lfoData=d.lfos;renderLfoList();}else if(lfoData.length>0){lfoData=[];renderLfoList()}
+    // LFO: only re-render when active slots change (avoids destroying click targets)
+    if(d.lfos){
+      var lfoSig='';for(var li=0;li<d.lfos.length;li++)lfoSig+=(d.lfos[li]?'1':'0');
+      var oldSig='';for(var li=0;li<lfoData.length;li++)oldSig+=(lfoData[li]?'1':'0');
+      lfoData=d.lfos;if(lfoSig!==oldSig)renderLfoList();
+    }else if(lfoData.length>0){lfoData=[];renderLfoList()}
     // Layout editor sync
     if(layActive){
       var lbo=document.getElementById('layBoBtn');if(lbo)lbo.style.background=boState?'#f33':'#555';
@@ -3996,7 +4001,10 @@ function cueAdd(){
   wsSend({cmd:'cue_add',s:slot,f:fade,a:auto,l:label});
   setTimeout(loadCueList,300);
 }
-function cueRemove(i){wsSend({cmd:'cue_rm',i:i});setTimeout(loadCueList,300)}
+function cueRemove(i){
+  cueList.splice(i,1);renderCueTable();
+  wsSend({cmd:'cue_rm',i:i});setTimeout(loadCueList,500);
+}
 function loadCueList(){
   fetch('/api/cuelist').then(function(r){return r.json()}).then(function(d){
     cueList=d.cues||[];renderCueTable();
@@ -4028,7 +4036,9 @@ function updateCueStatus(cl){
     else if(cl.cnt>0)st.textContent=cl.cnt+' cue-jev';
     else st.textContent='Prazno';
   }
-  renderCueTable();
+  // Only update current-cue highlight, not full re-render (preserves click targets)
+  var rows=document.querySelectorAll('#cueTable tr');
+  rows.forEach(function(tr,idx){tr.className=(idx===cueCurrent&&cueRunning)?'cue-cur':''});
 }
 
 // ============ LFO ============
@@ -4041,7 +4051,10 @@ function lfoAdd(){
     rate:+(document.getElementById('lfoRate').value),depth:+(document.getElementById('lfoDepth').value),
     phase:+(document.getElementById('lfoPhase').value),mask:mask});
 }
-function lfoRemove(i){wsSend({cmd:'lfo_rm',i:i})}
+function lfoRemove(i){
+  if(lfoData[i])lfoData[i]=null;renderLfoList();
+  wsSend({cmd:'lfo_rm',i:i});
+}
 function lfoClearAll(){wsSend({cmd:'lfo_clear'})}
 function renderLfoList(){
   var el=document.getElementById('lfoList');if(!el)return;
