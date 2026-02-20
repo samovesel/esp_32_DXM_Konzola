@@ -3172,7 +3172,7 @@ function bindLayFxGroup(g){
     xyhandle.addEventListener('pointerdown',function(e){
       if(layStageEdit)return;
       e.preventDefault();e.stopPropagation();
-      openXyPop(fi,e.clientX,e.clientY);
+      openXyPop(fi,e.clientX,e.clientY,true);
     },{passive:false});
   }
   var circle=g.querySelector('.lay-fx-circle');
@@ -3301,7 +3301,7 @@ function bindBeamHandle(handle,fi,g){
       if(!beamMoved){
         // Klik/tap brez premika → odpri XY Pad popup
         var popX=ev.clientX||startEvt.x,popY=ev.clientY||startEvt.y;
-        openXyPop(fi,popX,popY);
+        openXyPop(fi,popX,popY,true);
         return;
       }
       var pt=laySvgPt(ev);
@@ -4182,20 +4182,22 @@ function mxCpVertClick(e,sl){
 }
 // ============ XY PAD POPUP ============
 var xyPopOpen=false,xyPopFi=-1,xyPopPanC=-1,xyPopPanF=-1,xyPopTiltC=-1,xyPopTiltF=-1;
-var _xyPopCanvasBound=false;
+var _xyPopCanvasBound=false,xyPopFromLay=false,xyPopOpenTime=0;
 
-function openXyPop(fi,cx,cy){
+function openXyPop(fi,cx,cy,fromLay){
   var f=fixtures[fi];if(!f||!f.channels)return;
   var pc=findChByType(f,CT.PAN),tc=findChByType(f,CT.TILT);
   if(pc<0&&tc<0)return;
-  xyPopFi=fi;xyPopOpen=true;
+  xyPopFi=fi;xyPopOpen=true;xyPopOpenTime=Date.now();
+  xyPopFromLay=!!fromLay;
   xyPopPanC=pc;xyPopTiltC=tc;
   xyPopPanF=findChByType(f,CT.PANF);xyPopTiltF=findChByType(f,CT.TILTF);
   document.getElementById('xyPopTitle').textContent=f.name+' (A'+(f.dmxAddress||'?')+')';
   xyPopDraw();
   var pop=document.getElementById('xyPop');
   pop.style.display='block';
-  document.getElementById('xyPopOverlay').style.display='block';
+  // V 2D layout: brez overlay-a (blokira SVG interakcijo na tablicah)
+  if(!fromLay)document.getElementById('xyPopOverlay').style.display='block';
   xyPopBindCanvas();
   var pw=pop.offsetWidth||240,ph=pop.offsetHeight||280;
   var px=cx+10,py=cy-ph/2;
@@ -4205,10 +4207,22 @@ function openXyPop(fi,cx,cy){
   pop.style.left=Math.max(8,px)+'px';pop.style.top=Math.max(8,py)+'px';
 }
 function closeXyPop(){
-  xyPopOpen=false;xyPopFi=-1;
+  if(Date.now()-xyPopOpenTime<400)return;
+  xyPopOpen=false;xyPopFi=-1;xyPopFromLay=false;
   document.getElementById('xyPop').style.display='none';
   document.getElementById('xyPopOverlay').style.display='none';
 }
+// Zapri XY popup s tapom izven (ko ni overlay-a, npr. iz 2D layouta)
+document.addEventListener('pointerdown',function(e){
+  if(!xyPopOpen||!xyPopFromLay)return;
+  if(Date.now()-xyPopOpenTime<400)return;
+  var pop=document.getElementById('xyPop');
+  if(pop&&!pop.contains(e.target))closeXyPop();
+},true);
+// Escape zapre XY popup
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&xyPopOpen)closeXyPop();
+});
 function xyPopDraw(){
   if(!xyPopOpen||xyPopFi<0)return;
   var cv=document.getElementById('xyPopCanvas');if(!cv)return;
