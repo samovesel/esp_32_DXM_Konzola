@@ -95,6 +95,13 @@
 #define STL_ATTACK_DEFAULT 50     // ms
 #define STL_DECAY_DEFAULT  200    // ms
 #define BEAT_HISTORY_SIZE  24     // Zmanjšano iz 32
+
+// AGC (Automatic Gain Control) za sound-to-light
+#define AGC_DECAY_SLOW     0.999f  // Počasen upad (~10s do 50% pri 50Hz) — koncert
+#define AGC_DECAY_MED      0.995f  // Srednji upad (~3.4s do 50%) — club
+#define AGC_DECAY_FAST     0.98f   // Hiter upad (~0.7s do 50%) — testiranje
+#define AGC_MIN_FLOOR      1.0f    // Min referenčna vrednost (prepreči deljenje z ~0)
+
 #define DMX_UNIVERSE_SIZE  513   // Start code + 512
 #define ARTNET_TIMEOUT_MS  10000  // 10 sekund
 #define WS_UPDATE_INTERVAL  80   // ~12 fps posodobitev WebSocket klientov
@@ -409,6 +416,19 @@ static const STLEasyConfig STL_EASY_DEFAULTS = {
   {0},     // zones — vse ZONE_ALL
   0.0f,    // beatPhase
   false    // beatSync
+};
+
+// AGC nastavitve (ločena struktura za binarno kompatibilnost z V3)
+struct STLAgcConfig {
+  float    bandGains[STL_BAND_COUNT]; // Per-band gain množilnik (0.0 - 3.0)
+  float    agcSpeed;                   // AGC hitrost prilagajanja (0.0=počasi, 1.0=hitro)
+  float    noiseGate;                  // Noise gate prag (0.0=izključen, 1.0=agresiven)
+};
+
+static const STLAgcConfig STL_AGC_DEFAULTS = {
+  {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f},  // bandGains — enakomerno
+  0.5f,  // agcSpeed — srednji
+  0.3f   // noiseGate — zmeren
 };
 
 // Pro mode pravilo

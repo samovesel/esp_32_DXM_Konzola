@@ -151,6 +151,21 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     int z  = doc["z"]|0;
     if (fi >= 0 && fi < MAX_FIXTURES) _snd->getEasyConfig().zones[fi] = (uint8_t)z;
   }
+  else if (strcmp(cmd, "agc") == 0 && _snd) {
+    STLAgcConfig& agc = _snd->getAgcConfig();
+    if (!doc["spd"].isNull()) agc.agcSpeed  = doc["spd"] | 0.5f;
+    if (!doc["ng"].isNull())  agc.noiseGate = doc["ng"]  | 0.3f;
+    JsonArray bg = doc["bg"].as<JsonArray>();
+    if (bg) {
+      int i = 0;
+      for (JsonVariant v : bg) {
+        if (i >= STL_BAND_COUNT) break;
+        agc.bandGains[i] = v | 1.0f;
+        i++;
+      }
+    }
+    _snd->resetAgcPeaks();
+  }
   else if (strcmp(cmd, "save_sound") == 0 && _snd) {
     _snd->saveConfig();
   }
@@ -625,6 +640,14 @@ static void apiCfgSave(AsyncWebServerRequest* req, uint8_t* data, size_t len, si
       ro["outMin"] = r->outMin; ro["outMax"] = r->outMax;
       ro["curve"] = r->curve; ro["attackMs"] = r->attackMs; ro["decayMs"] = r->decayMs;
     }
+
+    // AGC config
+    const STLAgcConfig& agc = _snd->getAgcConfig();
+    JsonObject agcObj = sndObj["agc"].to<JsonObject>();
+    agcObj["agcSpeed"] = agc.agcSpeed;
+    agcObj["noiseGate"] = agc.noiseGate;
+    JsonArray bgArr = agcObj["bandGains"].to<JsonArray>();
+    for (int i = 0; i < STL_BAND_COUNT; i++) bgArr.add(agc.bandGains[i]);
   }
 
   // --- Mixer ---
@@ -791,6 +814,25 @@ static void apiCfgLoad(AsyncWebServerRequest* req, uint8_t* data, size_t len, si
         i++;
       }
     }
+
+    // AGC config
+    if (sndObj.containsKey("agc")) {
+      JsonObject agcObj = sndObj["agc"];
+      STLAgcConfig agc = STL_AGC_DEFAULTS;
+      agc.agcSpeed  = agcObj["agcSpeed"]  | 0.5f;
+      agc.noiseGate = agcObj["noiseGate"] | 0.3f;
+      JsonArray bgArr = agcObj["bandGains"].as<JsonArray>();
+      if (bgArr) {
+        int j = 0;
+        for (JsonVariant v : bgArr) {
+          if (j >= STL_BAND_COUNT) break;
+          agc.bandGains[j] = v | 1.0f;
+          j++;
+        }
+      }
+      _snd->setAgcConfig(agc);
+    }
+
     _snd->saveConfig();
   }
 
@@ -1133,6 +1175,11 @@ void webLoop() {
     fft["beat"]=bands.beatDetected; fft["bpm"]=bands.bpm;
     fft["bp"]=_snd->getBeatPhase();
     fft["peak"]=_aud->getPeakLevel(); fft["sr"]=_aud->getSampleRate();
+    // AGC config za UI sinhronizacijo
+    const STLAgcConfig& agc=_snd->getAgcConfig();
+    fft["aspd"]=agc.agcSpeed; fft["ang"]=agc.noiseGate;
+    JsonArray abg=fft["abg"].to<JsonArray>();
+    for(int i=0;i<STL_BAND_COUNT;i++) abg.add(agc.bandGains[i]);
     // Fixture sound levels za preview
     if(_snd->isActive()){
       JsonArray fxl=doc["fxl"].to<JsonArray>();
