@@ -1,6 +1,6 @@
 # ESP32 ArtNet/DMX Node z mešalno mizo
 
-**Kompletna verzija** — ArtNet node + fixture engine + mixer + scene + sound-to-light
+**Kompletna verzija** — ArtNet node + fixture engine + mixer + scene + sound-to-light + cue list + LFO + OSC + 2D layout
 
 ## Funkcionalnosti
 
@@ -28,6 +28,13 @@
 - **Manual beat** — tap tempo ali ročni BPM brez zvočnega vira
 - **Pametna detekcija telefona** — samodejno prilagodi UI (skrije beat gumbe, prikaže ☰ meni) z JS detekcijo touch naprave
 - **Zgodovina stanj** (5 avtomatskih snapshot-ov ob preklopu)
+- **2D Layout Editor** — interaktivni oder s SVG vizualizacijo fixtur, drag & drop pozicioniranje, zoom (20%–300%), pan, barvne pike z realnim DMX izhodom, prosto risanje odrskih elementov
+- **Highlight / Locate** — toggle gumb ki nastavi fixture na locate preset (dimmer=255, barve=bela, pan/tilt=center, zoom=wide, gobo=open), ob izklopu obnovi originalne vrednosti
+- **Cue List** — sekvenčno predvajanje scen s per-cue fade časom in auto-follow zamikom, GO/BACK/STOP kontrola, do 40 cue-jev, persistenca na LittleFS
+- **LFO / FX Generator** — do 8 neodvisnih oscilatorjev (sine, triangle, square, sawtooth) za dimmer/pan/tilt/R/G/B, per-fixture fazni spread za chase efekte
+- **DMX Output Monitor** — prikaz vseh 512 kanalov v realnem času na canvas gridu z barvnim kodiranjem vrednosti
+- **OSC Server** — UDP port 8000, podpira `/dmx/N`, `/fixture/N/dimmer`, `/fixture/N/color`, `/scene/N`, `/master`, `/blackout`
+- **Web MIDI** — podpora za MIDI kontrolerje prek Web MIDI API (Chrome/Edge), MIDI Learn, CC→fader in Note→scene mapping
 - **RGB status LED** (zelena=ArtNet, cyan=lokalno/auto, vijolična=lokalno/ročno)
 - **Factory reset** (drži GPIO14 ob zagonu 3s)
 
@@ -168,14 +175,17 @@ esp32_artnet_dmx/
 ├── config_store.h         — LittleFS load/save
 ├── dmx_driver.h/.cpp      — DMX TX (baud-rate break)
 ├── fixture_engine.h/.cpp  — Profili, patch, skupine
-├── mixer_engine.h/.cpp    — State machine, kanali, snapshoti, scene + sound
-├── scene_engine.h/.cpp    — Scene CRUD, crossfade interpolacija
+├── mixer_engine.h/.cpp    — State machine, kanali, snapshoti, locate, scene + sound + LFO
+├── scene_engine.h/.cpp    — Scene CRUD, crossfade interpolacija, cue list
 ├── audio_input.h/.cpp     — Audio vhod (ADC / I2S), jedro 0
 ├── sound_engine.h/.cpp    — FFT, pasovi, beat detect, easy/pro mode
+├── lfo_engine.h/.cpp      — LFO/FX generator (8 oscilatorjev, 4 valovne oblike)
+├── osc_server.h/.cpp      — OSC UDP server (port 8000)
 ├── led_status.h           — RGB LED
 ├── web_ui.h/.cpp          — Web server, API, servira gzipan HTML
-├── web_ui_gz.h            — Gzipan index.html (generiran iz index.html)
-├── index.html             — Spletni vmesnik (5 zavihkov + celozaslonska konzola)
+├── web_ui_gz.h            — Gzipan index.html (generiran iz convert.py)
+├── convert.py             — Generira web_ui_gz.h iz index.html (gzip + PROGMEM)
+├── index.html             — Spletni vmesnik (7 zavihkov + celozaslonska konzola + 2D layout)
 └── data/
     └── profiles/          — Fixture profili (JSON)
 ```
@@ -192,6 +202,16 @@ Linearna interpolacija med trenutnim in ciljnim stanjem:
 output[ch] = from[ch] + (to[ch] - from[ch]) × (elapsed / duration)
 ```
 Fiksno-vejični izračun (alpha 0-256) za hitrost na ESP32. Crossfade se posodablja vsak loop() cikel (~40fps).
+
+## Cue List
+
+Sekvenčno predvajanje scen z gumbi GO / BACK / STOP. Do **40 cue-jev**, vsak s:
+- **Scene slot** — katera od 20 scen se predvaja
+- **Fade čas** — per-cue crossfade (0–10s)
+- **Auto-follow** — samodejni prehod na naslednji cue po nastavljenem zamiku (0 = ročni trigger)
+- **Label** — oznaka cue-ja (do 24 znakov)
+
+Cue list se shrani v `/cuelist.json` na LittleFS. Upravljanje prek spletnega vmesnika (Scene zavihek) ali WebSocket ukazov.
 
 ## Sound-to-Light
 
@@ -214,6 +234,41 @@ Uporabniška pravila: izberi fixture, kanal, frekvenčni pas, DMX razpon, krivul
 
 ### Beat detection
 Primerja trenutno bass energijo s tekočim povprečjem zadnjih 32 vzorcev. Beat = presežek 1.5× povprečja z minimalnim intervalom 200ms. BPM iz povprečja intervalov.
+
+## LFO / FX Generator
+
+Do **8 neodvisnih oscilatorjev** za modulacijo DMX kanalov. Integriran v mixer pipeline za sound overlay in pred master dimmer.
+
+### Valovne oblike
+
+| Oblika | Formula |
+|--------|---------|
+| Sine | `sin(phase × 2π)` |
+| Triangle | Linearni ramp gor/dol |
+| Square | On/off pulz |
+| Sawtooth | Žagast val |
+
+### Tarčni kanali
+Dimmer, Pan, Tilt, Red, Green, Blue
+
+### Parametri (per LFO)
+- **Rate**: 0.1–10 Hz
+- **Depth**: 0–100% modulacijska globina
+- **Phase spread**: 0–100% fazni zamik med fixturami (za chase efekte)
+- **Fixture mask**: bitmask za izbiro do 24 fixtur
+
+## OSC Server
+
+Vgrajen UDP Open Sound Control (OSC) strežnik na **portu 8000** za daljinsko krmiljenje iz zunanjih aplikacij (TouchOSC, QLab, ipd.).
+
+| OSC naslov | Argumenti | Akcija |
+|---|---|---|
+| `/dmx/N` | float (0–1) | Nastavi DMX kanal N |
+| `/fixture/N/dimmer` | float (0–1) | Nastavi dimmer fixture-a N |
+| `/fixture/N/color` | float, float, float | Nastavi R, G, B fixture-a N |
+| `/scene/N` | — | Prikliči sceno N (s crossfade 1.5s) |
+| `/master` | float (0–1) | Master dimmer |
+| `/blackout` | int (0/1) | Blackout on/off |
 
 ## Celozaslonska konzola
 
@@ -260,23 +315,26 @@ Optimiziran pogled za živo upravljanje luči (telefon, tablica ali desktop).
 - Long-press na barvno piko sproži FULL ON
 - Detekcija telefona z JS (`hover: none` + `pointer: coarse` + velikost zaslona)
 
+## 2D Layout Editor
+
+Interaktivni vizualni oder za pozicioniranje luči v prostoru.
+
+- **SVG vizualizacija** z realnim DMX izhodom — barvne pike prikazujejo dejansko barvo in intenziteto
+- **Drag & drop** pozicioniranje fixtur iz stranske vrstice na oder
+- **Zoom** 20%–300% (scroll kolo) s **pan** (vleci prazno površino)
+- **Odrski elementi** — prosto risanje oblik (pravokotniki, elipse) za vizualni kontekst
+- **Fixture popup** — klik na fixture odpre panel s sliderji za vse kanale, Locate in barvnim izbirnikom
+- **Shranjevanje layoutov** na LittleFS z možnostjo več poimenovanih layoutov
+
 ## Posodabljanje spletnega vmesnika
 
 Po urejanju `index.html` je potrebno regenerirati `web_ui_gz.h`:
 
 ```bash
-python3 -c "
-import gzip
-with open('index.html','rb') as f: data=gzip.compress(f.read(),9)
-lines=['#ifndef HTML_PAGE_GZ_H','#define HTML_PAGE_GZ_H','','#include <pgmspace.h>','','const uint8_t HTML_PAGE_GZ[] PROGMEM = {']
-for i in range(0,len(data),16):
-  chunk=data[i:i+16]; h=', '.join('0x{:02x}'.format(b) for b in chunk)
-  lines.append('  '+h+(',' if i+16<len(data) else ''))
-lines+=['};\n','const size_t HTML_PAGE_GZ_LEN = '+str(len(data))+';','','#endif','']
-with open('web_ui_gz.h','w') as f: f.write('\n'.join(lines))
-print(f'{len(data)} bytes')
-"
+python3 convert.py
 ```
+
+Skripta prebere `index.html`, ga gzip kompresira (level 9) in zapiše C PROGMEM array v `web_ui_gz.h`.
 
 ## RAM poraba (ocena)
 
@@ -288,9 +346,13 @@ print(f'{len(data)} bytes')
 | Fixture profili | ~12 |
 | Snapshoti (5×512) | ~2.5 |
 | Scene (crossfade 2×512) | ~1 |
+| Cue list (40×30B) | ~1.2 |
 | FFT buffer (2×1024×4B) | ~8 |
 | Sound engine | ~2 |
+| LFO engine (8 instanc) | ~0.25 |
+| OSC server (256B buffer) | ~0.3 |
+| Locate states (24 fixtur) | ~0.6 |
 | Audio task (jedro 0) | ~4 |
 | FreeRTOS | ~24 |
-| **Skupaj** | **~120** |
-| **Prosto (od 320KB)** | **~200** |
+| **Skupaj** | **~122** |
+| **Prosto (od 320KB)** | **~198** |
