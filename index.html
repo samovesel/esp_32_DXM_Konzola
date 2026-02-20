@@ -693,7 +693,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <div style="display:flex;gap:6px;margin-top:6px">
     <button id="lxFoBtn" style="flex:1;background:#e67e22;color:#000;font-size:0.82em;padding:6px;font-weight:bold;user-select:none;touch-action:none">Full On</button>
     <button id="lxBoBtn" style="flex:1;background:#1a1a1a;border:1px solid #444;color:#aaa;font-size:0.82em;padding:6px;user-select:none;touch-action:none">Blackout</button>
-    <button id="lxLocBtn" onclick="if(typeof lxFxIdx!=='undefined'&&lxFxIdx>=0)toggleLocate(lxFxIdx)" style="flex:1;background:#555;border:1px solid #444;color:#fff;font-size:0.82em;padding:6px;user-select:none">Locate</button>
+    <button id="lxLocBtn" onclick="if(typeof lxFxIdx!=='undefined'&&lxFxIdx>=0&&fixtures[lxFxIdx])toggleLocate(fixtures[lxFxIdx].idx)" style="flex:1;background:#555;border:1px solid #444;color:#fff;font-size:0.82em;padding:6px;user-select:none">Locate</button>
   </div>
   <button onclick="lxToConsole()" style="width:100%;margin-top:6px;background:#0d1a0d;border:1px solid #1e3a1e;color:#0af;font-size:0.78em;padding:5px">Podrobnosti → konzola</button>
 </div>
@@ -1596,7 +1596,7 @@ function renderFsConsole(){
     h+='<div class="fx-addr">'+f.dmxAddress+'</div>';
     h+='<div class="fx-group-hdr" style="color:'+lbl+';max-width:'+hdrMax+'" onclick="toggleCollapsed('+fi+');renderFsConsole()" title="Skrij/pokazi skrcene kanale">'+colIcon+' '+f.name+'</div>';
     h+='<button class="fullon-btn phone-hide" data-fi="'+fi+'">FULL ON</button>';
-    h+='<button class="locate-btn phone-hide" data-fi="'+fi+'" style="background:'+(locateMask&(1<<fi)?'#9b59b6':'#555')+';color:#fff;font-size:0.7em;padding:3px 6px;border:1px solid '+(locateMask&(1<<fi)?'#9b59b6':'#444')+';border-radius:4px;cursor:pointer">'+(locateMask&(1<<fi)?'LOC ON':'LOCATE')+'</button>';
+    h+='<button class="locate-btn phone-hide" data-fi="'+f.idx+'" style="background:'+(locateMask&(1<<f.idx)?'#9b59b6':'#555')+';color:#fff;font-size:0.7em;padding:3px 6px;border:1px solid '+(locateMask&(1<<f.idx)?'#9b59b6':'#444')+';border-radius:4px;cursor:pointer">'+(locateMask&(1<<f.idx)?'LOC ON':'LOCATE')+'</button>';
     h+='</div>';
     h+='<div class="fx-group-body">';
     f.channels.forEach((ch,ci)=>{
@@ -1816,8 +1816,9 @@ function updateLocateButtons(){
   });
   // Layout popup Locate gumb
   var lb=document.getElementById('lxLocBtn');
-  if(lb&&typeof lxFxIdx!=='undefined'&&lxFxIdx>=0){
-    var isOn=!!(locateMask&(1<<lxFxIdx));
+  if(lb&&typeof lxFxIdx!=='undefined'&&lxFxIdx>=0&&fixtures[lxFxIdx]){
+    var locIdx=fixtures[lxFxIdx].idx;
+    var isOn=!!(locateMask&(1<<locIdx));
     lb.style.background=isOn?'#9b59b6':'#555';
     lb.style.borderColor=isOn?'#9b59b6':'#444';
     lb.textContent=isOn?'LOC ON':'Locate';
