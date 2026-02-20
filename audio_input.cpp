@@ -48,7 +48,7 @@ bool AudioInput::setupI2S(uint8_t source) {
   if (source == 1) {
     // WM8782S — ESP32 je slave (WM8782S generira BCLK in LRCK iz lastnega MCLK)
     cfg.mode = (i2s_mode_t)(I2S_MODE_SLAVE | I2S_MODE_RX);
-    cfg.sample_rate = WM8782S_SAMPLE_RATE;  // 48000 Hz
+    cfg.sample_rate = WM8782S_SAMPLE_RATE;  // 96000 Hz (master mode, 24.576MHz MCLK)
   } else {
     // INMP441 — ESP32 je master
     cfg.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX);
@@ -102,7 +102,7 @@ void AudioInput::taskLoop() {
   bool useA = true;
   int sampleIdx = 0;
   unsigned long lastBatch = micros();
-  int decimCounter = 0;  // Za decimacijo WM8782S (48kHz → ~24kHz)
+  int decimCounter = 0;  // Za decimacijo WM8782S (96kHz / 4 → ~24kHz)
 
   while (_running) {
     // I2S bere v blokih (oba vira)
@@ -112,7 +112,7 @@ void AudioInput::taskLoop() {
     int samplesRead = bytesRead / sizeof(int32_t);
 
     for (int i = 0; i < samplesRead && sampleIdx < FFT_SAMPLES; i++) {
-      // WM8782S pri 48kHz: decimacija — obdrži vsak N-ti vzorec
+      // WM8782S pri 96kHz: decimacija — obdrži vsak 4. vzorec
       if (_source == 1) {
         if (++decimCounter < WM8782S_DECIMATION) continue;
         decimCounter = 0;
