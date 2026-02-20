@@ -235,6 +235,8 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 .lay-fx-item.placed{opacity:0.4}
 .lay-fx-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:2px solid #444}
 .lay-beam-handle:hover{stroke:rgba(39,174,96,0.5)!important}
+.lay-xy-handle:hover{fill:rgba(39,174,96,0.8)!important}
+.mx-cp h4,.xy-pop h4,.lx-popup h4{cursor:grab;user-select:none;-webkit-user-select:none}
 .lx-popup{position:fixed;z-index:220;background:#101a10;border:1px solid #27ae60;border-radius:10px;padding:14px 16px;min-width:235px;max-width:280px;box-shadow:0 8px 40px rgba(0,0,0,0.9)}
 .lx-popup h4{color:#27ae60;margin:0 0 10px;font-size:0.92em;padding-right:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lx-x{position:absolute;top:10px;right:10px;background:none;border:none;color:#555;font-size:1.1em;cursor:pointer;padding:2px 6px;line-height:1}
@@ -1049,29 +1051,57 @@ function syncFxValues(fxv){
     if(!fxv[i])continue;
     const f=fixtures.find(fx=>fx.idx===i);
     if(!f||!f.channels)continue;
+    // 16-bit pair lookup za pravilno sinhronizacijo sliderjev
+    const pairs16=find16bitPairs(f.channels);
+    const fineSet=new Set(pairs16.map(function(p){return p.fineIdx}));
+    const coarseMap={};
+    pairs16.forEach(function(p){coarseMap[p.coarseIdx]=p.fineIdx});
     for(let c=0;c<f.channels.length&&c<fxv[i].length;c++){
       const newVal=fxv[i][c];
       if(f.channels[c].currentValue!==newVal){
         f.channels[c].currentValue=newVal;
+        // Fine kanal: posodobi UI coarse partnerja s kombinirano 16-bit vrednostjo
+        if(fineSet.has(c)){
+          var coarsePair=pairs16.find(function(p){return p.fineIdx===c});
+          if(coarsePair){
+            var cc=coarsePair.coarseIdx;
+            var combinedVal=combine16bit(f.channels[cc].currentValue||0,newVal);
+            var fIdx2=fixtures.indexOf(f);
+            if(fIdx2>=0)consLastVal[fIdx2+'_'+cc]=combinedVal;
+            var cv2=document.getElementById('cv_'+i+'_'+cc);if(cv2)cv2.textContent=combinedVal;
+            var vs2=document.getElementById('vs_'+i+'_'+cc);if(vs2&&document.activeElement!==vs2){vs2.value=combinedVal;sfill(vs2)}
+            var fcv2=document.getElementById('fcv_'+i+'_'+cc);if(fcv2)fcv2.textContent=combinedVal;
+            var fvs2=document.getElementById('fvs_'+i+'_'+cc);if(fvs2&&document.activeElement!==fvs2){fvs2.value=combinedVal;sfill(fvs2)}
+            if(i===compactIdx){
+              var hv2=document.getElementById('chv'+cc);if(hv2)hv2.textContent=combinedVal;
+              var hs2=document.getElementById('hs_'+cc);if(hs2&&document.activeElement!==hs2){hs2.value=combinedVal;sfill(hs2)}
+            }
+          }
+          continue;
+        }
+        // Coarse 16-bit kanal: kombiniraj z fine partnerjem
+        const fineIdx=coarseMap[c];
+        const is16=fineIdx!==undefined;
+        const displayVal=is16?combine16bit(newVal,fxv[i][fineIdx]||0):newVal;
         // Gang tracking: posodobi lastVal za pravilen delta
         const fIdx=fixtures.indexOf(f);
-        if(fIdx>=0)consLastVal[fIdx+'_'+c]=newVal;
-        // Konzola: posodobi tekst + slider (vedno, neodvisno)
+        if(fIdx>=0)consLastVal[fIdx+'_'+c]=displayVal;
+        // Konzola: posodobi tekst + slider
         const cv=document.getElementById('cv_'+i+'_'+c);
-        if(cv)cv.textContent=newVal;
+        if(cv)cv.textContent=displayVal;
         const vs=document.getElementById('vs_'+i+'_'+c);
-        if(vs&&document.activeElement!==vs){vs.value=newVal;sfill(vs);}
+        if(vs&&document.activeElement!==vs){vs.value=displayVal;sfill(vs);}
         // Celozaslonska konzola
         const fcv=document.getElementById('fcv_'+i+'_'+c);
-        if(fcv)fcv.textContent=newVal;
+        if(fcv)fcv.textContent=displayVal;
         const fvs=document.getElementById('fvs_'+i+'_'+c);
-        if(fvs&&document.activeElement!==fvs){fvs.value=newVal;sfill(fvs);}
+        if(fvs&&document.activeElement!==fvs){fvs.value=displayVal;sfill(fvs);}
         // Kompakt: SAMO za fixture ki je dejansko prikazana
         if(i===compactIdx){
           const hv=document.getElementById('chv'+c);
-          if(hv)hv.textContent=newVal;
+          if(hv)hv.textContent=displayVal;
           const hs=document.getElementById('hs_'+c);
-          if(hs&&document.activeElement!==hs){hs.value=newVal;sfill(hs);}
+          if(hs&&document.activeElement!==hs){hs.value=displayVal;sfill(hs);}
         }
       }
     }
@@ -3112,6 +3142,10 @@ function renderLayFixtures(){
       h+='<ellipse class="lay-spot" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" rx="'+Math.max(3,bm.hs*0.6).toFixed(1)+'" ry="'+Math.max(2,bm.hs*0.4).toFixed(1)+'" fill="'+bc.replace('rgb(','rgba(').replace(')',',0.5)')+'" pointer-events="none"/>';
       h+='<circle class="lay-beam-handle" cx="'+bm.ex.toFixed(1)+'" cy="'+bm.ey.toFixed(1)+'" r="12" fill="rgba(255,255,255,0.01)" stroke="rgba(39,174,96,0)" stroke-width="2" style="cursor:crosshair" pointer-events="all"/>';
       if(hasChType(f,18)){h+='<circle class="lay-zoom-handle" cx="'+bm.zhx.toFixed(1)+'" cy="'+bm.zhy.toFixed(1)+'" r="10" fill="rgba(32,96,255,0.5)" stroke="#0060ff" stroke-width="1.5" style="cursor:pointer" pointer-events="all"/>';}
+      // Zelena pika za odprtje XY Pad popupa
+      var xydx=cx+bm.pdx*32,xydy=cy+bm.pdy*32;
+      xydx=Math.max(12,Math.min(layVbW-12,xydx));xydy=Math.max(12,Math.min(layVbH-12,xydy));
+      h+='<circle class="lay-xy-handle" cx="'+xydx.toFixed(1)+'" cy="'+xydy.toFixed(1)+'" r="10" fill="rgba(39,174,96,0.5)" stroke="#27ae60" stroke-width="1.5" style="cursor:pointer" pointer-events="all"/>';
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="20" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
     }else{
       h+='<circle class="lay-fx-circle" cx="'+cx+'" cy="'+cy+'" r="18" fill="'+col+'" stroke="'+bcol+'" stroke-width="2"/>';
@@ -3130,6 +3164,15 @@ function bindLayFxGroup(g){
   if(handle)bindBeamHandle(handle,fi,g);
   var zhandle=g.querySelector('.lay-zoom-handle');
   if(zhandle)bindZoomHandle(zhandle,fi,g);
+  // Zelena pika za XY Pad popup
+  var xyhandle=g.querySelector('.lay-xy-handle');
+  if(xyhandle){
+    xyhandle.addEventListener('pointerdown',function(e){
+      if(layStageEdit)return;
+      e.preventDefault();e.stopPropagation();
+      openXyPop(fi,e.clientX,e.clientY);
+    },{passive:false});
+  }
   var circle=g.querySelector('.lay-fx-circle');
   if(circle)bindFixtureCircle(circle,fi,g);
   // Scroll wheel na beam handle za zoom
@@ -3240,6 +3283,8 @@ function bindBeamHandle(handle,fi,g){
       handle.setAttribute('cx',bm.ex.toFixed(1));handle.setAttribute('cy',bm.ey.toFixed(1));
       var zh=g.querySelector('.lay-zoom-handle');
       if(zh){zh.setAttribute('cx',bm.zhx.toFixed(1));zh.setAttribute('cy',bm.zhy.toFixed(1));}
+      var xyh=g.querySelector('.lay-xy-handle');
+      if(xyh){var nxydx=Math.max(12,Math.min(layVbW-12,cx+bm.pdx*32)),nxydy=Math.max(12,Math.min(layVbH-12,cy+bm.pdy*32));xyh.setAttribute('cx',nxydx.toFixed(1));xyh.setAttribute('cy',nxydy.toFixed(1));}
       if(!beamThrottle){
         beamThrottle=setTimeout(function(){beamThrottle=null;},30);
         f.channels.forEach(function(ch,ci){
@@ -3397,7 +3442,7 @@ function bindLaySvgEvents(){
   // ---- Wheel zoom (PC) ----
   svg.addEventListener('wheel',function(e){
     if(e.defaultPrevented)return;
-    if(e.target.closest&&e.target.closest('.lay-zoom-handle,.lay-beam-handle'))return;
+    if(e.target.closest&&e.target.closest('.lay-zoom-handle,.lay-beam-handle,.lay-xy-handle'))return;
     e.preventDefault();
     var factor=e.deltaY<0?1.15:1/1.15;
     var newZoom=Math.max(0.2,Math.min(6,layZoom*factor));
@@ -4584,5 +4629,48 @@ function renderMidiMappings(){
   el.innerHTML=h;
 }
 
+// ============ DRAGGABLE POPUPS ============
+function makePopupDraggable(popupId,handleSel){
+  var popup=document.getElementById(popupId);if(!popup)return;
+  var handle=popup.querySelector(handleSel);if(!handle)return;
+  handle.style.cursor='grab';handle.style.userSelect='none';handle.style.webkitUserSelect='none';
+  var dragging=false,offX=0,offY=0;
+  function onStart(cx,cy){
+    dragging=true;var rect=popup.getBoundingClientRect();
+    offX=cx-rect.left;offY=cy-rect.top;handle.style.cursor='grabbing';
+  }
+  function onMove(cx,cy){
+    if(!dragging)return;
+    var nl=cx-offX,nt=cy-offY;
+    var pw=popup.offsetWidth,ph=popup.offsetHeight;
+    nl=Math.max(0,Math.min(window.innerWidth-pw,nl));
+    nt=Math.max(0,Math.min(window.innerHeight-ph,nt));
+    popup.style.left=nl+'px';popup.style.top=nt+'px';
+  }
+  function onEnd(){if(!dragging)return;dragging=false;handle.style.cursor='grab';}
+  // Touch events (tablice)
+  handle.addEventListener('touchstart',function(e){
+    if(e.touches.length!==1)return;e.preventDefault();
+    var t=e.touches[0];onStart(t.clientX,t.clientY);
+  },{passive:false});
+  document.addEventListener('touchmove',function(e){
+    if(!dragging)return;e.preventDefault();
+    var t=e.touches[0];onMove(t.clientX,t.clientY);
+  },{passive:false});
+  document.addEventListener('touchend',function(){onEnd()});
+  document.addEventListener('touchcancel',function(){onEnd()});
+  // Pointer events (miška, stylus)
+  handle.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='touch')return;e.preventDefault();
+    handle.setPointerCapture(e.pointerId);onStart(e.clientX,e.clientY);
+  });
+  handle.addEventListener('pointermove',function(e){
+    if(e.pointerType==='touch')return;onMove(e.clientX,e.clientY);
+  });
+  handle.addEventListener('pointerup',function(e){if(e.pointerType!=='touch')onEnd()});
+  handle.addEventListener('pointercancel',function(e){if(e.pointerType!=='touch')onEnd()});
+}
+
 wsConnect();loadFixtures();loadSettings();loadScenes();updateFadeLabel();midiInit();
+makePopupDraggable('mxCp','h4');makePopupDraggable('xyPop','h4');makePopupDraggable('lxPopup','h4');
 </script></body></html>
