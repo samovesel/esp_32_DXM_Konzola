@@ -311,7 +311,13 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <!-- Kompakt pogled — multi-select = skupna kontrola -->
   <div id="viewCompact">
     <div class="card"><h3>Izberi fixture / skupino</h3><p style="font-size:0.7em;color:#0af;margin:0 0 6px">Več izbranih = skupna kontrola vseh</p><div class="fxsel" id="groupBtns"></div><div class="fxsel" id="fixBtns"></div></div>
-    <div class="card" id="faderBox" style="display:none"><h3 id="faderTitle">Kanali</h3><div class="ch-grid" id="faders"></div></div>
+    <div class="card" id="faderBox" style="display:none"><h3 id="faderTitle">Kanali</h3><div class="ch-grid" id="faders"></div>
+      <div id="xyPadBox" style="display:none;margin-top:10px;text-align:center">
+        <div style="font-size:0.8em;color:#888;margin-bottom:4px">XY Pad (Pan / Tilt)</div>
+        <canvas id="xyPadCanvas" width="200" height="200" style="border:1px solid #444;border-radius:6px;background:#0a0a1e;touch-action:none;cursor:crosshair;max-width:100%"></canvas>
+        <div style="font-size:0.7em;color:#666;margin-top:2px">Pan: <span id="xyPanVal">---</span> &nbsp; Tilt: <span id="xyTiltVal">---</span></div>
+      </div>
+    </div>
   </div>
   <!-- Konzola pogled — multi-select = prikaz vseh -->
   <div id="viewConsole" style="display:none">
@@ -469,6 +475,30 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <div style="margin-top:4px"><label style="display:inline;margin:0;font-size:0.75em;color:#888">Fixtures:</label><span id="lfoFxSel" style="display:inline-flex;flex-wrap:wrap;gap:2px;margin-left:4px"></span></div>
     <div style="margin-top:6px;display:flex;gap:4px"><button onclick="lfoAdd()">+ Dodaj LFO</button><button onclick="lfoClearAll()" class="danger" style="font-size:0.8em;padding:4px 10px">Zbriši vse</button></div>
   </div>
+
+  <div class="card"><h3>Shape Generator</h3>
+    <div id="shapeList"></div>
+    <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+      <select id="shapeType" style="width:100px"><option value="0">Circle</option><option value="1">Figure-8</option><option value="2">Triangle</option><option value="3">Square</option><option value="4">Line H</option><option value="5">Line V</option></select>
+      <label style="display:inline;margin:0;font-size:0.75em;color:#888">Speed</label><input id="shapeRate" type="number" min="0.1" max="5" step="0.1" value="0.5" style="width:55px">
+      <label style="display:inline;margin:0;font-size:0.75em;color:#888">Size</label><input id="shapeSize" type="number" min="0" max="1" step="0.05" value="0.5" style="width:55px">
+      <label style="display:inline;margin:0;font-size:0.75em;color:#888">Spread</label><input id="shapePhase" type="number" min="0" max="1" step="0.05" value="0" style="width:55px">
+    </div>
+    <div style="margin-top:4px"><label style="display:inline;margin:0;font-size:0.75em;color:#888">Fixtures:</label><span id="shapeFxSel" style="display:inline-flex;flex-wrap:wrap;gap:2px;margin-left:4px"></span></div>
+    <div style="margin-top:6px;display:flex;gap:4px"><button onclick="shapeAdd()">+ Dodaj Shape</button><button onclick="shapeClearAll()" class="danger" style="font-size:0.8em;padding:4px 10px">Zbriši vse</button></div>
+  </div>
+
+  <div class="card"><h3>Master Speed</h3>
+    <div class="fade-row">
+      <label style="white-space:nowrap">Hitrost:</label>
+      <input type="range" min="10" max="400" step="5" value="100" id="mspdSlider" oninput="onMspdChange()" style="flex:1">
+      <span class="val" id="mspdVal" style="min-width:38px;text-align:right">1.0x</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:4px">
+      <button onclick="setMspd(50)">0.5x</button><button onclick="setMspd(100)">1.0x</button><button onclick="setMspd(200)">2.0x</button>
+    </div>
+    <p style="font-size:0.7em;color:#666;margin-top:4px">Vpliva na LFO, sound-to-light in shape efekte</p>
+  </div>
 </div>
 
 <!-- TAB 3: FIXTURES -->
@@ -506,6 +536,10 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <div class="row"><div><label>Ime (hostname)</label><input id="s_host" maxlength="27"></div><div><label>ArtNet Univerza</label><input id="s_univ" type="number" min="0" max="32767"></div></div>
     <label>Število DMX kanalov</label><input id="s_ch" type="number" min="1" max="512">
     <div class="row" style="margin-top:8px"><div><label>ArtNet timeout (s)</label><input id="s_artTimeout" type="number" min="1" max="3600" value="10"></div><div style="display:flex;align-items:flex-end;padding-bottom:4px"><div class="toggle"><input type="checkbox" id="s_artPrimary"><label>Primarni način (ArtNet ne prevzame)</label></div></div></div>
+    <div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap">
+      <div class="toggle"><input type="checkbox" id="s_artnetOut"><label>ArtNet izhod (oddajaj DMX kot ArtNet)</label></div>
+      <div class="toggle"><input type="checkbox" id="s_sacn"><label>sACN (E1.31) izhod</label></div>
+    </div>
   </div>
   <div class="card"><h3>WiFi omrežja</h3>
     <p style="font-size:0.7em;color:#666;margin:-4px 0 6px">Do 5 omrežij s samodejnim failover. Prvo delujoče se uporabi.</p>
@@ -775,6 +809,8 @@ function handleWs(d){
     document.getElementById('sysInfo').textContent=[heapTxt,flashTxt].filter(Boolean).join(' | ');
     boState=!!d.bo;document.getElementById('boBtn').style.background=boState?'#f33':'#555';
     document.getElementById('masterSlider').value=d.master;document.getElementById('masterVal').textContent=d.master;
+    // Master speed sync
+    if(d.mspd!==undefined){var mse=document.getElementById('mspdSlider');if(mse&&!mse.matches(':active')){mse.value=Math.round(d.mspd*100);document.getElementById('mspdVal').textContent=d.mspd.toFixed(1)+'x';}}
     // Group dimmers sync
     if(d.gd){d.gd.forEach(function(v,gi){
       fsGroupDimmers[gi]=v;
@@ -815,6 +851,12 @@ function handleWs(d){
       var oldSig='';for(var li=0;li<lfoData.length;li++)oldSig+=(lfoData[li]?'1':'0');
       lfoData=d.lfos;if(lfoSig!==oldSig)renderLfoList();
     }else if(lfoData.length>0){lfoData=[];renderLfoList()}
+    // Shape status
+    if(d.shapes){
+      var shpSig='';for(var si=0;si<d.shapes.length;si++)shpSig+=(d.shapes[si]?'1':'0');
+      var oldShpSig='';for(var si=0;si<shapeData.length;si++)oldShpSig+=(shapeData[si]?'1':'0');
+      shapeData=d.shapes;if(shpSig!==oldShpSig)renderShapeList();
+    }else if(shapeData.length>0){shapeData=[];renderShapeList()}
     // Layout editor sync
     if(layActive){
       var lbo=document.getElementById('layBoBtn');if(lbo)lbo.style.background=boState?'#f33':'#555';
@@ -823,7 +865,7 @@ function handleWs(d){
       var lub=document.getElementById('layUndoBtn');if(lub)lub.style.display=d.undo?'inline-block':'none';
     }
     // Sinhronizacija fixture vrednosti iz ESP32
-    if(d.fxv)syncFxValues(d.fxv);
+    if(d.fxv){syncFxValues(d.fxv);if(xyActive)drawXyPad()}
     // Fixture output vrednosti (dejanski DMX izhod z beatom, master/group dimmerji)
     if(d.fxo)lastFxo=d.fxo;
     // FFT data
@@ -851,7 +893,7 @@ function handleWs(d){
   }
 }
 
-function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1){loadScenes();loadCueList();updateCueSceneSel()}if(n===2){loadRules();renderZoneList();renderFxPreviewInit();renderPalBtns();renderChainList();renderLfoFxSel()}if(n===5)loadConfigs()}
+function showTab(n,btn){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('show',i===n));document.querySelectorAll('nav button').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');if(n===1){loadScenes();loadCueList();updateCueSceneSel()}if(n===2){loadRules();renderZoneList();renderFxPreviewInit();renderPalBtns();renderChainList();renderLfoFxSel();renderShapeFxSel()}if(n===5)loadConfigs()}
 function toggleMode(){if(currentMode===0)wsSend({cmd:'mode',v:'local'});else if(currentMode===3)wsSend({cmd:'mode',v:'local'});else wsSend({cmd:'mode',v:'artnet'})}
 function showOtaDialog(){
   if(!confirm('Firmware posodobitev (OTA).\nIzberi .bin datoteko za nalaganje.\nNaprava se bo po uspešnem nalaganju resetirala.'))return;
@@ -899,13 +941,13 @@ function renderFixBtns(){
   // Konzola: fixture gumbi (oranžna selekcija)
   let h2='';fixtures.forEach((f,i)=>{h2+='<button onclick="selConsFn('+i+')" class="'+(selCons.has(i)?'sel-cons':'')+'" style="border-bottom:3px solid '+fxLbl(i)+'">'+f.name+'</button>'});document.getElementById('fixBtns2').innerHTML=h2;
 }
-function selCompFn(i){selGroup=-1;if(selComp.has(i))selComp.delete(i);else selComp.add(i);renderFixBtns();renderFaders()}
+function selCompFn(i){selGroup=-1;if(selComp.has(i))selComp.delete(i);else selComp.add(i);renderFixBtns();renderFaders();initXyPad()}
 function selConsFn(i){
   if(selCons.has(i)){selCons.delete(i);consOrder=consOrder.filter(x=>x!==i)}
   else{selCons.add(i);consOrder.push(i)}
   renderFixBtns();renderConsOrder();renderConsole();
 }
-function selGroupFn(g){selGroup=selGroup===g?-1:g;selComp.clear();if(selGroup>=0)fixtures.forEach((f,i)=>{if(f.groupMask&(1<<selGroup))selComp.add(i)});renderFixBtns();renderFaders()}
+function selGroupFn(g){selGroup=selGroup===g?-1:g;selComp.clear();if(selGroup>=0)fixtures.forEach((f,i)=>{if(f.groupMask&(1<<selGroup))selComp.add(i)});renderFixBtns();renderFaders();initXyPad()}
 
 // ---- Konzola vrstni red (drag & drop) ----
 var dragIdx=-1,dragOverIdx=-1;
@@ -1042,6 +1084,110 @@ function syncFxValues(fxv){
 }
 
 // ---- Kompakt pogled (horizontalni) — skupna kontrola vseh izbranih ----
+// ============ 16-BIT PAN/TILT HELPERS ============
+function find16bitPairs(channels){
+  var pairs=[];
+  if(!channels)return pairs;
+  channels.forEach(function(ch,i){
+    if(ch.type===8){var fi=channels.findIndex(function(c){return c.type===9});if(fi>=0)pairs.push({coarseIdx:i,fineIdx:fi,label:'Pan',type:'pan'})}
+    if(ch.type===10){var fi=channels.findIndex(function(c){return c.type===11});if(fi>=0)pairs.push({coarseIdx:i,fineIdx:fi,label:'Tilt',type:'tilt'})}
+  });
+  return pairs;
+}
+function split16bit(v){v=Math.max(0,Math.min(65535,Math.round(v)));return{hi:(v>>8)&0xFF,lo:v&0xFF}}
+function combine16bit(hi,lo){return((hi&0xFF)<<8)|(lo&0xFF)}
+function sendFader16(coarseCh,fineCh,val16,chType){
+  val16=+val16;
+  var s=split16bit(val16);
+  var firstIdx=[...selComp][0];
+  if(selGroup>=0){
+    wsSend({cmd:'grch',g:selGroup,c:coarseCh,v:s.hi});
+    wsSend({cmd:'grch',g:selGroup,c:fineCh,v:s.lo});
+  } else {
+    selComp.forEach(function(f){
+      var fx=fixtures[f];if(!fx||!fx.channels)return;
+      var cc=coarseCh,fc=fineCh;
+      if(f!==firstIdx){
+        cc=findChByType(fx,chType);fc=findChByType(fx,chType===8?9:11);
+        if(cc<0||fc<0)return;
+      }
+      if(fx.channels[cc])fx.channels[cc].currentValue=s.hi;
+      if(fx.channels[fc])fx.channels[fc].currentValue=s.lo;
+      wsSend({cmd:'fxch',f:fx.idx,c:cc,v:s.hi});
+      wsSend({cmd:'fxch',f:fx.idx,c:fc,v:s.lo});
+    });
+  }
+}
+
+// ============ XY PAD ============
+var xyPanCoarse=-1,xyPanFine=-1,xyTiltCoarse=-1,xyTiltFine=-1,xyActive=false;
+function initXyPad(){
+  var firstIdx=[...selComp][0];
+  var f=fixtures[firstIdx];
+  if(!f||!f.channels){hideXyPad();return}
+  xyPanCoarse=findChByType(f,8);xyTiltCoarse=findChByType(f,10);
+  if(xyPanCoarse<0||xyTiltCoarse<0){hideXyPad();return}
+  xyPanFine=findChByType(f,9);xyTiltFine=findChByType(f,11);
+  document.getElementById('xyPadBox').style.display='block';
+  xyActive=true;drawXyPad();
+}
+function hideXyPad(){document.getElementById('xyPadBox').style.display='none';xyActive=false}
+function drawXyPad(){
+  if(!xyActive)return;
+  var cv=document.getElementById('xyPadCanvas');if(!cv)return;
+  var ctx=cv.getContext('2d');var w=cv.width,h=cv.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#0a0a1e';ctx.fillRect(0,0,w,h);
+  // Grid
+  ctx.strokeStyle='#222';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
+  ctx.strokeStyle='#1a1a2e';
+  for(var i=0.25;i<1;i+=0.25){ctx.beginPath();ctx.moveTo(w*i,0);ctx.lineTo(w*i,h);ctx.moveTo(0,h*i);ctx.lineTo(w,h*i);ctx.stroke()}
+  // Position dot
+  var firstIdx=[...selComp][0];var f=fixtures[firstIdx];
+  if(!f||!f.channels)return;
+  var maxP=xyPanFine>=0?65535:255;var maxT=xyTiltFine>=0?65535:255;
+  var pV=xyPanFine>=0?combine16bit(f.channels[xyPanCoarse].currentValue||0,f.channels[xyPanFine].currentValue||0):(f.channels[xyPanCoarse].currentValue||0);
+  var tV=xyTiltFine>=0?combine16bit(f.channels[xyTiltCoarse].currentValue||0,f.channels[xyTiltFine].currentValue||0):(f.channels[xyTiltCoarse].currentValue||0);
+  var x=(pV/maxP)*w,y=(tV/maxT)*h;
+  ctx.fillStyle='#0af';ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(0,170,255,0.3)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.stroke();
+  document.getElementById('xyPanVal').textContent=pV;
+  document.getElementById('xyTiltVal').textContent=tV;
+}
+(function(){
+  var cv,dragging=false,lastSend=0;
+  function xyMove(cx,cy){
+    if(!xyActive||!dragging)return;
+    var now=Date.now();if(now-lastSend<33)return;lastSend=now;
+    if(!cv)cv=document.getElementById('xyPadCanvas');
+    var rect=cv.getBoundingClientRect();
+    var nx=Math.max(0,Math.min(1,(cx-rect.left)/rect.width));
+    var ny=Math.max(0,Math.min(1,(cy-rect.top)/rect.height));
+    var firstIdx=[...selComp][0];
+    selComp.forEach(function(fi){
+      var fx=fixtures[fi];if(!fx||!fx.channels)return;
+      var pc=fi===firstIdx?xyPanCoarse:findChByType(fx,8);
+      var tc=fi===firstIdx?xyTiltCoarse:findChByType(fx,10);
+      if(pc<0||tc<0)return;
+      var pf=fi===firstIdx?xyPanFine:findChByType(fx,9);
+      var tf=fi===firstIdx?xyTiltFine:findChByType(fx,11);
+      if(pf>=0){var pv=Math.round(nx*65535);var ps=split16bit(pv);fx.channels[pc].currentValue=ps.hi;fx.channels[pf].currentValue=ps.lo;wsSend({cmd:'fxch',f:fx.idx,c:pc,v:ps.hi});wsSend({cmd:'fxch',f:fx.idx,c:pf,v:ps.lo})}
+      else{var pv8=Math.round(nx*255);fx.channels[pc].currentValue=pv8;wsSend({cmd:'fxch',f:fx.idx,c:pc,v:pv8})}
+      if(tf>=0){var tv=Math.round(ny*65535);var ts=split16bit(tv);fx.channels[tc].currentValue=ts.hi;fx.channels[tf].currentValue=ts.lo;wsSend({cmd:'fxch',f:fx.idx,c:tc,v:ts.hi});wsSend({cmd:'fxch',f:fx.idx,c:tf,v:ts.lo})}
+      else{var tv8=Math.round(ny*255);fx.channels[tc].currentValue=tv8;wsSend({cmd:'fxch',f:fx.idx,c:tc,v:tv8})}
+    });
+    drawXyPad();
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    cv=document.getElementById('xyPadCanvas');if(!cv)return;
+    cv.addEventListener('pointerdown',function(e){dragging=true;cv.setPointerCapture(e.pointerId);xyMove(e.clientX,e.clientY);e.preventDefault()},{passive:false});
+    cv.addEventListener('pointermove',function(e){if(dragging)xyMove(e.clientX,e.clientY)});
+    cv.addEventListener('pointerup',function(){dragging=false});
+    cv.addEventListener('pointercancel',function(){dragging=false});
+  });
+})();
+
 function renderFaders(){
   const box=document.getElementById('faderBox');
   if(selComp.size===0){box.style.display='none';return}
@@ -1050,17 +1196,31 @@ function renderFaders(){
   const first=fixtures[firstIdx];
   if(!first||!first.channels){box.style.display='none';return}
   document.getElementById('faderTitle').textContent=[...selComp].map(i=>fixtures[i].name).join(', ');
+  var pairs16=find16bitPairs(first.channels);
+  var fineSkip=new Set(pairs16.map(function(p){return p.fineIdx}));
   let h='';
   first.channels.forEach((ch,ci)=>{
+    if(fineSkip.has(ci))return; // Fine kanal skrit — upravljan prek coarse 16-bit
     const col=chColor(ch.type);
-    const v=ch.currentValue||0;
-    const rl=ch.ranges&&ch.ranges.length?ch.ranges.map(r=>r.from+'-'+r.to+':'+r.label).join(', '):'';
-    h+='<div class="ch-row">';
-    h+='<span class="ch-name" style="color:'+col+'">'+ch.name+'</span>';
-    // data-type hrani tip kanala za type-based matching
-    h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+';--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" data-type="'+ch.type+'" oninput="sfill(this);sendFader('+ci+',this.value)">';
-    h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v+'</span>';
-    h+='<span class="ch-range">'+rl+'</span></div>';
+    const pair=pairs16.find(function(p){return p.coarseIdx===ci});
+    if(pair){
+      // 16-bit slider
+      const v16=combine16bit(ch.currentValue||0,first.channels[pair.fineIdx].currentValue||0);
+      h+='<div class="ch-row">';
+      h+='<span class="ch-name" style="color:'+col+'">'+ch.name+' <small style="opacity:0.5">16-bit</small></span>';
+      h+='<input type="range" id="hs_'+ci+'" min="0" max="65535" value="'+v16+'" style="accent-color:'+col+';--ch-col:'+col+';--ch-pct:'+Math.round(v16/655.35)+'%" data-type="'+ch.type+'" oninput="sfill(this);sendFader16('+ci+','+pair.fineIdx+',this.value,'+ch.type+');document.getElementById(\'chv'+ci+'\').textContent=this.value">';
+      h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v16+'</span>';
+      h+='</div>';
+    } else {
+      // 8-bit slider (obstoječ)
+      const v=ch.currentValue||0;
+      const rl=ch.ranges&&ch.ranges.length?ch.ranges.map(r=>r.from+'-'+r.to+':'+r.label).join(', '):'';
+      h+='<div class="ch-row">';
+      h+='<span class="ch-name" style="color:'+col+'">'+ch.name+'</span>';
+      h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+';--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" data-type="'+ch.type+'" oninput="sfill(this);sendFader('+ci+',this.value)">';
+      h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v+'</span>';
+      h+='<span class="ch-range">'+rl+'</span></div>';
+    }
   });
   document.getElementById('faders').innerHTML=h;
   bindHorizontalSliders(document.getElementById('faders'));
@@ -1155,12 +1315,19 @@ function renderConsole(){
     h+='<div class="fx-group" style="background:'+bg+'">';
     h+='<div class="fx-group-hdr" style="color:'+lbl+';max-width:'+hdrMax+'" onclick="toggleCollapsed('+fi+')" title="Skrij/pokazi skrcene kanale">'+colIcon+' '+f.name+'</div>';
     h+='<div class="fx-group-body">';
+    var pairs16c=find16bitPairs(f.channels);
+    var fineSkipC=new Set(pairs16c.map(function(p){return p.fineIdx}));
     f.channels.forEach((ch,ci)=>{
+      if(fineSkipC.has(ci))return;
       const isMini=hidden.has(ci);
       if(isMini&&collapsed)return;
 
-      const v=ch.currentValue||0;
       const col=chColor(ch.type);
+      const pair16=pairs16c.find(function(p){return p.coarseIdx===ci});
+      const is16=!!pair16;
+      const v=is16?combine16bit(ch.currentValue||0,f.channels[pair16.fineIdx].currentValue||0):(ch.currentValue||0);
+      const maxV=is16?65535:255;
+      const pct=is16?Math.round(v/655.35):Math.round(v/2.55);
       const key=fi+'_'+ci;
       consLastVal[key]=v;
 
@@ -1173,8 +1340,12 @@ function renderConsole(){
         const checked=consGang.has(gKey)?'checked':'';
         h+='<div class="fx-col" style="background:'+bg+'">';
         h+='<div class="ch-vval" style="color:'+col+'" id="cv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+')" ondblclick="event.stopPropagation();startFineTune(this,'+f.idx+','+fi+','+ci+')" title="Klik: solo | 2x klik: natančna vrednost">'+v+'</div>';
-        h+='<input type="range" orient="vertical" id="vs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" oninput="sfill(this);sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
-        h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+')">'+ch.name+'</div>';
+        if(is16){
+          h+='<input type="range" orient="vertical" id="vs_'+f.idx+'_'+ci+'" min="0" max="65535" value="'+v+'" data-fine="'+pair16.fineIdx+'" data-16="1" style="--ch-col:'+col+';--ch-pct:'+pct+'%" oninput="sfill(this);sendCGang16('+f.idx+','+fi+','+ci+','+pair16.fineIdx+',this.value)">';
+        }else{
+          h+='<input type="range" orient="vertical" id="vs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+';--ch-pct:'+pct+'%" oninput="sfill(this);sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
+        }
+        h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+')">'+ch.name+(is16?' <small>16b</small>':'')+'</div>';
         h+='<div class="gang-wrap"><input type="checkbox" '+checked+' onchange="toggleGang('+fi+','+ci+')"><div class="gang-lbl">gang</div></div>';
         h+='</div>';
       }
@@ -1216,6 +1387,22 @@ function sendCGang(fxIdx,fi,ci,val){
       wsSend({cmd:'fxch',f:gf.idx,c:gCi,v:gNew});
     });
   }
+}
+
+// 16-bit sendCGang za vertikalne sliderje v konzolah
+function sendCGang16(fxIdx,fi,ci,fineCi,val16){
+  val16=+val16;
+  var s=split16bit(val16);
+  var myKey=fi+'_'+ci;
+  consLastVal[myKey]=val16;
+  ['cv_','fcv_'].forEach(function(p){var el=document.getElementById(p+fxIdx+'_'+ci);if(el)el.textContent=val16});
+  var f=fixtures.find(function(x){return x.idx===fxIdx});
+  if(f&&f.channels){
+    if(f.channels[ci])f.channels[ci].currentValue=s.hi;
+    if(f.channels[fineCi])f.channels[fineCi].currentValue=s.lo;
+  }
+  wsSend({cmd:'fxch',f:fxIdx,c:ci,v:s.hi});
+  wsSend({cmd:'fxch',f:fxIdx,c:fineCi,v:s.lo});
 }
 
 // ---- Celozaslonska konzola ----
@@ -1599,11 +1786,18 @@ function renderFsConsole(){
     h+='<button class="locate-btn phone-hide" data-fi="'+f.idx+'" style="background:'+(locateMask&(1<<f.idx)?'#9b59b6':'#555')+';color:#fff;font-size:0.7em;padding:3px 6px;border:1px solid '+(locateMask&(1<<f.idx)?'#9b59b6':'#444')+';border-radius:4px;cursor:pointer">'+(locateMask&(1<<f.idx)?'LOC ON':'LOCATE')+'</button>';
     h+='</div>';
     h+='<div class="fx-group-body">';
+    var pairs16fs=find16bitPairs(f.channels);
+    var fineSkipFs=new Set(pairs16fs.map(function(p){return p.fineIdx}));
     f.channels.forEach((ch,ci)=>{
+      if(fineSkipFs.has(ci))return;
       const isMini=hidden.has(ci);
       if(isMini&&collapsed)return;
-      const v=ch.currentValue||0;
       const col=chColor(ch.type);
+      const pair16f=pairs16fs.find(function(p){return p.coarseIdx===ci});
+      const is16f=!!pair16f;
+      const v=is16f?combine16bit(ch.currentValue||0,f.channels[pair16f.fineIdx].currentValue||0):(ch.currentValue||0);
+      const maxV=is16f?65535:255;
+      const pct=is16f?Math.round(v/655.35):Math.round(v/2.55);
       const key=fi+'_'+ci;
       consLastVal[key]=v;
       if(isMini){
@@ -1614,8 +1808,12 @@ function renderFsConsole(){
         const checked=consGang.has(fi+'_'+ci)?'checked':'';
         h+='<div class="fx-col" style="background:'+bg+'">';
         h+='<div class="ch-vval" style="color:'+col+'" id="fcv_'+f.idx+'_'+ci+'" onclick="soloChannel('+fi+','+ci+');renderFsConsole()" ondblclick="event.stopPropagation();startFineTune(this,'+f.idx+','+fi+','+ci+')" title="Klik: solo | Dvojni klik: natančna vrednost">'+v+'</div>';
-        h+='<input type="range" orient="vertical" id="fvs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" oninput="sfill(this);sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
-        h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+');renderFsConsole()">'+ch.name+'</div>';
+        if(is16f){
+          h+='<input type="range" orient="vertical" id="fvs_'+f.idx+'_'+ci+'" min="0" max="65535" value="'+v+'" data-fine="'+pair16f.fineIdx+'" data-16="1" style="--ch-col:'+col+';--ch-pct:'+pct+'%" oninput="sfill(this);sendCGang16('+f.idx+','+fi+','+ci+','+pair16f.fineIdx+',this.value)">';
+        }else{
+          h+='<input type="range" orient="vertical" id="fvs_'+f.idx+'_'+ci+'" min="0" max="255" value="'+v+'" style="--ch-col:'+col+';--ch-pct:'+pct+'%" oninput="sfill(this);sendCGang('+f.idx+','+fi+','+ci+',this.value)">';
+        }
+        h+='<div class="ch-label" style="color:'+col+'" onclick="toggleChVis('+fi+','+ci+');renderFsConsole()">'+ch.name+(is16f?' <small>16b</small>':'')+'</div>';
         h+='<div class="gang-wrap"><input type="checkbox" '+checked+' onchange="toggleGang('+fi+','+ci+')"><div class="gang-lbl">gang</div></div>';
         h+='</div>';
       }
@@ -2671,6 +2869,8 @@ function loadSettings(){fetch('/api/config').then(r=>r.json()).then(d=>{
   document.getElementById('s_auser').value=d.authUser||'admin';
   document.getElementById('s_artTimeout').value=d.artnetTimeoutSec||10;
   document.getElementById('s_artPrimary').checked=!!d.artnetPrimaryMode;
+  document.getElementById('s_artnetOut').checked=!!d.artnetOutEnabled;
+  document.getElementById('s_sacn').checked=!!d.sacnEnabled;
   document.getElementById('verInfo').textContent='FW: '+d.version+' | IP: '+d.ip+' | MAC: '+d.mac+(d.mdns?' | '+d.mdns:'');
   // WiFi APs
   window._wifiAPs=d.wifiAPs||[];
@@ -2687,7 +2887,8 @@ function saveSettings(){
     staticIp:document.getElementById('s_ip').value,staticGw:document.getElementById('s_gw').value,staticSn:document.getElementById('s_sn').value,
     audioSource:+document.getElementById('s_audio').value,
     authEnabled:document.getElementById('s_auth').checked,authUser:document.getElementById('s_auser').value,authPass:document.getElementById('s_apass').value,
-    artnetTimeoutSec:+document.getElementById('s_artTimeout').value,artnetPrimaryMode:document.getElementById('s_artPrimary').checked};
+    artnetTimeoutSec:+document.getElementById('s_artTimeout').value,artnetPrimaryMode:document.getElementById('s_artPrimary').checked,
+    artnetOutEnabled:document.getElementById('s_artnetOut').checked,sacnEnabled:document.getElementById('s_sacn').checked};
   fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json()).then(d=>showMsg(d.ok?'Shranjeno, restartiram...':'Napaka',d.ok));
 }
 function renderWifiAps(){
@@ -4073,6 +4274,49 @@ function renderLfoFxSel(){
   var el=document.getElementById('lfoFxSel');if(!el||!fixtures)return;
   var h='';
   fixtures.forEach(function(f,i){
+    if(!f)return;
+    h+='<label style="font-size:0.75em;display:inline-flex;align-items:center;gap:2px;background:#222;padding:1px 5px;border-radius:3px;cursor:pointer"><input type="checkbox" value="'+f.idx+'" style="width:auto;margin:0"> '+f.name+'</label>';
+  });
+  el.innerHTML=h;
+}
+
+// ============ MASTER SPEED ============
+function onMspdChange(){
+  var v=+document.getElementById('mspdSlider').value/100;
+  document.getElementById('mspdVal').textContent=v.toFixed(1)+'x';
+  wsSend({cmd:'master_speed',v:v});
+}
+function setMspd(pct){document.getElementById('mspdSlider').value=pct;onMspdChange()}
+
+// ============ SHAPE GENERATOR ============
+var shapeData=[];
+function shapeAdd(){
+  var mask=0;
+  document.querySelectorAll('#shapeFxSel input[type=checkbox]:checked').forEach(function(cb){mask|=(1<<(+cb.value))});
+  var sz=+document.getElementById('shapeSize').value;
+  wsSend({cmd:'shape_add',type:+document.getElementById('shapeType').value,rate:+document.getElementById('shapeRate').value,sx:sz,sy:sz,phase:+document.getElementById('shapePhase').value,mask:mask});
+}
+function shapeRemove(i){wsSend({cmd:'shape_rm',i:i});if(shapeData[i])shapeData[i]=null;renderShapeList()}
+function shapeClearAll(){wsSend({cmd:'shape_clear'})}
+function renderShapeList(){
+  var el=document.getElementById('shapeList');if(!el)return;
+  var types=['Circle','Fig-8','Tri','Sqr','LineH','LineV'];
+  var h='';
+  shapeData.forEach(function(s,i){
+    if(!s)return;
+    h+='<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;background:#1a1a2e;border-radius:4px;margin-bottom:3px;font-size:0.8em">';
+    h+='<span style="color:#e67e22;font-weight:bold">'+(types[s.type]||'?')+'</span>';
+    h+='<span style="color:#888">'+s.rate+'Hz sz:'+s.sx+' spr:'+s.phase+'</span>';
+    h+='<button onclick="shapeRemove('+i+')" style="background:#c0392b;color:#fff;font-size:0.85em;padding:2px 8px;margin-left:auto">X</button>';
+    h+='</div>';
+  });
+  if(!h)h='<div style="font-size:0.8em;color:#555">Ni aktivnih shape-ov</div>';
+  el.innerHTML=h;
+}
+function renderShapeFxSel(){
+  var el=document.getElementById('shapeFxSel');if(!el||!fixtures)return;
+  var h='';
+  fixtures.forEach(function(f){
     if(!f)return;
     h+='<label style="font-size:0.75em;display:inline-flex;align-items:center;gap:2px;background:#222;padding:1px 5px;border-radius:3px;cursor:pointer"><input type="checkbox" value="'+f.idx+'" style="width:auto;margin:0"> '+f.name+'</label>';
   });

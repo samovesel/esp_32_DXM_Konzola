@@ -467,6 +467,10 @@ struct NodeConfig {
   // ArtNet vedenje
   uint16_t artnetTimeoutSec;  // Po koliko sekundah brez ArtNet-a preklopi na LOCAL_AUTO (privzeto 10)
   bool artnetPrimaryMode;     // true = CTRL_LOCAL_PRIMARY ob zagonu (manualna mešalka ima prednost)
+
+  // Omrežni protokoli izhod
+  bool artnetOutEnabled;      // Oddajaj DMX kot ArtNet broadcast
+  bool sacnEnabled;           // Oddajaj DMX kot sACN (E1.31) multicast
 };
 
 // Privzete vrednosti
@@ -484,7 +488,9 @@ static const NodeConfig DEFAULT_CONFIG = {
   "admin",         // authUser
   "",              // authPass (prazno = brez gesla)
   10,              // artnetTimeoutSec
-  false            // artnetPrimaryMode
+  false,           // artnetPrimaryMode
+  false,           // artnetOutEnabled
+  false            // sacnEnabled
 };
 
 // ============================================================================

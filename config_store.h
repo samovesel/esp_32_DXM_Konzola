@@ -51,6 +51,8 @@ inline bool configLoad(NodeConfig &cfg) {
   // ArtNet vedenje
   cfg.artnetTimeoutSec = doc["artnetTimeoutSec"] | (uint16_t)10;
   cfg.artnetPrimaryMode = doc["artnetPrimaryMode"] | false;
+  cfg.artnetOutEnabled = doc["artnetOutEnabled"] | false;
+  cfg.sacnEnabled = doc["sacnEnabled"] | false;
   return true;
 }
 
@@ -78,6 +80,8 @@ inline bool configSave(const NodeConfig &cfg) {
   doc["authPass"]         = cfg.authPass;
   doc["artnetTimeoutSec"] = cfg.artnetTimeoutSec;
   doc["artnetPrimaryMode"]= cfg.artnetPrimaryMode;
+  doc["artnetOutEnabled"] = cfg.artnetOutEnabled;
+  doc["sacnEnabled"]      = cfg.sacnEnabled;
 
   File f = LittleFS.open(PATH_CONFIG, "w");
   if (!f) return false;

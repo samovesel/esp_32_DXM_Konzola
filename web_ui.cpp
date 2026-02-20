@@ -16,6 +16,7 @@ static SoundEngine*    _snd = nullptr;
 static AudioInput*     _aud = nullptr;
 static AsyncWebSocket* _ws  = nullptr;
 static LfoEngine*      _lfo = nullptr;
+static ShapeGenerator* _shapeGen = nullptr;
 static unsigned long   _lastWsSend = 0;
 static bool            _dmxMonActive = false;
 
@@ -95,6 +96,39 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   }
   else if (strcmp(cmd, "lfo_clear") == 0 && _lfo) {
     for (int i = 0; i < MAX_LFOS; i++) _lfo->removeLfo(i);
+  }
+  else if (strcmp(cmd, "master_speed") == 0) {
+    _mix->setMasterSpeed(doc["v"] | 1.0f);
+  }
+  else if (strcmp(cmd, "shape_add") == 0 && _shapeGen) {
+    ShapeInstance s = {}; s.active = true;
+    s.type = doc["type"] | 0;
+    s.rate = doc["rate"] | 0.5f;
+    s.sizeX = doc["sx"] | 0.5f;
+    s.sizeY = doc["sy"] | 0.5f;
+    s.phase = doc["phase"] | 0.0f;
+    s.fixtureMask = doc["mask"] | 0UL;
+    _shapeGen->addShape(s);
+  }
+  else if (strcmp(cmd, "shape_rm") == 0 && _shapeGen) {
+    _shapeGen->removeShape(doc["i"] | 0);
+  }
+  else if (strcmp(cmd, "shape_upd") == 0 && _shapeGen) {
+    int idx = doc["i"] | -1;
+    const ShapeInstance* existing = _shapeGen->getShape(idx);
+    if (existing) {
+      ShapeInstance s = *existing;
+      if (!doc["type"].isNull()) s.type = doc["type"] | 0;
+      if (!doc["rate"].isNull()) s.rate = doc["rate"] | 0.5f;
+      if (!doc["sx"].isNull()) s.sizeX = doc["sx"] | 0.5f;
+      if (!doc["sy"].isNull()) s.sizeY = doc["sy"] | 0.5f;
+      if (!doc["phase"].isNull()) s.phase = doc["phase"] | 0.0f;
+      if (!doc["mask"].isNull()) s.fixtureMask = doc["mask"] | 0UL;
+      _shapeGen->updateShape(idx, s);
+    }
+  }
+  else if (strcmp(cmd, "shape_clear") == 0 && _shapeGen) {
+    for (int i = 0; i < MAX_SHAPES; i++) _shapeGen->removeShape(i);
   }
   else if (strcmp(cmd, "easy") == 0 && _snd) {
     STLEasyConfig& e = _snd->getEasyConfig();
@@ -210,6 +244,7 @@ static void apiGetConfig(AsyncWebServerRequest* req) {
   doc["staticGw"]=_cfg->staticGw; doc["staticSn"]=_cfg->staticSn; doc["audioSource"]=_cfg->audioSource;
   doc["authEnabled"]=_cfg->authEnabled; doc["authUser"]=_cfg->authUser;
   doc["artnetTimeoutSec"]=_cfg->artnetTimeoutSec; doc["artnetPrimaryMode"]=_cfg->artnetPrimaryMode;
+  doc["artnetOutEnabled"]=_cfg->artnetOutEnabled; doc["sacnEnabled"]=_cfg->sacnEnabled;
   doc["version"]=FW_VERSION " " __DATE__; doc["ip"]=WiFi.localIP().toString(); doc["mac"]=WiFi.macAddress();
   doc["mdns"]=String("http://") + _cfg->hostname + ".local";
   String json; serializeJson(doc,json); req->send(200,"application/json",json);
@@ -243,6 +278,8 @@ static void apiPostConfig(AsyncWebServerRequest* req, uint8_t* data, size_t len,
   if(doc["authPass"].is<const char*>()&&strlen(doc["authPass"])>0) strlcpy(_cfg->authPass,doc["authPass"],sizeof(_cfg->authPass));
   if(!doc["artnetTimeoutSec"].isNull()) _cfg->artnetTimeoutSec=doc["artnetTimeoutSec"]|_cfg->artnetTimeoutSec;
   if(!doc["artnetPrimaryMode"].isNull()) _cfg->artnetPrimaryMode=doc["artnetPrimaryMode"]|false;
+  if(!doc["artnetOutEnabled"].isNull()) _cfg->artnetOutEnabled=doc["artnetOutEnabled"]|false;
+  if(!doc["sacnEnabled"].isNull()) _cfg->sacnEnabled=doc["sacnEnabled"]|false;
 
   bool ok=configSave(*_cfg); req->send(200,"application/json",ok?"{\"ok\":true}":"{\"ok\":false}");
   if(ok){delay(500);ESP.restart();}
@@ -935,6 +972,7 @@ static void apiLayoutDelete(AsyncWebServerRequest* req) {
 // ============================================================================
 
 void webSetLfoEngine(LfoEngine* lfo) { _lfo = lfo; }
+void webSetShapeGenerator(ShapeGenerator* shapes) { _shapeGen = shapes; }
 
 void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
               NodeConfig* cfg, FixtureEngine* fixtures, MixerEngine* mixer,
@@ -1037,6 +1075,7 @@ void webLoop() {
   doc["pkts"]=_mix->getArtNetPackets(); doc["master"]=_mix->getMasterDimmer(); doc["bo"]=_mix->isBlackout();
   doc["heap"]=esp_get_free_heap_size();
   doc["iheap"]=heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+  doc["mspd"]=_mix->getMasterSpeed();
 
   // Group dimmers
   JsonArray gd=doc["gd"].to<JsonArray>();
@@ -1068,6 +1107,19 @@ void webLoop() {
       o["w"]=l->waveform;o["tgt"]=l->target;o["rate"]=serialized(String(l->rate,2));
       o["depth"]=serialized(String(l->depth,2));o["phase"]=serialized(String(l->phase,2));
       o["mask"]=l->fixtureMask;o["p"]=serialized(String(l->currentPhase,2));
+    }
+  }
+
+  // Shape status
+  if(_shapeGen && _shapeGen->isActive()){
+    JsonArray sa=doc["shapes"].to<JsonArray>();
+    for(int i=0;i<MAX_SHAPES;i++){
+      const ShapeInstance* s=_shapeGen->getShape(i);
+      if(!s||!s->active){sa.add(nullptr);continue;}
+      JsonObject o=sa.add<JsonObject>();
+      o["type"]=s->type;o["rate"]=serialized(String(s->rate,2));
+      o["sx"]=serialized(String(s->sizeX,2));o["sy"]=serialized(String(s->sizeY,2));
+      o["phase"]=serialized(String(s->phase,2));o["mask"]=s->fixtureMask;
     }
   }
 
