@@ -19,6 +19,7 @@
 #define MAX_STATE_SNAPSHOTS  3    // Zmanjšano iz 5 — prihranek ~1KB
 #define MAX_SCENES          20
 #define MAX_SCENE_NAME_LEN  24
+#define MAX_CUES            40
 #define MAX_CONFIGS          8    // Shranjene konfiguracije na LittleFS
 #define CROSSFADE_MIN_MS    0      // Takojšen
 #define CROSSFADE_MAX_MS    10000  // 10 sekund
@@ -215,6 +216,14 @@ struct CrossfadeState {
   uint32_t durationMs;                   // Trajanje crossfade-a
   uint32_t startTime;                    // millis() ob začetku
   int      targetSceneIdx;               // Katera scena je cilj (-1 = ročno)
+};
+
+// Cue List vnos
+struct CueEntry {
+  int8_t   sceneSlot;                   // Scene slot (0-19), -1 = invalid
+  uint16_t fadeMs;                      // Per-cue fade time (0-10000)
+  uint16_t autoFollowMs;               // 0 = manual, >0 = auto-advance delay po fade koncu
+  char     label[MAX_SCENE_NAME_LEN];  // Override label
 };
 
 // ============================================================================

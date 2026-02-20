@@ -1,5 +1,7 @@
 #include "scene_engine.h"
+#include "mixer_engine.h"
 #include <LittleFS.h>
+#include <ArduinoJson.h>
 
 void SceneEngine::begin() {
   // Alociraj scene v PSRAM (~10.7 KB)
@@ -9,6 +11,8 @@ void SceneEngine::begin() {
   }
   memset(_scenes, 0, sizeof(Scene) * MAX_SCENES);
   memset(&_cf, 0, sizeof(_cf));
+  memset(_cues, 0, sizeof(_cues));
+  _cueCount = 0; _cueCurrent = -1; _cueRunning = false;
 
   // Ustvari mapo za scene
   if (!LittleFS.exists(PATH_SCENES_DIR)) {
@@ -21,6 +25,7 @@ void SceneEngine::begin() {
     if (loadSlot(i)) loaded++;
   }
   Serial.printf("[SCN] Naloženih %d scen\n", loaded);
+  loadCueList();
 }
 
 // ============================================================================
@@ -189,4 +194,123 @@ bool SceneEngine::updateCrossfade(uint8_t* outDmx) {
   }
 
   return true;
+}
+
+// ============================================================================
+//  CUE LIST
+// ============================================================================
+
+bool SceneEngine::loadCueList() {
+  _cueCount = 0; _cueCurrent = -1; _cueRunning = false;
+  File f = LittleFS.open("/cuelist.json", "r");
+  if (!f) return false;
+  JsonDocument doc;
+  if (deserializeJson(doc, f)) { f.close(); return false; }
+  f.close();
+  JsonArray arr = doc["cues"].as<JsonArray>();
+  if (arr.isNull()) return false;
+  for (JsonObject o : arr) {
+    if (_cueCount >= MAX_CUES) break;
+    CueEntry& c = _cues[_cueCount];
+    c.sceneSlot = o["s"] | -1;
+    c.fadeMs = o["f"] | (uint16_t)CROSSFADE_DEFAULT_MS;
+    c.autoFollowMs = o["a"] | (uint16_t)0;
+    strlcpy(c.label, o["l"] | "", sizeof(c.label));
+    _cueCount++;
+  }
+  Serial.printf("[CUE] Loaded %d cues\n", _cueCount);
+  return true;
+}
+
+bool SceneEngine::saveCueList() {
+  JsonDocument doc;
+  JsonArray arr = doc["cues"].to<JsonArray>();
+  for (int i = 0; i < _cueCount; i++) {
+    JsonObject o = arr.add<JsonObject>();
+    o["s"] = _cues[i].sceneSlot;
+    o["f"] = _cues[i].fadeMs;
+    o["a"] = _cues[i].autoFollowMs;
+    o["l"] = _cues[i].label;
+  }
+  File f = LittleFS.open("/cuelist.json", "w");
+  if (!f) return false;
+  serializeJson(doc, f);
+  f.close();
+  return true;
+}
+
+bool SceneEngine::addCue(int8_t sceneSlot, uint16_t fadeMs, uint16_t autoFollowMs, const char* label) {
+  if (_cueCount >= MAX_CUES) return false;
+  CueEntry& c = _cues[_cueCount];
+  c.sceneSlot = sceneSlot;
+  c.fadeMs = fadeMs;
+  c.autoFollowMs = autoFollowMs;
+  strlcpy(c.label, label ? label : "", sizeof(c.label));
+  _cueCount++;
+  return true;
+}
+
+bool SceneEngine::removeCue(int index) {
+  if (index < 0 || index >= _cueCount) return false;
+  for (int i = index; i < _cueCount - 1; i++) _cues[i] = _cues[i + 1];
+  _cueCount--;
+  if (_cueCurrent >= _cueCount) _cueCurrent = _cueCount - 1;
+  return true;
+}
+
+bool SceneEngine::updateCue(int index, int8_t sceneSlot, uint16_t fadeMs, uint16_t autoFollowMs, const char* label) {
+  if (index < 0 || index >= _cueCount) return false;
+  _cues[index].sceneSlot = sceneSlot;
+  _cues[index].fadeMs = fadeMs;
+  _cues[index].autoFollowMs = autoFollowMs;
+  if (label) strlcpy(_cues[index].label, label, sizeof(_cues[index].label));
+  return true;
+}
+
+const CueEntry* SceneEngine::getCue(int idx) const {
+  if (idx < 0 || idx >= _cueCount) return nullptr;
+  return &_cues[idx];
+}
+
+void SceneEngine::cueGo(MixerEngine* mixer) {
+  if (_cueCount == 0) return;
+  int next = _cueCurrent + 1;
+  if (next >= _cueCount) next = 0;
+  cueGoTo(next, mixer);
+}
+
+void SceneEngine::cueBack(MixerEngine* mixer) {
+  if (_cueCount == 0) return;
+  int prev = _cueCurrent - 1;
+  if (prev < 0) prev = _cueCount - 1;
+  cueGoTo(prev, mixer);
+}
+
+void SceneEngine::cueGoTo(int idx, MixerEngine* mixer) {
+  if (idx < 0 || idx >= _cueCount || !mixer) return;
+  _cueCurrent = idx;
+  const CueEntry& c = _cues[idx];
+  if (c.sceneSlot >= 0 && c.sceneSlot < MAX_SCENES) {
+    mixer->recallScene(c.sceneSlot, c.fadeMs);
+  }
+  if (c.autoFollowMs > 0) {
+    _cueWaitAutoFollow = true;
+    _cueAutoFollowAt = millis() + c.fadeMs + c.autoFollowMs;
+    _cueRunning = true;
+  } else {
+    _cueWaitAutoFollow = false;
+  }
+}
+
+void SceneEngine::cueStop() {
+  _cueRunning = false;
+  _cueWaitAutoFollow = false;
+}
+
+void SceneEngine::cueUpdateAutoFollow(MixerEngine* mixer) {
+  if (!_cueRunning || !_cueWaitAutoFollow) return;
+  if (millis() >= _cueAutoFollowAt) {
+    _cueWaitAutoFollow = false;
+    cueGo(mixer);
+  }
 }

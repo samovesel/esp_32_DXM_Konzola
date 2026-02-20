@@ -15,7 +15,9 @@ static SceneEngine*    _scn = nullptr;
 static SoundEngine*    _snd = nullptr;
 static AudioInput*     _aud = nullptr;
 static AsyncWebSocket* _ws  = nullptr;
+static LfoEngine*      _lfo = nullptr;
 static unsigned long   _lastWsSend = 0;
+static bool            _dmxMonActive = false;
 
 // HTML_PAGE_GZ in HTML_PAGE_GZ_LEN sta definirani v web_ui_gz.h
 
@@ -60,6 +62,40 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   else if (strcmp(cmd, "recall_artnet") == 0) _mix->recallArtNetShadow();
   else if (strcmp(cmd, "scene_recall") == 0) _mix->recallScene(doc["slot"]|-1, doc["fade"]|CROSSFADE_DEFAULT_MS);
   else if (strcmp(cmd, "undo") == 0) _mix->undo();
+  else if (strcmp(cmd, "locate") == 0) _mix->locateFixture(doc["f"]|0, (doc["on"]|0)!=0);
+  else if (strcmp(cmd, "dmxmon") == 0) _dmxMonActive = (doc["on"]|0) != 0;
+  else if (strcmp(cmd, "cue_go") == 0 && _scn) _scn->cueGo(_mix);
+  else if (strcmp(cmd, "cue_back") == 0 && _scn) _scn->cueBack(_mix);
+  else if (strcmp(cmd, "cue_goto") == 0 && _scn) _scn->cueGoTo(doc["i"]|0, _mix);
+  else if (strcmp(cmd, "cue_stop") == 0 && _scn) _scn->cueStop();
+  else if (strcmp(cmd, "cue_add") == 0 && _scn) { _scn->addCue(doc["s"]|-1, doc["f"]|1500, doc["a"]|0, doc["l"]|""); _scn->saveCueList(); }
+  else if (strcmp(cmd, "cue_rm") == 0 && _scn) { _scn->removeCue(doc["i"]|0); _scn->saveCueList(); }
+  else if (strcmp(cmd, "cue_upd") == 0 && _scn) { _scn->updateCue(doc["i"]|0, doc["s"]|-1, doc["f"]|1500, doc["a"]|0, doc["l"]|""); _scn->saveCueList(); }
+  else if (strcmp(cmd, "lfo_add") == 0 && _lfo) {
+    LfoInstance l = {}; l.active = true;
+    l.waveform = doc["w"] | 0; l.target = doc["tgt"] | 0;
+    l.rate = doc["rate"] | 1.0f; l.depth = doc["depth"] | 0.5f;
+    l.phase = doc["phase"] | 0.0f; l.fixtureMask = doc["mask"] | 0UL;
+    _lfo->addLfo(l);
+  }
+  else if (strcmp(cmd, "lfo_rm") == 0 && _lfo) { _lfo->removeLfo(doc["i"]|0); }
+  else if (strcmp(cmd, "lfo_upd") == 0 && _lfo) {
+    int idx = doc["i"] | -1;
+    const LfoInstance* existing = _lfo->getLfo(idx);
+    if (existing) {
+      LfoInstance l = *existing;
+      if (!doc["w"].isNull()) l.waveform = doc["w"] | 0;
+      if (!doc["tgt"].isNull()) l.target = doc["tgt"] | 0;
+      if (!doc["rate"].isNull()) l.rate = doc["rate"] | 1.0f;
+      if (!doc["depth"].isNull()) l.depth = doc["depth"] | 0.5f;
+      if (!doc["phase"].isNull()) l.phase = doc["phase"] | 0.0f;
+      if (!doc["mask"].isNull()) l.fixtureMask = doc["mask"] | 0UL;
+      _lfo->updateLfo(idx, l);
+    }
+  }
+  else if (strcmp(cmd, "lfo_clear") == 0 && _lfo) {
+    for (int i = 0; i < MAX_LFOS; i++) _lfo->removeLfo(i);
+  }
   else if (strcmp(cmd, "easy") == 0 && _snd) {
     STLEasyConfig& e = _snd->getEasyConfig();
     e.enabled       = (doc["en"]|0) != 0;
@@ -898,6 +934,8 @@ static void apiLayoutDelete(AsyncWebServerRequest* req) {
 
 // ============================================================================
 
+void webSetLfoEngine(LfoEngine* lfo) { _lfo = lfo; }
+
 void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
               NodeConfig* cfg, FixtureEngine* fixtures, MixerEngine* mixer,
               SceneEngine* scenes, SoundEngine* sound, AudioInput* audio) {
@@ -925,6 +963,18 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   server->on("/api/sound/rules",HTTP_POST,[](AsyncWebServerRequest* req){},NULL,apiPostSoundRules);
   server->on("/api/factory-reset",HTTP_POST,apiFactoryReset);
   server->on("/api/wifiscan",HTTP_GET,[](AsyncWebServerRequest* req){if(!checkAuth(req))return;apiWifiScan(req);});
+
+  // Cue list API
+  server->on("/api/cuelist",HTTP_GET,[](AsyncWebServerRequest* req){
+    if(!_scn){req->send(500);return;}
+    JsonDocument doc;JsonArray arr=doc["cues"].to<JsonArray>();
+    for(int i=0;i<_scn->getCueCount();i++){
+      const CueEntry* c=_scn->getCue(i);if(!c)continue;
+      JsonObject o=arr.add<JsonObject>();
+      o["s"]=c->sceneSlot;o["f"]=c->fadeMs;o["a"]=c->autoFollowMs;o["l"]=c->label;
+    }
+    String json;serializeJson(doc,json);req->send(200,"application/json",json);
+  });
 
   // Layout (2D oder)
   server->on("/api/layouts",HTTP_GET,apiGetLayouts);
@@ -996,6 +1046,30 @@ void webLoop() {
   JsonObject cf=doc["cf"].to<JsonObject>();
   cf["active"]=_mix->isSceneCrossfading(); cf["progress"]=_mix->getSceneCrossfadeProgress();
   cf["target"]=_mix->getSceneCrossfadeTarget();
+
+  // Locate
+  uint32_t locMask=_mix->getLocateMask();
+  if(locMask) doc["loc"]=locMask;
+
+  // Cue list status
+  if(_scn){
+    _scn->cueUpdateAutoFollow(_mix);
+    JsonObject cl=doc["cl"].to<JsonObject>();
+    cl["cur"]=_scn->getCurrentCue();cl["cnt"]=_scn->getCueCount();cl["run"]=_scn->isCueRunning();
+  }
+
+  // LFO status
+  if(_lfo && _lfo->isActive()){
+    JsonArray la=doc["lfos"].to<JsonArray>();
+    for(int i=0;i<MAX_LFOS;i++){
+      const LfoInstance* l=_lfo->getLfo(i);
+      if(!l||!l->active){la.add(nullptr);continue;}
+      JsonObject o=la.add<JsonObject>();
+      o["w"]=l->waveform;o["tgt"]=l->target;o["rate"]=serialized(String(l->rate,2));
+      o["depth"]=serialized(String(l->depth,2));o["phase"]=serialized(String(l->phase,2));
+      o["mask"]=l->fixtureMask;o["p"]=serialized(String(l->currentPhase,2));
+    }
+  }
 
   // FFT
   if(_snd&&_aud&&_aud->isRunning()){
@@ -1098,4 +1172,10 @@ void webLoop() {
   }
 
   String json; serializeJson(doc,json); _ws->textAll(json); _ws->cleanupClients();
+
+  // DMX Monitor — send raw 512 bytes as base64 (only when active)
+  if (_dmxMonActive && _ws->count() > 0) {
+    String b64 = dmxToBase64(_mix->getDmxOutput());
+    _ws->textAll("{\"t\":\"dmx\",\"d\":\"" + b64 + "\"}");
+  }
 }
