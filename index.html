@@ -76,6 +76,16 @@ td{padding:4px 6px;border-bottom:1px solid #222}
 .stl-meter{height:8px;background:#222;border-radius:4px;overflow:hidden;margin:3px 0}
 .stl-meter-fill{height:100%;border-radius:4px;transition:width 0.08s}
 .bass-fill{background:#f33}.mid-fill{background:#fc0}.high-fill{background:#0af}
+/* AGC EQ sliders */
+.eq-row{display:flex;align-items:flex-end;gap:4px;justify-content:center;padding:8px 0}
+.eq-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;max-width:48px}
+.eq-col input[type=range]{writing-mode:vertical-lr;direction:rtl;height:80px;width:28px;accent-color:#0af;margin:0}
+.eq-col .eq-val{font-size:0.65em;color:#0af;white-space:nowrap}
+.eq-col .eq-lbl{font-size:0.6em;color:#888;white-space:nowrap}
+.env-presets{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.env-presets button{padding:4px 10px;font-size:0.8em;background:#222;border:1px solid #444;border-radius:4px}
+.env-presets button.ep-sel{background:#27ae60;color:#fff;border-color:#27ae60}
+.env-hint{font-size:0.7em;color:#666;margin:4px 0;line-height:1.3}
 #msg{position:fixed;top:60px;left:50%;transform:translateX(-50%);padding:8px 16px;border-radius:4px;display:none;z-index:20;font-weight:bold}
 #msg.ok{display:block;background:#27ae60;color:#fff}#msg.err{display:block;background:#e74c3c;color:#fff}
 /* Konzola — vertikalni faderji */
@@ -392,6 +402,35 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <div class="toggle"><input type="checkbox" id="eHigh" checked onchange="sendEasy()"><label>High → Strobe</label></div>
     <div class="toggle"><input type="checkbox" id="eBeat" checked onchange="sendEasy()"><label>Beat → Bump</label></div>
     <div class="toggle"><input type="checkbox" id="eBeatSync" onchange="sendEasy()"><label>Beat Sync (efekti sinhroni z BPM)</label></div>
+    <button onclick="saveSoundCfg()" style="margin-top:8px;background:#555">Shrani nastavitve</button>
+  </div>
+
+  <div class="card">
+    <h3>Audio EQ &amp; AGC</h3>
+    <p style="font-size:0.7em;color:#888;margin:0 0 6px">Avtomatsko prilagajanje ojačanja (AGC) in per-band grafični izenačevalnik</p>
+    <p style="font-size:0.7em;color:#888;margin:0 0 4px">Okolje:</p>
+    <div class="env-presets" id="envPresets">
+      <button onclick="setEnvPreset('quiet')">Tiha soba</button>
+      <button onclick="setEnvPreset('club')" class="ep-sel">Club / bar</button>
+      <button onclick="setEnvPreset('concert')">Koncert</button>
+      <button onclick="setEnvPreset('custom')">Po meri</button>
+    </div>
+    <div class="env-hint" id="envHint">Club / bar (~80 dB): srednje ojačanje, zmeren noise gate. Primerno za manjše prostore z glasbo iz zvočnikov.</div>
+    <p style="font-size:0.7em;color:#aaa;margin:8px 0 2px">Frekvenčni pasovi (gain):</p>
+    <div class="eq-row" id="eqRow">
+      <div class="eq-col"><span class="eq-val" id="eqV0">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq0" oninput="onEqChange(0)"><span class="eq-lbl">Sub</span></div>
+      <div class="eq-col"><span class="eq-val" id="eqV1">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq1" oninput="onEqChange(1)"><span class="eq-lbl">Bass</span></div>
+      <div class="eq-col"><span class="eq-val" id="eqV2">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq2" oninput="onEqChange(2)"><span class="eq-lbl">Low</span></div>
+      <div class="eq-col"><span class="eq-val" id="eqV3">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq3" oninput="onEqChange(3)"><span class="eq-lbl">Mid</span></div>
+      <div class="eq-col"><span class="eq-val" id="eqV4">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq4" oninput="onEqChange(4)"><span class="eq-lbl">Hi-M</span></div>
+      <div class="eq-col"><span class="eq-val" id="eqV5">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq5" oninput="onEqChange(5)"><span class="eq-lbl">Pres</span></div>
+      <div class="eq-col"><span class="eq-val" id="eqV6">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq6" oninput="onEqChange(6)"><span class="eq-lbl">Bril</span></div>
+      <div class="eq-col"><span class="eq-val" id="eqV7">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq7" oninput="onEqChange(7)"><span class="eq-lbl">Air</span></div>
+    </div>
+    <div class="fade-row"><label>AGC hitrost:</label><input type="range" min="0" max="100" step="5" value="50" id="agcSpd" oninput="onAgcChange()"><span class="val" id="agcSpdV">0.5</span></div>
+    <p class="env-hint">Počasi = stabilno za koncerte (AGC se prilagaja v ~10s). Hitro = odzivno za testiranje (~0.7s).</p>
+    <div class="fade-row"><label>Noise gate:</label><input type="range" min="0" max="100" step="5" value="30" id="agcNg" oninput="onAgcChange()"><span class="val" id="agcNgV">0.3</span></div>
+    <p class="env-hint">0 = izključen (vedno reagira). Višje = agresivnejše filtriranje šuma v tišini.</p>
     <button onclick="saveSoundCfg()" style="margin-top:8px;background:#555">Shrani nastavitve</button>
   </div>
 
@@ -775,7 +814,7 @@ function sfill(el){if(!el)return;var pct=((+el.value-+el.min)/(+el.max-+el.min))
 function sfillAll(container){if(!container)return;container.querySelectorAll('input[type=range]').forEach(sfill);}
 function isPhoneDevice(){var touch=window.matchMedia('(hover: none) and (pointer: coarse)').matches;var smallScreen=Math.min(screen.width,screen.height)<=500;return touch&&smallScreen}
 
-function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onopen=function(){document.getElementById('offlineBanner').style.display='none'};ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>{document.getElementById('offlineBanner').style.display='block';setTimeout(wsConnect,2000)}}
+function wsConnect(){ws=new WebSocket('ws://'+location.host+'/ws');ws.onopen=function(){document.getElementById('offlineBanner').style.display='none';agcSynced=false};ws.onmessage=e=>{try{handleWs(JSON.parse(e.data))}catch(x){}};ws.onclose=()=>{document.getElementById('offlineBanner').style.display='block';setTimeout(wsConnect,2000)}}
 function wsSend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
 
 // FFT bars init
@@ -892,6 +931,7 @@ function handleWs(d){
       document.getElementById('sBeatPh').textContent=d.fft.bp!==undefined?d.fft.bp.toFixed(2):'0';
       document.getElementById('sPeak').textContent=Math.round(d.fft.peak*100)+'%';
       document.getElementById('sSr').textContent=d.fft.sr>0?(d.fft.sr/1000).toFixed(1)+'kHz':'--';
+      syncAgcFromStatus(d.fft);
     }
     // Fixture sound preview
     if(d.fxl){lastFxl=d.fxl;updateFxPreview(d.fxl);}
@@ -2356,6 +2396,96 @@ function updateFxPreview(fxl){
   });
 }
 function saveSoundCfg(){wsSend({cmd:'save_sound'});showMsg('Sound nastavitve shranjene',true)}
+
+// ============ AGC / EQ ============
+var agcSynced=false,curEnvPreset='club';
+var envPresets={
+  quiet:{bg:[2.0,2.0,1.8,1.5,1.5,1.2,1.0,1.0],spd:0.8,ng:0.1,
+    hint:'Tiha soba (~50 dB): visoko ojačanje, hiter AGC, nizek noise gate. Za testiranje doma ali v studiu.'},
+  club:{bg:[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],spd:0.5,ng:0.3,
+    hint:'Club / bar (~80 dB): srednje ojačanje, zmeren noise gate. Primerno za manjše prostore z glasbo iz zvočnikov.'},
+  concert:{bg:[0.6,0.7,0.8,1.0,1.0,0.9,0.7,0.5],spd:0.2,ng:0.6,
+    hint:'Koncert / festival (~100 dB): nižje ojačanje, počasen AGC, visok noise gate. Za velike odre z močnim PA.'},
+  custom:{bg:null,spd:null,ng:null,
+    hint:'Po meri: ročno nastavi vse parametre. Prilagodi za tvoj specifični prostor in opremo.'}
+};
+function setEnvPreset(key){
+  curEnvPreset=key;
+  document.querySelectorAll('#envPresets button').forEach(function(b){b.className=b.textContent.toLowerCase().indexOf(key)>=0||(key==='quiet'&&b.textContent.indexOf('Tiha')>=0)||(key==='concert'&&b.textContent.indexOf('Koncert')>=0)||(key==='custom'&&b.textContent.indexOf('meri')>=0)?'ep-sel':''});
+  // Fix: match buttons properly
+  var btns=document.querySelectorAll('#envPresets button');
+  var keys=['quiet','club','concert','custom'];
+  keys.forEach(function(k,i){if(btns[i])btns[i].className=k===key?'ep-sel':''});
+  document.getElementById('envHint').textContent=envPresets[key].hint;
+  if(key==='custom')return; // Don't change sliders
+  var p=envPresets[key];
+  for(var i=0;i<8;i++){
+    document.getElementById('eq'+i).value=Math.round(p.bg[i]*100);
+    document.getElementById('eqV'+i).textContent=p.bg[i].toFixed(1);
+  }
+  document.getElementById('agcSpd').value=Math.round(p.spd*100);
+  document.getElementById('agcSpdV').textContent=p.spd.toFixed(1);
+  document.getElementById('agcNg').value=Math.round(p.ng*100);
+  document.getElementById('agcNgV').textContent=p.ng.toFixed(1);
+  sendAgc();
+}
+function onEqChange(b){
+  var v=+document.getElementById('eq'+b).value;
+  document.getElementById('eqV'+b).textContent=(v/100).toFixed(1);
+  selectCustomEnv();
+  sendAgc();
+}
+function onAgcChange(){
+  document.getElementById('agcSpdV').textContent=(+document.getElementById('agcSpd').value/100).toFixed(1);
+  document.getElementById('agcNgV').textContent=(+document.getElementById('agcNg').value/100).toFixed(1);
+  selectCustomEnv();
+  sendAgc();
+}
+function selectCustomEnv(){
+  curEnvPreset='custom';
+  var btns=document.querySelectorAll('#envPresets button');
+  btns.forEach(function(b,i){b.className=i===3?'ep-sel':''});
+  document.getElementById('envHint').textContent=envPresets.custom.hint;
+}
+function sendAgc(){
+  var bg=[];
+  for(var i=0;i<8;i++) bg.push(+document.getElementById('eq'+i).value/100);
+  wsSend({cmd:'agc',spd:+document.getElementById('agcSpd').value/100,
+    ng:+document.getElementById('agcNg').value/100,bg:bg});
+}
+function syncAgcFromStatus(fft){
+  if(!fft.abg||agcSynced)return;
+  agcSynced=true;
+  for(var i=0;i<8&&i<fft.abg.length;i++){
+    document.getElementById('eq'+i).value=Math.round(fft.abg[i]*100);
+    document.getElementById('eqV'+i).textContent=fft.abg[i].toFixed(1);
+  }
+  if(fft.aspd!==undefined){
+    document.getElementById('agcSpd').value=Math.round(fft.aspd*100);
+    document.getElementById('agcSpdV').textContent=fft.aspd.toFixed(1);
+  }
+  if(fft.ang!==undefined){
+    document.getElementById('agcNg').value=Math.round(fft.ang*100);
+    document.getElementById('agcNgV').textContent=fft.ang.toFixed(1);
+  }
+  // Detect matching preset
+  var keys=['quiet','club','concert'];
+  for(var k=0;k<keys.length;k++){
+    var p=envPresets[keys[k]],match=true;
+    for(var i=0;i<8;i++){if(Math.abs(p.bg[i]-fft.abg[i])>0.05){match=false;break;}}
+    if(match&&Math.abs(p.spd-fft.aspd)<0.05&&Math.abs(p.ng-fft.ang)<0.05){
+      curEnvPreset=keys[k];
+      var btns=document.querySelectorAll('#envPresets button');
+      btns.forEach(function(b,i){b.className=i===k?'ep-sel':''});
+      document.getElementById('envHint').textContent=p.hint;
+      return;
+    }
+  }
+  curEnvPreset='custom';
+  var btns=document.querySelectorAll('#envPresets button');
+  btns.forEach(function(b,i){b.className=i===3?'ep-sel':''});
+  document.getElementById('envHint').textContent=envPresets.custom.hint;
+}
 
 // ============ MANUAL BEAT ============
 var mbProg=0,mbSub=2,mbSrc=1,mbPal=0,mbGrpOverrides=[];

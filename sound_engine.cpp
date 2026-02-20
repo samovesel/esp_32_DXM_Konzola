@@ -31,6 +31,9 @@ void SoundEngine::begin(AudioInput* audio, FixtureEngine* fixtures) {
   memset(_tapTimes, 0, sizeof(_tapTimes));
   memset(_mbRandomHues, 0, sizeof(_mbRandomHues));
   memset(_mbEnvelope, 0, sizeof(_mbEnvelope));
+  _agc = STL_AGC_DEFAULTS;
+  memset(_bandPeaks, 0, sizeof(_bandPeaks));
+  memset(_proPeaks, 0, sizeof(_proPeaks));
   memset(&_chain, 0, sizeof(_chain));
   memset(_grpState, 0, sizeof(_grpState));
   for(int g=0;g<MAX_GROUPS;g++) _grpState[g].scanDir = 1;
@@ -45,6 +48,11 @@ void SoundEngine::begin(AudioInput* audio, FixtureEngine* fixtures) {
   _lastUpdateTime = millis();
   loadConfig();
   Serial.println("[SND] Sound engine inicializiran");
+}
+
+void SoundEngine::resetAgcPeaks() {
+  memset(_bandPeaks, 0, sizeof(_bandPeaks));
+  memset(_proPeaks, 0, sizeof(_proPeaks));
 }
 
 void SoundEngine::update() {
@@ -101,6 +109,17 @@ void SoundEngine::processFFT() {
 void SoundEngine::extractBands(float dt) {
   float freqPerBin = (float)FFT_SAMPLE_RATE / FFT_SAMPLES;
 
+  // AGC decay rate iz nastavljivega parametra (0.0=počasi, 1.0=hitro)
+  float decayRate = 1.0f - (0.001f + _agc.agcSpeed * 0.019f);
+
+  // Noise gate — preveri ali je signal nad pragom šuma
+  float peak = (_audio && _audio->isRunning()) ? _audio->getPeakLevel() : 0;
+  float gateThresh   = _agc.noiseGate * 0.05f;
+  float gateRelease  = _agc.noiseGate * 0.15f;
+  bool gateOpen = (gateThresh <= 0) ||
+                  (peak > gateRelease) ||
+                  (_bands.bass > 0.01f && peak > gateThresh);
+
   for (int b = 0; b < STL_BAND_COUNT; b++) {
     int binLow  = (int)(BAND_EDGES[b] / freqPerBin);
     int binHigh = (int)(BAND_EDGES[b + 1] / freqPerBin);
@@ -112,7 +131,17 @@ void SoundEngine::extractBands(float dt) {
     for (int i = binLow; i <= binHigh; i++) { sum += _vReal[i]; count++; }
     float avg = count > 0 ? sum / count : 0;
 
-    float normalized = fminf(avg * _easy.sensitivity / 200.0f, 1.0f);
+    // AGC: posodobi tekoči maksimum za ta pas
+    if (avg > _bandPeaks[b]) _bandPeaks[b] = avg;      // Hiter attack
+    else _bandPeaks[b] *= decayRate;                     // Nastavljiv decay
+
+    // Normaliziraj glede na tekoči maksimum z per-band gain
+    float ref = fmaxf(_bandPeaks[b], AGC_MIN_FLOOR);
+    float normalized = fminf(avg / ref * _easy.sensitivity * _agc.bandGains[b], 1.0f);
+
+    // Noise gate: utišaj ko ni signala
+    if (!gateOpen) normalized = 0;
+
     _bands.bands[b] = smoothValue(_bands.bands[b], normalized, 30, 120, dt);
   }
 
@@ -359,6 +388,12 @@ void SoundEngine::applyEasyMode(const uint8_t* manualValues, uint8_t* dmxOut, fl
 
 void SoundEngine::applyProMode(const uint8_t* manualValues, uint8_t* dmxOut, float dt) {
   float freqPerBin = (float)FFT_SAMPLE_RATE / FFT_SAMPLES;
+  float decayRate = 1.0f - (0.001f + _agc.agcSpeed * 0.019f);
+
+  // Noise gate za pro mode
+  float peak = (_audio && _audio->isRunning()) ? _audio->getPeakLevel() : 0;
+  float gateThresh = _agc.noiseGate * 0.05f;
+  bool gateOpen = (gateThresh <= 0) || (peak > gateThresh);
 
   for (int r = 0; r < STL_MAX_RULES; r++) {
     if (!_rules[r].active) continue;
@@ -376,7 +411,14 @@ void SoundEngine::applyProMode(const uint8_t* manualValues, uint8_t* dmxOut, flo
     int count = 0;
     for (int i = binLow; i <= binHigh; i++) { sum += _vReal[i]; count++; }
     float energy = count > 0 ? sum / count : 0;
-    float normalized = fminf(energy * _easy.sensitivity / 300.0f, 1.0f);
+
+    // AGC: posodobi tekoči maksimum za to pravilo
+    if (energy > _proPeaks[r]) _proPeaks[r] = energy;
+    else _proPeaks[r] *= decayRate;
+    float proRef = fmaxf(_proPeaks[r], AGC_MIN_FLOOR);
+    float normalized = fminf(energy / proRef * _easy.sensitivity, 1.0f);
+    if (!gateOpen) normalized = 0;
+
     normalized = applyResponseCurve(normalized, (ResponseCurve)rule.curve);
 
     // FIX: uporabi dejanski dt namesto hardkodiranega
@@ -873,20 +915,21 @@ int SoundEngine::getRuleCount() const {
 #define SND_MAGIC    0xAE
 #define SND_MAGIC_V2 0xAF  // V2: vključuje ManualBeatConfig (stara velikost)
 #define SND_MAGIC_V3 0xB0  // V3: razširjen ManualBeatConfig + ProgramChain
+#define SND_MAGIC_V4 0xB1  // V4: + STLAgcConfig (per-band gain, AGC hitrost, noise gate)
 #define SND_V2_MBCFG_SIZE 20  // Velikost starega ManualBeatConfig (brez novih polj)
 
 void SoundEngine::saveConfig() {
   File f = LittleFS.open(PATH_SOUND_CFG, "w");
   if (!f) { Serial.println("[SND] Napaka pri pisanju"); return; }
-  uint8_t magic = SND_MAGIC_V3;
+  uint8_t magic = SND_MAGIC_V4;
   f.write(&magic, 1);
   f.write((uint8_t*)&_easy, sizeof(STLEasyConfig));
   f.write((uint8_t*)_rules, sizeof(_rules));
   f.write((uint8_t*)&_mbCfg, sizeof(ManualBeatConfig));
   f.write((uint8_t*)&_chain, sizeof(ProgramChain));
+  f.write((uint8_t*)&_agc, sizeof(STLAgcConfig));
   f.close();
-  Serial.printf("[SND] Konfiguracija shranjena (V3, mbCfg=%d, chain=%d)\n",
-                sizeof(ManualBeatConfig), sizeof(ProgramChain));
+  Serial.printf("[SND] Konfiguracija shranjena (V4, agc=%d)\n", sizeof(STLAgcConfig));
 }
 
 void SoundEngine::loadConfig() {
@@ -894,18 +937,26 @@ void SoundEngine::loadConfig() {
   if (!f) return;
   uint8_t magic = 0;
   f.read(&magic, 1);
-  if (magic != SND_MAGIC && magic != SND_MAGIC_V2 && magic != SND_MAGIC_V3) { f.close(); return; }
+  if (magic != SND_MAGIC && magic != SND_MAGIC_V2 && magic != SND_MAGIC_V3 && magic != SND_MAGIC_V4) { f.close(); return; }
   if (f.read((uint8_t*)&_easy, sizeof(STLEasyConfig)) != sizeof(STLEasyConfig)) {
     _easy = STL_EASY_DEFAULTS;
   }
   f.read((uint8_t*)_rules, sizeof(_rules));
-  if (magic == SND_MAGIC_V3) {
-    // V3: polna nova struktura
+  if (magic == SND_MAGIC_V4 || magic == SND_MAGIC_V3) {
+    // V3/V4: polna nova struktura
     if (f.read((uint8_t*)&_mbCfg, sizeof(ManualBeatConfig)) != sizeof(ManualBeatConfig)) {
       _mbCfg = MANUAL_BEAT_DEFAULTS;
     }
     if (f.read((uint8_t*)&_chain, sizeof(ProgramChain)) != sizeof(ProgramChain)) {
       memset(&_chain, 0, sizeof(_chain));
+    }
+    // V4: AGC config
+    if (magic == SND_MAGIC_V4) {
+      if (f.read((uint8_t*)&_agc, sizeof(STLAgcConfig)) != sizeof(STLAgcConfig)) {
+        _agc = STL_AGC_DEFAULTS;
+      }
+    } else {
+      _agc = STL_AGC_DEFAULTS;
     }
   } else if (magic == SND_MAGIC_V2) {
     // V2: stari ManualBeatConfig — preberi staro velikost, zapolni nove z defaulti
@@ -915,9 +966,11 @@ void SoundEngine::loadConfig() {
       memcpy(&_mbCfg, oldBuf, SND_V2_MBCFG_SIZE);
     }
     memset(&_chain, 0, sizeof(_chain));
+    _agc = STL_AGC_DEFAULTS;
   } else {
     _mbCfg = MANUAL_BEAT_DEFAULTS;
     memset(&_chain, 0, sizeof(_chain));
+    _agc = STL_AGC_DEFAULTS;
   }
   f.close();
   Serial.println("[SND] Konfiguracija naložena");

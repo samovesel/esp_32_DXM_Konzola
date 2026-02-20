@@ -19,6 +19,11 @@ public:
   // --- Easy mode ---
   STLEasyConfig& getEasyConfig() { return _easy; }
   void setEasyConfig(const STLEasyConfig& cfg) { _easy = cfg; }
+
+  // --- AGC ---
+  STLAgcConfig& getAgcConfig() { return _agc; }
+  void setAgcConfig(const STLAgcConfig& cfg) { _agc = cfg; }
+  void resetAgcPeaks();
   void applyPreset(uint8_t preset);
 
   // --- Manual beat mode ---
@@ -97,6 +102,11 @@ private:
 
   // Pro mode smooth
   float _ruleValues[STL_MAX_RULES];
+
+  // AGC — adaptivna normalizacija FFT magnitud
+  STLAgcConfig _agc;
+  float _bandPeaks[STL_BAND_COUNT];   // Tekoči maks za vsak frekvenčni pas
+  float _proPeaks[STL_MAX_RULES];     // Tekoči maks za vsako pro mode pravilo
 
   // Timing
   unsigned long _lastUpdateTime = 0;
