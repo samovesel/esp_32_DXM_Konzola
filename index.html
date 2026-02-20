@@ -316,11 +316,6 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <div id="viewCompact">
     <div class="card"><h3>Izberi fixture / skupino</h3><p style="font-size:0.7em;color:#0af;margin:0 0 6px">Več izbranih = skupna kontrola vseh</p><div class="fxsel" id="groupBtns"></div><div class="fxsel" id="fixBtns"></div></div>
     <div class="card" id="faderBox" style="display:none"><h3 id="faderTitle">Kanali</h3><div class="ch-grid" id="faders"></div>
-      <div id="xyPadBox" style="display:none;margin-top:10px;text-align:center">
-        <div style="font-size:0.8em;color:#888;margin-bottom:4px">XY Pad (Pan / Tilt)</div>
-        <canvas id="xyPadCanvas" width="200" height="200" style="border:1px solid #444;border-radius:6px;background:#0a0a1e;touch-action:none;cursor:crosshair;max-width:100%"></canvas>
-        <div style="font-size:0.7em;color:#666;margin-top:2px">Pan: <span id="xyPanVal">---</span> &nbsp; Tilt: <span id="xyTiltVal">---</span></div>
-      </div>
     </div>
   </div>
   <!-- Konzola pogled — multi-select = prikaz vseh -->
@@ -880,7 +875,7 @@ function handleWs(d){
       var lub=document.getElementById('layUndoBtn');if(lub)lub.style.display=d.undo?'inline-block':'none';
     }
     // Sinhronizacija fixture vrednosti iz ESP32
-    if(d.fxv){syncFxValues(d.fxv);if(xyActive)drawXyPad()}
+    if(d.fxv){syncFxValues(d.fxv);if(xyPopOpen)xyPopDraw()}
     // Fixture output vrednosti (dejanski DMX izhod z beatom, master/group dimmerji)
     if(d.fxo)lastFxo=d.fxo;
     // FFT data
@@ -956,13 +951,13 @@ function renderFixBtns(){
   // Konzola: fixture gumbi (oranžna selekcija)
   let h2='';fixtures.forEach((f,i)=>{h2+='<button onclick="selConsFn('+i+')" class="'+(selCons.has(i)?'sel-cons':'')+'" style="border-bottom:3px solid '+fxLbl(i)+'">'+f.name+'</button>'});document.getElementById('fixBtns2').innerHTML=h2;
 }
-function selCompFn(i){selGroup=-1;if(selComp.has(i))selComp.delete(i);else selComp.add(i);renderFixBtns();renderFaders();initXyPad()}
+function selCompFn(i){selGroup=-1;if(selComp.has(i))selComp.delete(i);else selComp.add(i);renderFixBtns();renderFaders()}
 function selConsFn(i){
   if(selCons.has(i)){selCons.delete(i);consOrder=consOrder.filter(x=>x!==i)}
   else{selCons.add(i);consOrder.push(i)}
   renderFixBtns();renderConsOrder();renderConsole();
 }
-function selGroupFn(g){selGroup=selGroup===g?-1:g;selComp.clear();if(selGroup>=0)fixtures.forEach((f,i)=>{if(f.groupMask&(1<<selGroup))selComp.add(i)});renderFixBtns();renderFaders();initXyPad()}
+function selGroupFn(g){selGroup=selGroup===g?-1:g;selComp.clear();if(selGroup>=0)fixtures.forEach((f,i)=>{if(f.groupMask&(1<<selGroup))selComp.add(i)});renderFixBtns();renderFaders()}
 
 // ---- Konzola vrstni red (drag & drop) ----
 var dragIdx=-1,dragOverIdx=-1;
@@ -1133,94 +1128,8 @@ function sendFader16(coarseCh,fineCh,val16,chType){
     });
   }
   // Sync XY pads when Pan/Tilt changes
-  if(chType===8||chType===10){if(xyActive)drawXyPad();if(typeof xyPopOpen!=='undefined'&&xyPopOpen)xyPopDraw()}
+  if(chType===8||chType===10){if(xyPopOpen)xyPopDraw()}
 }
-
-// ============ XY PAD ============
-var xyPanCoarse=-1,xyPanFine=-1,xyTiltCoarse=-1,xyTiltFine=-1,xyActive=false;
-function initXyPad(){
-  var firstIdx=[...selComp][0];
-  var f=fixtures[firstIdx];
-  if(!f||!f.channels){hideXyPad();return}
-  xyPanCoarse=findChByType(f,8);xyTiltCoarse=findChByType(f,10);
-  if(xyPanCoarse<0||xyTiltCoarse<0){hideXyPad();return}
-  xyPanFine=findChByType(f,9);xyTiltFine=findChByType(f,11);
-  document.getElementById('xyPadBox').style.display='block';
-  xyActive=true;drawXyPad();
-}
-function hideXyPad(){document.getElementById('xyPadBox').style.display='none';xyActive=false}
-function drawXyPad(){
-  if(!xyActive)return;
-  var cv=document.getElementById('xyPadCanvas');if(!cv)return;
-  var ctx=cv.getContext('2d');var w=cv.width,h=cv.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle='#0a0a1e';ctx.fillRect(0,0,w,h);
-  // Grid
-  ctx.strokeStyle='#222';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
-  ctx.strokeStyle='#1a1a2e';
-  for(var i=0.25;i<1;i+=0.25){ctx.beginPath();ctx.moveTo(w*i,0);ctx.lineTo(w*i,h);ctx.moveTo(0,h*i);ctx.lineTo(w,h*i);ctx.stroke()}
-  // Position dot
-  var firstIdx=[...selComp][0];var f=fixtures[firstIdx];
-  if(!f||!f.channels)return;
-  var maxP=xyPanFine>=0?65535:255;var maxT=xyTiltFine>=0?65535:255;
-  var pV=xyPanFine>=0?combine16bit(f.channels[xyPanCoarse].currentValue||0,f.channels[xyPanFine].currentValue||0):(f.channels[xyPanCoarse].currentValue||0);
-  var tV=xyTiltFine>=0?combine16bit(f.channels[xyTiltCoarse].currentValue||0,f.channels[xyTiltFine].currentValue||0):(f.channels[xyTiltCoarse].currentValue||0);
-  var x=(pV/maxP)*w,y=(tV/maxT)*h;
-  ctx.fillStyle='#0af';ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='rgba(0,170,255,0.3)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.stroke();
-  document.getElementById('xyPanVal').textContent=pV;
-  document.getElementById('xyTiltVal').textContent=tV;
-}
-(function(){
-  var cv,dragging=false,lastSend=0;
-  function xyMove(cx,cy){
-    if(!xyActive||!dragging)return;
-    var now=Date.now();if(now-lastSend<33)return;lastSend=now;
-    if(!cv)cv=document.getElementById('xyPadCanvas');
-    var rect=cv.getBoundingClientRect();
-    var nx=Math.max(0,Math.min(1,(cx-rect.left)/rect.width));
-    var ny=Math.max(0,Math.min(1,(cy-rect.top)/rect.height));
-    var firstIdx=[...selComp][0];
-    selComp.forEach(function(fi){
-      var fx=fixtures[fi];if(!fx||!fx.channels)return;
-      var pc=fi===firstIdx?xyPanCoarse:findChByType(fx,8);
-      var tc=fi===firstIdx?xyTiltCoarse:findChByType(fx,10);
-      if(pc<0||tc<0)return;
-      var pf=fi===firstIdx?xyPanFine:findChByType(fx,9);
-      var tf=fi===firstIdx?xyTiltFine:findChByType(fx,11);
-      if(pf>=0){var pv=Math.round(nx*65535);var ps=split16bit(pv);fx.channels[pc].currentValue=ps.hi;fx.channels[pf].currentValue=ps.lo;wsSend({cmd:'fxch',f:fx.idx,c:pc,v:ps.hi});wsSend({cmd:'fxch',f:fx.idx,c:pf,v:ps.lo})}
-      else{var pv8=Math.round(nx*255);fx.channels[pc].currentValue=pv8;wsSend({cmd:'fxch',f:fx.idx,c:pc,v:pv8})}
-      if(tf>=0){var tv=Math.round(ny*65535);var ts=split16bit(tv);fx.channels[tc].currentValue=ts.hi;fx.channels[tf].currentValue=ts.lo;wsSend({cmd:'fxch',f:fx.idx,c:tc,v:ts.hi});wsSend({cmd:'fxch',f:fx.idx,c:tf,v:ts.lo})}
-      else{var tv8=Math.round(ny*255);fx.channels[tc].currentValue=tv8;wsSend({cmd:'fxch',f:fx.idx,c:tc,v:tv8})}
-    });
-    drawXyPad();
-    // Sync compact + console slider UI
-    var f0=fixtures[firstIdx];if(f0){
-      if(xyPanCoarse>=0){
-        var pvS=xyPanFine>=0?combine16bit(f0.channels[xyPanCoarse].currentValue||0,f0.channels[xyPanFine].currentValue||0):(f0.channels[xyPanCoarse].currentValue||0);
-        var hsP=document.getElementById('hs_'+xyPanCoarse);if(hsP){hsP.value=pvS;sfill(hsP)}
-        var cvP=document.getElementById('chv'+xyPanCoarse);if(cvP)cvP.textContent=pvS;
-        ['vs_','fvs_'].forEach(function(p){var el=document.getElementById(p+f0.idx+'_'+xyPanCoarse);if(el){el.value=pvS;sfill(el)}});
-        ['cv_','fcv_'].forEach(function(p){var el=document.getElementById(p+f0.idx+'_'+xyPanCoarse);if(el)el.textContent=pvS});
-      }
-      if(xyTiltCoarse>=0){
-        var tvS=xyTiltFine>=0?combine16bit(f0.channels[xyTiltCoarse].currentValue||0,f0.channels[xyTiltFine].currentValue||0):(f0.channels[xyTiltCoarse].currentValue||0);
-        var hsT=document.getElementById('hs_'+xyTiltCoarse);if(hsT){hsT.value=tvS;sfill(hsT)}
-        var cvT=document.getElementById('chv'+xyTiltCoarse);if(cvT)cvT.textContent=tvS;
-        ['vs_','fvs_'].forEach(function(p){var el=document.getElementById(p+f0.idx+'_'+xyTiltCoarse);if(el){el.value=tvS;sfill(el)}});
-        ['cv_','fcv_'].forEach(function(p){var el=document.getElementById(p+f0.idx+'_'+xyTiltCoarse);if(el)el.textContent=tvS});
-      }
-    }
-  }
-  document.addEventListener('DOMContentLoaded',function(){
-    cv=document.getElementById('xyPadCanvas');if(!cv)return;
-    cv.addEventListener('pointerdown',function(e){dragging=true;cv.setPointerCapture(e.pointerId);xyMove(e.clientX,e.clientY);e.preventDefault()},{passive:false});
-    cv.addEventListener('pointermove',function(e){if(dragging)xyMove(e.clientX,e.clientY)});
-    cv.addEventListener('pointerup',function(){dragging=false});
-    cv.addEventListener('pointercancel',function(){dragging=false});
-  });
-})();
 
 function renderFaders(){
   const box=document.getElementById('faderBox');
@@ -1289,7 +1198,7 @@ function sendFader(ch,val){
     });
   }
   // Sync XY pads when Pan/Tilt changes
-  if(chType===8||chType===10){if(xyActive)drawXyPad();if(typeof xyPopOpen!=='undefined'&&xyPopOpen)xyPopDraw()}
+  if(chType===8||chType===10){if(xyPopOpen)xyPopDraw()}
 }
 
 // ---- Konzola (vertikalni) — vsaka fixture ima svoje sliderje ----
@@ -1406,7 +1315,7 @@ function sendCGang(fxIdx,fi,ci,val){
   if(f&&f.channels&&f.channels[ci])f.channels[ci].currentValue=val;
   wsSend({cmd:'fxch',f:fxIdx,c:ci,v:val});
   // Sync XY pads
-  if(f&&f.channels&&f.channels[ci]&&(f.channels[ci].type===8||f.channels[ci].type===10)){if(xyActive)drawXyPad();if(typeof xyPopOpen!=='undefined'&&xyPopOpen)xyPopDraw()}
+  if(f&&f.channels&&f.channels[ci]&&(f.channels[ci].type===8||f.channels[ci].type===10)){if(xyPopOpen)xyPopDraw()}
 
   // Gang: apliciraj delta na VSE oznacene kanale (razen tega)
   if(consGang.has(myKey)&&consGang.size>1&&delta!==0){
@@ -1442,7 +1351,7 @@ function sendCGang16(fxIdx,fi,ci,fineCi,val16){
   wsSend({cmd:'fxch',f:fxIdx,c:ci,v:s.hi});
   wsSend({cmd:'fxch',f:fxIdx,c:fineCi,v:s.lo});
   // Sync XY pads
-  if(f&&f.channels&&f.channels[ci]&&(f.channels[ci].type===8||f.channels[ci].type===10)){if(xyActive)drawXyPad();if(typeof xyPopOpen!=='undefined'&&xyPopOpen)xyPopDraw()}
+  if(f&&f.channels&&f.channels[ci]&&(f.channels[ci].type===8||f.channels[ci].type===10)){if(xyPopOpen)xyPopDraw()}
 }
 
 // ---- Celozaslonska konzola ----
@@ -1506,18 +1415,23 @@ function bindFsSliderTouch(container){
       if(!active)return;onMove(e.touches[0].clientX,e.touches[0].clientY);
     },{passive:true});
     sl.addEventListener('touchend',function(e){
-      // Tap brez premika na barvnem kanalu → odpri color picker (za tablice)
+      // Tap brez premika → odpri popup (za tablice)
       if(active&&!intent){
         var id=sl.id||'';
         var m=id.match(/f?vs_(\d+)_(\d+)/);
         if(m){
           var fxIdx=+m[1],ci=+m[2];
           var f=fixtures.find(function(x){return x.idx===fxIdx});
-          if(f&&f.channels&&f.channels[ci]&&CP_COLOR_TYPES.has(f.channels[ci].type)){
+          if(f&&f.channels&&f.channels[ci]){
+            var chType=f.channels[ci].type;
             var fi=fixtures.indexOf(f);
             if(fi>=0){
               var rect=sl.getBoundingClientRect();
-              openMxCp(fi,rect.right+5,rect.top+rect.height/2);
+              if(CP_COLOR_TYPES.has(chType)){
+                openMxCp(fi,rect.right+5,rect.top+rect.height/2);
+              } else if(chType===8||chType===10){
+                openXyPop(fi,rect.right+5,rect.top+rect.height/2);
+              }
             }
           }
         }
@@ -3305,9 +3219,13 @@ function bindBeamHandle(handle,fi,g){
     var f=fixtures[fi],pos=layData.fixturePositions[fi];
     if(!f||!pos)return;
     var cx=pos.x,cy=pos.y;
-    var beamMoved=false;
+    var beamMoved=false,startEvt={x:e.clientX,y:e.clientY};
     function onMove(ev){
-      beamMoved=true;
+      if(!beamMoved){
+        var ddx=ev.clientX-startEvt.x,ddy=ev.clientY-startEvt.y;
+        if(Math.abs(ddx)<5&&Math.abs(ddy)<5)return;
+        beamMoved=true;
+      }
       var pt=laySvgPt(ev);
       var result=calcPanTiltFromPos(cx,cy,pt.x,pt.y);
       f.channels.forEach(function(ch){
@@ -3334,8 +3252,9 @@ function bindBeamHandle(handle,fi,g){
       handle.removeEventListener('pointermove',onMove);handle.removeEventListener('pointerup',onUp);handle.removeEventListener('pointercancel',onUp);
       handle.setAttribute('stroke','rgba(39,174,96,0)');
       if(!beamMoved){
-        // Klik brez premika → odpri XY Pad popup
-        openXyPop(fi,ev.clientX,ev.clientY);
+        // Klik/tap brez premika → odpri XY Pad popup
+        var popX=ev.clientX||startEvt.x,popY=ev.clientY||startEvt.y;
+        openXyPop(fi,popX,popY);
         return;
       }
       var pt=laySvgPt(ev);
@@ -4317,8 +4236,6 @@ function xyPopSyncSliders(){
     var hsT=document.getElementById('hs_'+xyPopTiltC);if(hsT){hsT.value=tv;sfill(hsT)}
     var chvT=document.getElementById('chv'+xyPopTiltC);if(chvT)chvT.textContent=tv;
   }
-  // Update compact XY pad too
-  if(xyActive)drawXyPad();
   // Update 2D layout beam
   if(typeof updateLayColors==='function')updateLayColors();
 }
