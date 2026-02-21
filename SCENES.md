@@ -111,7 +111,24 @@ Z igralnim ploščkom (PlayStation/Xbox):
 
 ---
 
-## 6. Multiplayer sinhronizacija
+## 6. Scene v persona vmesnikih
+
+Scene so dostopne tudi prek **persona vmesnikov** — poenostavljenih spletnih strani za različne uporabnike:
+
+| Persona | URL | Uporaba scen |
+|---------|-----|-------------|
+| **Osebje lokala** | `/staff` | Vsak preset gumb prikliče eno sceno (npr. "Odprtje" → scena 0, "Večer" → scena 3) |
+| **Tonski mojster** | `/sound-eng` | Mreža scene gumbov (do 8), konfigurirani scene sloti z labeli |
+| **Gledališče** | `/theater` | Cue list (GO/BACK/STOP) — vsak cue prikliče eno sceno s per-cue fade časom |
+| **DJ** | `/dj` | Mood preseti (Chill, Warm, Neon, Rave) — vsak mood prikliče sceno + STL preset |
+| **Zabava/poroka** | `/event` | Timeline faz — vsaka faza prikliče sceno ob nastavljeni uri |
+| **Busker** | `/busker` | 4 look preseti — vsak look prikliče eno sceno |
+
+Konfigurirane scene slote za vsako persono lahko nastavite v polnem vmesniku (zavihek **Konfig** → **Persona vmesniki**) ali neposredno v `/persona.json`.
+
+---
+
+## 7. Multiplayer sinhronizacija
 
 Ob sprožitvi scene se crossfade sinhronizira na **vse povezane naprave** prek WebSocket-a v realnem času:
 

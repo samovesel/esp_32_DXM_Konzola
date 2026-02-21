@@ -2,6 +2,8 @@
 
 > **Novo v tej verziji:** FFT analiza je sedaj strojno pospeena (hardware-accelerated) z uporabo knjiznice **ESP-DSP**. Na ESP32-S3 se uporablja Vector ISA instrukcijski nabor, kar je priblizno **3x hitrejse** od prejsnje ArduinoFFT implementacije. To omogoca nizjo latenco in boljso odzivnost pri vseh Sound-to-Light efektih.
 
+> **Persona vmesniki:** Sound-to-Light je dostopen tudi prek poenostavljenih persona vmesnikov — **Tonski mojster** (`/sound-eng`) ima STL toggle s preseti za okolje, **DJ** (`/dj`) vkljucuje beat programe in BPM sync, **Busker** (`/busker`) ima STL stikalo za avtomatsko zvocno reaktivnost. Konfiguracija presetov: zavihek Konfig > Persona vmesniki.
+
 ## 1. Kako deluje Sound-to-Light (STL)?
 
 Naprava zajema zvok prek mikrofona (INMP441) ali line-in vhoda (WM8782S), ga analizira s FFT (Fast Fourier Transform) in razdeli v **8 frekvencnih pasov**. Energija v vsakem pasu poganja svetlobne efekte na luceh, ki imajo v patchu vklopljeno opcijo **"Zvok"** (Sound Reactive).
