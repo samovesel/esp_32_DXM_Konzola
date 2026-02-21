@@ -160,6 +160,17 @@ Množilnik tempa:
 - **Decay** (0–2000 ms): Čas od polne svetilnosti do ugasnitve. 0 = privzeto (po programu). 500+ ms = dolg rep.
 - **Paleta**: Izberi barvno shemo — Rainbow, Warm (rdeča/oranžna), Cool (modra/vijolična), Fire, Ocean, Party, ali Custom (4 barve po meri).
 
+### FX Simetrija (Manual Beat)
+
+Gumbi pod beat programi določajo vrstni red fixture-ov za efekte:
+
+- **→ Naprej** — normalno (1→2→3→4)
+- **← Nazaj** — obratno (4→3→2→1)
+- **↔ Sredina ven** — iz sredine navzven
+- **⇄ Zunaj not** — od zunaj proti sredini
+
+Uporabno za Chase, Wave, Stack in Scanner programe — npr. simetrija "Sredina ven" ustvari efekt ki se širi od centra odra.
+
 ### Primer — chase efekt na 128 BPM
 
 1. Vklopi Manual Beat
@@ -228,6 +239,11 @@ Nizkofrekvenčni oscilator — ustvarja ponavljajoče vzorce na DMX kanalih **ne
 - **Rate**: Hitrost oscilacije (Hz). 0.5 = en cikel na 2 sekundi, 2.0 = 2 cikla na sekundo.
 - **Depth**: Amplituda (0–1). 0.5 = nihanje za +/-50% od središča.
 - **Phase**: Fazni zamik med fixture-i (0–1). 0.25 = vsak fixture zamaknjen za četrtino cikla → val.
+- **Symmetry**: Simetrija faznega razporeda:
+  - **→ Naprej** — normalno (1→2→3→4)
+  - **← Nazaj** — obratno (4→3→2→1)
+  - **↔ Sredina** — iz sredine navzven
+  - **⇄ Zunaj** — od zunaj proti sredini
 
 **Primer — dihanje svetlobe:** Sine, Dimmer, Rate 0.3, Depth 0.8, Phase 0. Na vseh fixture-ih se svetilnost počasi dviguje in spušča.
 

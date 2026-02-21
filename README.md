@@ -32,7 +32,8 @@ Platforma se zazna samodejno prek `CONFIG_IDF_TARGET_ESP32S3` — ni ročne konf
 - **Audio vhod** — I2S line-in (WM8782S ADC) ali I2S MEMS mikrofon (INMP441)
 - **Beat detection** z BPM izračunom
 - **Živi FFT spekter** v spletnem vmesniku
-- **Blackout** gumb
+- **Pametni Blackout** — izklopi samo svetlobne kanale (Intensity, barve, strobe). Pan/Tilt/Gobo/Focus/Zoom ostanejo nespremenjeni
+- **Flash (Blinder)** — drži gumb za prisilno 100% intenziteto na vseh fixture-ih (deluje tudi med blackoutom)
 - **Celozaslonska konzola** — optimiziran pogled za upravljanje v živo:
   - Vertikalni sliderji za vse kanale z drag & drop prerazvrščanjem fixture-ov
   - Barvne pike za vizualno stanje fixture-a (long-press = FULL ON na telefonu)
@@ -45,10 +46,14 @@ Platforma se zazna samodejno prek `CONFIG_IDF_TARGET_ESP32S3` — ni ročne konf
 - **Manual beat** — tap tempo ali ročni BPM brez zvočnega vira
 - **Pametna detekcija telefona** — samodejno prilagodi UI (skrije beat gumbe, prikaže ☰ meni) z JS detekcijo touch naprave
 - **Zgodovina stanj** (3 avtomatski snapshot-i ob preklopu)
-- **2D Layout Editor** — interaktivni oder s SVG vizualizacijo fixtur, drag & drop pozicioniranje, zoom (20%–300%), pan, barvne pike z realnim DMX izhodom, prosto risanje odrskih elementov
+- **2D Layout Editor** — interaktivni oder s SVG vizualizacijo fixtur, drag & drop pozicioniranje, zoom (20%–300%), pan, barvne pike z realnim DMX izhodom, prosto risanje odrskih elementov, auto-arrange (linija, lok, krog, mreža)
+- **Filmstrip gumbi** — kanali z obsegi (Gobo, Prism, Macro, Preset, Shutter) prikažejo mrežo gumbov namesto drsnika
+- **Fan / Pahljača** — razpršitev fader vrednosti čez več izbranih fixture-ov (npr. pahljača Pan kota)
+- **Pan/Tilt omejitve** — per-fixture invert osi in bounding box (min/max) za Pan in Tilt
+- **Snap crossfade** — kanali tipa Gobo/Prism/Shutter/Macro/Preset preskočijo na sredini crossfade-a namesto interpolacije
 - **Highlight / Locate** — toggle gumb ki nastavi fixture na locate preset (dimmer=255, barve=bela, pan/tilt=center, zoom=wide, gobo=open), ob izklopu obnovi originalne vrednosti
 - **Cue List** — sekvenčno predvajanje scen s per-cue fade časom in auto-follow zamikom, GO/BACK/STOP kontrola, do 40 cue-jev, persistenca na LittleFS
-- **LFO / FX Generator** — do 8 neodvisnih oscilatorjev (sine, triangle, square, sawtooth) za dimmer/pan/tilt/R/G/B, per-fixture fazni spread za chase efekte
+- **LFO / FX Generator** — do 8 neodvisnih oscilatorjev (sine, triangle, square, sawtooth) za dimmer/pan/tilt/R/G/B, per-fixture fazni spread za chase efekte, FX simetrija (forward, reverse, center-out, ends-in)
 - **DMX Output Monitor** — prikaz vseh 512 kanalov v realnem času na canvas gridu z barvnim kodiranjem vrednosti
 - **OSC Server** — UDP port 8000, podpira `/dmx/N`, `/fixture/N/dimmer`, `/fixture/N/color`, `/scene/N`, `/master`, `/blackout`
 - **Web MIDI** — podpora za MIDI kontrolerje prek Web MIDI API (Chrome/Edge), MIDI Learn, CC→fader in Note→scene mapping
@@ -271,7 +276,8 @@ esp32_artnet_dmx/
 ├── scene_engine.h/.cpp    — Scene CRUD, crossfade interpolacija, cue list
 ├── audio_input.h/.cpp     — Audio vhod (I2S WM8782S / I2S INMP441), jedro 0
 ├── sound_engine.h/.cpp    — FFT, pasovi, beat detect, easy/pro mode
-├── lfo_engine.h/.cpp      — LFO/FX generator (8 oscilatorjev, 4 valovne oblike)
+├── lfo_engine.h/.cpp      — LFO/FX generator (8 oscilatorjev, 4 valovne oblike, simetrija)
+├── shape_generator.h/.cpp — Shape generator (krogi, osmičke, trikotniki za Pan/Tilt)
 ├── osc_server.h/.cpp      — OSC UDP server (port 8000)
 ├── led_status.h           — RGB LED (PWM za ESP32, NeoPixel za ESP32-S3)
 ├── web_ui.h/.cpp          — Web server, API, servira gzipan HTML
@@ -357,6 +363,7 @@ Dimmer, Pan, Tilt, Red, Green, Blue
 - **Rate**: 0.1–10 Hz
 - **Depth**: 0–100% modulacijska globina
 - **Phase spread**: 0–100% fazni zamik med fixturami (za chase efekte)
+- **Symmetry**: Forward, Reverse, Center-Out, Ends-In — vpliva na razporeditev faznega zamika
 - **Fixture mask**: bitmask za izbiro do 24 fixtur
 
 ## OSC Server

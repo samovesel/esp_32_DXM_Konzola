@@ -90,6 +90,9 @@ td{padding:4px 6px;border-bottom:1px solid #222}
 .env-presets button{padding:4px 10px;font-size:0.8em;background:#222;border:1px solid #444;border-radius:4px}
 .env-presets button.ep-sel{background:#27ae60;color:#fff;border-color:#27ae60}
 .env-hint{font-size:0.7em;color:#666;margin:4px 0;line-height:1.3}
+.help-toggle{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#222;color:#0af;border:1px solid #0af;font-size:0.8em;font-weight:bold;cursor:pointer;float:right;margin-top:-2px;user-select:none}.help-toggle:hover{background:#0af;color:#000}
+.help-body{display:none;font-size:0.82em;line-height:1.55;color:#ccc;padding:10px 0 0}
+.help-body p{margin:4px 0}.help-body b{color:#0af}.help-body table{font-size:0.9em;margin:4px 0 8px}.help-body th{text-align:left;color:#0af;padding:2px 6px;border-bottom:1px solid #333}.help-body td{padding:2px 6px;border-bottom:1px solid #222}
 #msg{position:fixed;top:60px;left:50%;transform:translateX(-50%);padding:8px 16px;border-radius:4px;display:none;z-index:20;font-weight:bold}
 #msg.ok{display:block;background:#27ae60;color:#fff}#msg.err{display:block;background:#e74c3c;color:#fff}
 /* Konzola — vertikalni faderji */
@@ -318,6 +321,16 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <!-- TAB 0: MIXER -->
 <div class="tab show" id="tab0">
+  <div style="text-align:right;margin-bottom:4px"><span class="help-toggle" onclick="tglHelp('helpMixer')">?</span></div>
+  <div class="help-body" id="helpMixer">
+<p><b>Master</b> — globalna svetilnost (0–255). Vpliva na Intensity in barvne kanale, ne na Pan/Tilt/Gobo.</p>
+<p><b>Kompakt pogled</b> — izberi fixture-e ali skupino, krmili s horizontalnimi drsniki. Filmstrip gumbi za Gobo/Prism/Macro kanale. 16-bit drsniki za Pan/Tilt Fine.</p>
+<p><b>Fan (pahljača)</b> — pri izbiri več fixture-ov razprši vrednosti. Drsnik -100% do +100%: +100% = naraščajoče, -100% = padajoče, 0% = enako.</p>
+<p><b>Konzola</b> — vertikalni faderji. Klikni ime kanala za skrči/razširi, vrednost za solo. Povleci fixture za vrstni red. Gang = povezani kanali.</p>
+<p><b>Celozaslonska</b> — polni zaslon s faderji, scene gumbi, crossfade, beat kontrolami in skupinskimi dimmerji na dnu.</p>
+<p><b>2D Oder</b> — vizualni oder. Povleci fixture-e iz ☰ na oder. Klikni fixture za dimmer/barvo/pan/tilt popup. Zelena pika = XY Pad, modra = Zoom. Vleci žarek za Pan/Tilt. <b>Razporedi...</b> = Linija/Lok/Krog/Mreža.</p>
+<p><b>Zgodovina stanj</b> — snapshoti ob preklopu ArtNet ↔ Lokalno. A = ArtNet, L = Lokalno. Klikni za obnovo.</p>
+  </div>
   <div class="master-row">
     <label>Master</label>
     <input type="range" min="0" max="255" value="255" id="masterSlider" oninput="sendMaster(this.value)">
@@ -353,6 +366,12 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <!-- TAB 1: SCENE -->
 <div class="tab" id="tab1">
+  <div style="text-align:right;margin-bottom:4px"><span class="help-toggle" onclick="tglHelp('helpScene')">?</span></div>
+  <div class="help-body" id="helpScene">
+<p><b>Crossfade</b> — čas prehoda med scenami (0–10s). Kanali tipa Gobo/Prism/Shutter/Macro/Preset <b>preskočijo</b> (snap) na sredini namesto interpolacije.</p>
+<p><b>Scene</b> — do 20 scen v flash pomnilniku. Klikni gumb za recall s crossfade-om. Desni klik (ali dolg pritisk) = preimenuj / prepiši / izbriši. Barvne pike na gumbu prikazujejo shranjene barve.</p>
+<p><b>Cue List</b> — sekvenčno predvajanje scen. <b>GO</b> = naslednja scena, <b>BACK</b> = prejšnja, <b>STOP</b> = ustavi. Vsak cue ima svoj Fade čas in opcijski Auto čas (samodejni prehod po zamiku). Label = oznaka do 23 znakov. Do 40 cue-jev.</p>
+  </div>
   <div class="card"><h3>Crossfade</h3>
     <div class="fade-row"><label>Čas:</label><input type="range" min="0" max="10000" step="100" value="1500" id="fadeSlider" oninput="updateFadeLabel()"><span class="val" id="fadeVal">1.5s</span></div>
     <div class="cf-bar"><div class="cf-fill" id="cfBar"></div></div><div id="cfStatus" style="font-size:0.8em;color:#666;height:1.2em"></div>
@@ -378,9 +397,9 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <!-- TAB 2: SOUND -->
 <div class="tab" id="tab2">
-  <div class="card" id="stlGuideCard">
-    <h3 style="cursor:pointer;user-select:none" onclick="var b=document.getElementById('stlGuideBody');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('span').textContent=b.style.display==='none'?'+':'-'">Uporabniški priročnik <span style="float:right;font-size:0.8em;color:#0af">+</span></h3>
-    <div id="stlGuideBody" style="display:none;font-size:0.82em;line-height:1.55;color:#ccc">
+  <div style="text-align:right;margin-bottom:4px"><span class="help-toggle" onclick="tglHelp('stlGuideCard')">?</span></div>
+  <div class="card" id="stlGuideCard" style="display:none">
+    <div id="stlGuideBody" style="font-size:0.82em;line-height:1.55;color:#ccc">
 
 <p style="color:#0af;font-weight:bold;margin:10px 0 4px">1. KAKO DELUJE SOUND-TO-LIGHT (STL)?</p>
 <p>Naprava zajema zvok prek mikrofona (INMP441) ali line-in vhoda (WM8782S), ga analizira s FFT (Fast Fourier Transform) in razdeli v <b>8 frekvenčnih pasov</b>. Energija v vsakem pasu poganja svetlobne efekte na lučeh, ki imajo v patchu vklopljeno opcijo <b>"Zvok"</b> (Sound Reactive).</p>
@@ -757,6 +776,13 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <!-- TAB 3: FIXTURES -->
 <div class="tab" id="tab3">
+  <div style="text-align:right;margin-bottom:4px"><span class="help-toggle" onclick="tglHelp('helpFixtures')">?</span></div>
+  <div class="help-body" id="helpFixtures">
+<p><b>Dodaj luč</b> — ime, DMX naslov (samodejno predlagan), profil, skupine (1–8), zvočna reaktivnost.</p>
+<p><b>Uredi luč</b> — spremeni ime, naslov, skupine, zvok. Za fixture-e s Pan/Tilt: <b>Obrni Pan/Tilt</b> (za zrcalne luči), <b>Pan/Tilt min/max</b> (0–255) za omejitev gibanja. Omejitve veljajo na koncu pipeline-a — faderji, LFO, shapes, sound jih upoštevajo.</p>
+<p><b>Profili</b> — JSON datoteke za DMX kanale naprave. Povleci .json datoteko ali klikni za nalaganje. Podprt OFL (Open Fixture Library) uvoz.</p>
+<p><b>Skupine</b> — 8 skupin za organizacijo. Fixture-i se dodajo prek checkboxov. Skupine omogočajo skupinsko kontrolo in skupinske dimmerje.</p>
+  </div>
   <div class="card"><h3>Patchane luči</h3>
     <div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Ime</th><th>Profil</th><th>DMX</th><th>Skupine</th><th>Zvok</th><th></th></tr></thead><tbody id="patchTable"></tbody></table></div>
     <button onclick="showAddFixture()" style="margin-top:8px">+ Dodaj luč</button>
@@ -799,6 +825,16 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <!-- TAB 4: NASTAVITVE -->
 <div class="tab" id="tab4">
+  <div style="text-align:right;margin-bottom:4px"><span class="help-toggle" onclick="tglHelp('helpSettings')">?</span></div>
+  <div class="help-body" id="helpSettings">
+<p><b>Naprava</b> — hostname (mDNS, do 27 znakov), ArtNet univerza (0–32767), DMX kanalov (1–512), ArtNet timeout, Primarni način (lokalna kontrola ima prednost), ArtNet izhod, sACN (E1.31) izhod.</p>
+<p><b>WiFi</b> — do 5 omrežij s failover. Prvo delujoče se uporabi. Statični IP: odklopi DHCP za ročno nastavitev IP/prehod/maska. Če nobeno omrežje ni dosegljivo → AP način.</p>
+<p><b>Zvok</b> — izberi vir: Izklopljeno, Line-in I2S (WM8782S, 96 kHz) ali I2S mikrofon (INMP441). Sprememba zahteva ponovni zagon.</p>
+<p><b>Avtentikacija</b> — zahtevaj prijavo za spletni vmesnik. Nastavi uporabnika in geslo (do 19 znakov).</p>
+<p><b>Web MIDI</b> — MIDI kontrolerji prek brskalnika (Chrome/Edge). MIDI Learn = klikni, nato premakni fizični fader za mapiranje. CC → faderji, Note → scene.</p>
+<p><b>OSC</b> — UDP port 8000. /dmx/N, /fixture/N/dimmer, /fixture/N/color, /scene/N, /master, /blackout.</p>
+<p><b>Shrani in ponovni zagon</b> — zapiše vse nastavitve in resetira ESP32. <b>Tovarniška ponastavitev</b> — pobriše vse.</p>
+  </div>
   <div class="card"><h3>Naprava</h3>
     <div class="row"><div><label>Ime (hostname)</label><input id="s_host" maxlength="27"></div><div><label>ArtNet Univerza</label><input id="s_univ" type="number" min="0" max="32767"></div></div>
     <label>Število DMX kanalov</label><input id="s_ch" type="number" min="1" max="512">
@@ -853,6 +889,14 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 </div>
 
 <div class="tab" id="tab5">
+  <div style="text-align:right;margin-bottom:4px"><span class="help-toggle" onclick="tglHelp('helpConfig')">?</span></div>
+  <div class="help-body" id="helpConfig">
+<p><b>Konfiguracija</b> — celotna postavitev (fixture-i, scene, skupine, zvočne nastavitve) kot snapshot v flash pomnilniku.</p>
+<p><b>Shrani</b> — vpiši ime (npr. "Klub Petek"), klikni "Shrani trenutno".</p>
+<p><b>Naloži</b> — klikni "Naloži" ob shranjeni konfiguraciji. Prepiše trenutno postavitev.</p>
+<p><b>Prenesi</b> — izvozi konfiguracijo kot JSON na računalnik. <b>Uvozi</b> — naloži JSON z računalnika.</p>
+<p>Opozorilo se prikaže ko je prostora na disku manj kot 20 KB.</p>
+  </div>
   <div class="card">
     <h3>Shranjene konfiguracije</h3>
     <p style="font-size:0.7em;color:#666;margin:-4px 0 8px">Celotna postavitev: patch, scene, zvočne nastavitve, skupine.</p>
@@ -871,6 +915,15 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <!-- TAB 6: DMX MONITOR -->
 <div class="tab" id="tab6">
+  <div style="text-align:right;margin-bottom:4px"><span class="help-toggle" onclick="tglHelp('helpDmxMon')">?</span></div>
+  <div class="help-body" id="helpDmxMon">
+<p><b>DMX Monitor</b> — vizualni prikaz vseh 512 DMX kanalov v realnem času.</p>
+<p><b>Start/Stop</b> — klikni za začetek/konec spremljanja. Podatki tečejo prek WebSocket-a.</p>
+<p><b>Hover</b> — premakni miško nad kanal za prikaz številke in vrednosti.</p>
+<p><b>Obseg</b> — izberi podmnožico: 1–512, 1–128, 129–256, 257–384, 385–512.</p>
+<p><b>Barvno kodiranje</b> — temno = 0 (neaktiven), svetlo = višje vrednosti, polno = 255 (maksimum).</p>
+<p>Monitor rahlo poveča obremenitev — izklopi ko ni v uporabi.</p>
+  </div>
   <div class="card">
     <h3>DMX Output Monitor</h3>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
@@ -1040,6 +1093,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 let ws,fixtures=[],profiles=[],groups=[],scenes=[],selComp=new Set(),selCons=new Set(),consOrder=[],selGroup=-1,boState=false,cfTarget=-1,viewMode=0,currentMode=0;
 var fsActive=false,fsActiveGroups=new Set(),fsFullOnState={},fsGrpFullOnState={},fsGrpBoState={},fsGrpSoloState={},lastFxl=null,lastFxo=null,fsGroupOrder=null,fsGroupDimmers={},locateMask=0;
 // Posodobi --ch-pct za barvni fill na track sliderja
+function tglHelp(id){var b=document.getElementById(id);b.style.display=b.style.display==='none'?'block':'none'}
 function sfill(el){if(!el)return;var pct=((+el.value-+el.min)/(+el.max-+el.min))*100;el.style.setProperty('--ch-pct',pct+'%');}
 function sfillAll(container){if(!container)return;container.querySelectorAll('input[type=range]').forEach(sfill);}
 function isPhoneDevice(){var touch=window.matchMedia('(hover: none) and (pointer: coarse)').matches;var smallScreen=Math.min(screen.width,screen.height)<=500;return touch&&smallScreen}
