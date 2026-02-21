@@ -9,7 +9,7 @@ Naprava zajema zvok prek mikrofona (INMP441) ali line-in vhoda (WM8782S), ga ana
 Signal potuje skozi verigo:
 
 ```
-Mikrofon → I2S → ESP-DSP FFT (hardware-accelerated) → AGC → EQ → Noise gate → Frekvencni pasovi → DMX
+Mikrofon → I2S → ESP-DSP FFT (hardware-accelerated) → AGC → Parametric EQ → Noise gate → Frekvencni pasovi → DMX
 ```
 
 ESP-DSP FFT izkoristi strojne zmoznosti ESP32 cipaː
@@ -21,18 +21,20 @@ ESP-DSP FFT izkoristi strojne zmoznosti ESP32 cipaː
 
 ## 2. FFT spekter (vizualizacija)
 
-Zgornja kartica prikazuje 8 stolpcev — po enega za vsak frekvencni pas:
+Zgornja kartica prikazuje 8 stolpcev — po enega za vsak frekvencni pas. Privzete center frekvence (nastavljive prek parametric EQ):
 
-| Pas  | Obseg       | Opis                              |
-|------|-------------|-----------------------------------|
-| Sub  | 30–60 Hz    | Globoki bas (bas bobna, sub-bass) |
-| Bass | 60–120 Hz   | Bas kitara, kick drum             |
-| Low  | 120–250 Hz  | Spodnji mid, toplina vokala      |
-| Mid  | 250–500 Hz  | Sredina — vokal, kitare           |
-| Hi-M | 500–1000 Hz | Zgornji mid, jasnost             |
-| Pres | 1–2 kHz     | Presence, razlocnost             |
-| Bril | 2–4 kHz     | Brilliance, cinele               |
-| Air  | 4–11 kHz    | Zrak, hi-hat, sibilanti          |
+| Pas  | Privzeto (center) | Q privzeto | Opis                              |
+|------|--------------------|------------|-----------------------------------|
+| 1    | 42 Hz              | 0.7        | Globoki bas (bas bobna, sub-bass) |
+| 2    | 85 Hz              | 0.7        | Bas kitara, kick drum             |
+| 3    | 173 Hz             | 0.7        | Spodnji mid, toplina vokala      |
+| 4    | 354 Hz             | 0.7        | Sredina — vokal, kitare           |
+| 5    | 707 Hz             | 0.7        | Zgornji mid, jasnost             |
+| 6    | 1414 Hz            | 0.7        | Presence, razlocnost             |
+| 7    | 2828 Hz            | 0.7        | Brilliance, cinele               |
+| 8    | 6633 Hz            | 0.7        | Zrak, hi-hat, sibilanti          |
+
+Center frekvenca in Q faktor vsakega pasu sta nastavljiva prek **parametric EQ** (glej poglavje 4). Privzete vrednosti ustrezajo klasicni razdelitvi Sub/Bass/Low/Mid/Hi-M/Pres/Bril/Air.
 
 Merilci **Bass** / **Mid** / **High** pod spektrom prikazujejo povprecje spodnjih 3, srednjih 3 in zgornjih 2 pasov. **Peak** = trenutni vrsni nivo vhoda, **BPM** = samodejno zaznani tempo, **Beat** = "!" ob zaznavi udarca.
 
@@ -73,7 +75,7 @@ Najhitrejsi nacin za zagon sound-to-light. Vklopi stikalo **"Vklopljeno"** in si
 
 ---
 
-## 4. Audio EQ & AGC
+## 4. Audio Parametric EQ & AGC
 
 **AGC (Automatic Gain Control)** samodejno prilagaja ojacanje glede na glasnost okolja. Brez AGC bi tiha glasba komaj ustvarila efekt, glasna pa bi vse saturirala.
 
@@ -86,13 +88,22 @@ Najhitrejsi nacin za zagon sound-to-light. Vklopi stikalo **"Vklopljeno"** in si
 | Koncert    | ~100 dB  | Pocasen (0.2)| Visok (0.6) | Veliki odri, mocen PA sistem                |
 | Po meri    | —        | —            | —           | Rocna nastavitev vseh parametrov             |
 
-### EQ drsniki (8 pasov)
+### Parametric EQ (8 pasov)
 
-Graficni izenacevalnik, ki mnozilnik (0.0–3.0) na vsakem frekvencnem pasu. Privzeto 1.0 = brez spremembe.
+Polno parametricni izenacevalnik z nastavljivimi parametri za vsak pas:
 
-- Povecaj **Sub + Bass** na 2.0 → mocnejsi odziv na bas boben
-- Zmanjsaj **Air** na 0.3 → manj sumenja od visokih frekvenc
-- Povecaj **Mid** na 1.5 → bolj izrazita barvna rotacija pri vokalu
+- **Gain** (0.0–3.0): Mnozilnik energije pasu. Privzeto 1.0 = brez spremembe.
+- **Center frekvenca** (20–11000 Hz): Srediscna frekvenca zvonaste krivulje. Nastavi na tocno frekvenco, ki jo zelis izpostaviti (npr. 80 Hz za kick drum, 400 Hz za vokal).
+- **Q faktor** (0.1–10.0): Sirina pasu. Nizek Q (0.3–1.0) = sirok pas (zajame vec frekvenc). Visok Q (3.0–10.0) = ozek, kirurski pas (cilja na specificno frekvenco).
+
+Primeri uporabe:
+
+- Povecaj **gain** na bandu 1 (85 Hz) na 2.0 → mocnejsi odziv na bas boben
+- Zmanjsaj **gain** na bandu 8 (6.6 kHz) na 0.3 → manj sumenja od visokih frekvenc
+- Premakni **center frekvenco** banda 4 na 400 Hz in povecaj **Q** na 3.0 → ozek pas za vokal
+- Premakni **center frekvenco** banda 1 na 60 Hz in **Q** na 5.0 → precizen odziv na kick drum brez basa kitare
+
+> **Opomba:** Beat detekcija temelji na prvih dveh pasovih (privzeto 42 Hz in 85 Hz). Ce premaknes te pasove na visje frekvence, se bo beat detekcija spremenila — to je pricakovano obnasanje.
 
 ### AGC hitrost (0–1.0)
 
@@ -112,10 +123,18 @@ Filtrira sum ko ni glasbe.
 ### Primer — nastavi za tiho sobo doma
 
 1. Odpri Audio EQ & AGC → klikni **Tiha soba**
-2. Sub in Bass se postavita na 2.0 (dvojno ojacanje za sibek bas iz telefona)
+2. Gain na prvih dveh bandih se postavi na 2.0 (dvojno ojacanje za sibek bas iz telefona)
 3. AGC hitrost: 0.8 (hitro prilagajanje)
 4. Noise gate: 0.1 (nizek, da prepusti tudi tihe signale)
 5. Pozeni glasbo s telefona — luci morajo reagirati
+
+### Primer — ozek pas za kick drum
+
+1. Odpri Audio EQ & AGC → klikni **Po meri**
+2. Band 1: nastavi center frekvenco na **60 Hz**, Q na **5.0**, gain na **2.0**
+3. Band 2: nastavi center frekvenco na **120 Hz**, Q na **3.0**, gain na **1.5**
+4. Ostale bande pusti na privzetih vrednostih
+5. Beat detekcija bo zdaj natancno sledila kick drumu
 
 ---
 
@@ -126,6 +145,7 @@ Ritmicni efekti **brez zvocnega vira** — za situacije ko mikrofon ne deluje al
 ### Vir beata
 
 - **Manual**: Tempo dolocis s TAP gumbom ali BPM drsnikom. Vedno aktiven.
+- **Avdio BPM**: Manualni programi (Pulse, Chase, Strobe…) tecejo, ampak BPM se samodejno sinhronizira iz avdio analize (FFT beat detekcija). BPM se glajeno prilagaja (eksponentno glajenje, cas prilagajanja ~2s), faza se resetira ob zaznavi beata za tesen lock. BPM drsnik je onemogocen v tem nacinu. *Idealno ko hoces manual beat programe, ampak ne zelis rocno nastavljati BPM.*
 - **Auto (fallback)**: Ko je zvocni signal prisoten, se uporabi avdio beat detekcija. Ko signal izgine (tisina), se preklopi na manual tempo. *Priporoceno za zive nastope!*
 - **Samo avdio**: Samo avdio beat detekcija. Ko ni signala, efekti utihnejo.
 - **Ableton Link**: BPM in beat faza se sinhronizirata prek Wi-Fi z DJ software-om (Ableton Live, Traktor, Rekordbox, Serato, VirtualDJ). Zahteva, da sta ESP32 in racunalnik/telefon z DJ appom na istem Wi-Fi omrezju. Vec o tem v poglavju [6. Ableton Link](#6-ableton-link).
@@ -197,6 +217,16 @@ Uporabno za Chase, Wave, Stack in Scanner programe — npr. simetrija "Sredina v
 4. Ko igra glasba → luci reagirajo na zvok (Easy Mode)
 5. Ko nastane tisina (prehod med skladbami) → Manual Beat prevzame s Chaseom pri 120 BPM
 6. Ko glasba spet zazivi → samodejno nazaj na audio
+
+### Primer — avdio BPM sinhronizacija
+
+1. Vklopi Manual Beat
+2. Vir: **Avdio BPM**
+3. Program: **Rainbow**, Subdivizija: **1x**
+4. Pozeni glasbo — sistem samodejno zazna BPM iz glasbe
+5. Rainbow efekt se vrti v tempu glasbe, BPM se prikazuje v statusni vrstici
+6. Ce zamenjsa skladbo z drugim tempom, se BPM glajeno prilagodi v ~2s
+7. BPM drsnik je onemogocen — tempo prihaja iz avdia
 
 ---
 

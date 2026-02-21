@@ -411,19 +411,19 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
 <p style="color:#0af;font-weight:bold;margin:10px 0 4px">1. KAKO DELUJE SOUND-TO-LIGHT (STL)?</p>
 <p>Naprava zajema zvok prek mikrofona (INMP441) ali line-in vhoda (WM8782S), ga analizira s FFT (Fast Fourier Transform) in razdeli v <b>8 frekvenčnih pasov</b>. Energija v vsakem pasu poganja svetlobne efekte na lučeh, ki imajo v patchu vklopljeno opcijo <b>"Zvok"</b> (Sound Reactive).</p>
-<p>Signal potuje skozi verigo: <span style="color:#0af">Mikrofon → FFT → AGC (ojačanje) → EQ (per-band gain) → Noise gate → Frekvenčni pasovi (Bass/Mid/High) → Mapiranje na DMX kanale</span></p>
+<p>Signal potuje skozi verigo: <span style="color:#0af">Mikrofon → FFT → AGC (ojačanje) → Parametric EQ (gain/center freq/Q) → Noise gate → Frekvenčni pasovi (Bass/Mid/High) → Mapiranje na DMX kanale</span></p>
 
 <p style="color:#0af;font-weight:bold;margin:14px 0 4px">2. FFT SPEKTER (vizualizacija)</p>
-<p>Zgornja kartica prikazuje 8 stolpcev — po enega za vsak frekvenčni pas:</p>
-<table style="font-size:0.9em;margin:4px 0 8px"><tr><th>Pas</th><th>Obseg</th><th>Opis</th></tr>
-<tr><td style="color:#f33">Sub</td><td>30–60 Hz</td><td>Globoki bas (bas bobna, sub-bass)</td></tr>
-<tr><td style="color:#f33">Bass</td><td>60–120 Hz</td><td>Bas kitara, kick drum</td></tr>
-<tr><td style="color:#f33">Low</td><td>120–250 Hz</td><td>Spodnji mid, toplina vokala</td></tr>
-<tr><td style="color:#fc0">Mid</td><td>250–500 Hz</td><td>Sredina — vokal, kitare</td></tr>
-<tr><td style="color:#fc0">Hi-M</td><td>500–1000 Hz</td><td>Zgornji mid, jasnost</td></tr>
-<tr><td style="color:#fc0">Pres</td><td>1–2 kHz</td><td>Presence, razločnost</td></tr>
-<tr><td style="color:#0af">Bril</td><td>2–4 kHz</td><td>Brilliance, činele</td></tr>
-<tr><td style="color:#0af">Air</td><td>4–11 kHz</td><td>Zrak, hi-hat, sibilanti</td></tr>
+<p>Zgornja kartica prikazuje 8 stolpcev — po enega za vsak frekvenčni pas. Privzete center frekvence so nastavljive prek <b>parametric EQ</b> (glej sekcijo 4):</p>
+<table style="font-size:0.9em;margin:4px 0 8px"><tr><th>Pas</th><th>Privzeto (center)</th><th>Opis</th></tr>
+<tr><td style="color:#f33">1</td><td>42 Hz</td><td>Globoki bas (bas bobna, sub-bass)</td></tr>
+<tr><td style="color:#f33">2</td><td>85 Hz</td><td>Bas kitara, kick drum</td></tr>
+<tr><td style="color:#f33">3</td><td>173 Hz</td><td>Spodnji mid, toplina vokala</td></tr>
+<tr><td style="color:#fc0">4</td><td>354 Hz</td><td>Sredina — vokal, kitare</td></tr>
+<tr><td style="color:#fc0">5</td><td>707 Hz</td><td>Zgornji mid, jasnost</td></tr>
+<tr><td style="color:#fc0">6</td><td>1414 Hz</td><td>Presence, razločnost</td></tr>
+<tr><td style="color:#0af">7</td><td>2828 Hz</td><td>Brilliance, činele</td></tr>
+<tr><td style="color:#0af">8</td><td>6633 Hz</td><td>Zrak, hi-hat, sibilanti</td></tr>
 </table>
 <p>Merilci <span style="color:#f33">Bass</span> / <span style="color:#fc0">Mid</span> / <span style="color:#0af">High</span> pod spektrom prikazujejo povprečje spodnjih 3, srednjih 3 in zgornjih 2 pasov. <b>Peak</b> = trenutni vršni nivo vhoda, <b>BPM</b> = samodejno zaznani tempo, <b>Beat</b> = "!" ob zaznavi udarca.</p>
 
@@ -459,7 +459,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 <li>Poženi glasbo — luči reagirajo na bas, barve se vrtijo, strobe utripa na činele</li>
 </ol>
 
-<p style="color:#0af;font-weight:bold;margin:14px 0 4px">4. AUDIO EQ &amp; AGC</p>
+<p style="color:#0af;font-weight:bold;margin:14px 0 4px">4. AUDIO PARAMETRIC EQ &amp; AGC</p>
 <p><b>AGC (Automatic Gain Control)</b> samodejno prilagaja ojačanje glede na glasnost okolja. Brez AGC bi tiha glasba komaj ustvarila efekt, glasna pa bi vse saturirala.</p>
 <p><b>Okoljski preseti:</b></p>
 <table style="font-size:0.9em;margin:4px 0 8px"><tr><th>Preset</th><th>Glasnost</th><th>AGC</th><th>Gate</th><th>Uporaba</th></tr>
@@ -469,12 +469,14 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 <tr><td>Po meri</td><td>—</td><td>—</td><td>—</td><td>Ročna nastavitev vseh parametrov</td></tr>
 </table>
 
-<p><b>EQ drsniki (8 pasov):</b> Grafični izenačevalnik, ki množilnik (0.0–3.0) na vsakem frekvenčnem pasu. Privzeto 1.0 = brez spremembe.</p>
+<p><b>Parametric EQ (8 pasov):</b> Polno parametrični izenačevalnik z nastavljivimi parametri za vsak pas:</p>
 <ul style="margin:4px 0">
-<li>Povečaj <b>Sub + Bass</b> na 2.0 → močnejši odziv na bas boben</li>
-<li>Zmanjšaj <b>Air</b> na 0.3 → manj šumenja od visokih frekvenc</li>
-<li>Povečaj <b>Mid</b> na 1.5 → bolj izrazita barvna rotacija pri vokalu</li>
+<li><b>Gain</b> (0.0–3.0): Množilnik energije pasu. Privzeto 1.0 = brez spremembe.</li>
+<li><b>Center frekvenca</b> (20–11000 Hz): Središčna frekvenca zvonaste krivulje. Nastavi na točno frekvenco, ki jo želiš izpostaviti (npr. 80 Hz za kick drum, 400 Hz za vokal).</li>
+<li><b>Q faktor</b> (0.1–10.0): Širina pasu. Nizek Q (0.3–1.0) = širok pas (zajame več frekvenc). Visok Q (3.0–10.0) = ozek, kirurški pas (cilja na specifično frekvenco).</li>
 </ul>
+<p style="color:#aaa;font-size:0.9em">Primeri: Povečaj gain na bandu 1 (85 Hz) na 2.0 → močnejši odziv na bas boben. Premakni center frekvenco banda 4 na 400 Hz in Q na 3.0 → ozek pas za vokal.</p>
+<p style="color:#f90;font-size:0.85em;margin:4px 0"><b>Opomba:</b> Beat detekcija temelji na prvih dveh pasovih (privzeto 42 Hz in 85 Hz). Če premakneš te pasove, se bo beat detekcija spremenila.</p>
 
 <p><b>AGC hitrost</b> (0–1.0): Kako hitro se sistem prilagodi spremembi glasnosti. <b>Počasi (0.1–0.3)</b> = stabilno za šov, glasnost se ne spreminja hitro. <b>Hitro (0.7–1.0)</b> = odzivno za testiranje pri različnih glasnostih.</p>
 <p><b>Noise gate</b> (0–1.0): Filtrira šum ko ni glasbe. <b>0</b> = izključen (vedno reagira — tudi na šum klime). <b>0.3</b> = zmeren (ignorira tihe zvoke). <b>0.8+</b> = agresiven (samo glasna glasba gre skozi).</p>
@@ -482,7 +484,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 <p style="color:#f90;margin:6px 0"><b>Primer — nastavi za tiho sobo doma:</b></p>
 <ol style="margin:4px 0;padding-left:18px">
 <li>Odpri Audio EQ &amp; AGC → klikni <b>Tiha soba</b></li>
-<li>Sub in Bass se postavita na 2.0 (dvojno ojačanje za šibek bas iz telefona)</li>
+<li>Gain na prvih dveh bandih se postavi na 2.0 (dvojno ojačanje za šibek bas iz telefona)</li>
 <li>AGC hitrost: 0.8 (hitro prilagajanje)</li>
 <li>Noise gate: 0.1 (nizek, da prepusti tudi tihe signale)</li>
 <li>Poženi glasbo s telefona — luči morajo reagirati</li>
@@ -494,6 +496,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 <p><b>Vir beata:</b></p>
 <ul style="margin:4px 0">
 <li><b>Manual</b>: Tempo določiš s TAP gumbom ali BPM drsnikom. Vedno aktiven.</li>
+<li><b>Avdio BPM</b>: Manualni programi (Pulse, Chase, Strobe…) tečejo, ampak BPM se samodejno sinhronizira iz avdio analize (FFT beat detekcija). BPM se glajeno prilagaja (~2s), faza se resetira ob zaznavi beata. BPM drsnik je onemogočen. <span style="color:#0af">Idealno ko hočeš manual beat programe brez ročnega nastavljanja BPM.</span></li>
 <li><b>Auto (fallback)</b>: Ko je zvočni signal prisoten, se uporabi avdio beat detekcija. Ko signal izgine (tišina), se preklopi na manual tempo. <span style="color:#0af">Priporočeno za žive nastope!</span></li>
 <li><b>Samo avdio</b>: Samo avdio beat detekcija. Ko ni signala, efekti utihnejo.</li>
 </ul>
@@ -646,7 +649,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
   <div class="card">
     <h3>Audio EQ &amp; AGC</h3>
-    <p style="font-size:0.7em;color:#888;margin:0 0 6px">Avtomatsko prilagajanje ojačanja (AGC) in per-band grafični izenačevalnik</p>
+    <p style="font-size:0.7em;color:#888;margin:0 0 6px">Avtomatsko prilagajanje ojačanja (AGC) in parametrični izenačevalnik (gain / center freq / Q)</p>
     <p style="font-size:0.7em;color:#888;margin:0 0 4px">Okolje:</p>
     <div class="env-presets" id="envPresets">
       <button onclick="setEnvPreset('quiet')">Tiha soba</button>
@@ -675,7 +678,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 
   <div class="card mb-card">
     <h3>Manual Beat</h3>
-    <p style="font-size:0.7em;color:#888;margin:0 0 6px">Ritmični efekti brez zvočnega vira — tap tempo ali ročni BPM</p>
+    <p style="font-size:0.7em;color:#888;margin:0 0 6px">Ritmični efekti — tap tempo, ročni BPM, avdio BPM sinhronizacija ali Ableton Link</p>
     <div class="toggle"><input type="checkbox" id="mbOn" onchange="sendMbCfg()"><label for="mbOn">Vklopljeno</label></div>
     <button class="tap-big" id="mbTapBtn" onpointerdown="doTap()">TAP TEMPO</button>
     <div class="mb-phase-bar"><div class="mb-phase-fill" id="mbPhaseBar"></div></div>

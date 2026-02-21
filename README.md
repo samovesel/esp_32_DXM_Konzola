@@ -32,7 +32,7 @@ Platforma se zazna samodejno prek `CONFIG_IDF_TARGET_ESP32S3` — ni rocne konfi
 - **Master dimmer** (vpliva na intensity + barvne kanale)
 - **HSV->RGBW pretvorba na ESP32** — barvni izbirnik poslje HSV vrednosti na ESP32, ki pretvori HSV->RGB in nato izpelne W/A/UV kanale iz profila fixture-a (1 sporocilo namesto 3-6)
 - **Scene** — shrani/recall do 20 scen s crossfade (0-10s)
-- **Sound-to-light** — ESP-DSP hardware FFT analiza, easy mode (bass->dimmer, mid->barve, high->strobe, beat->bump) in pro mode (uporabniska pravila za mapiranje frekvencnih pasov na kanale)
+- **Sound-to-light** — ESP-DSP hardware FFT analiza s parametricnim EQ (nastavljiva center frekvenca + Q za vsak pas), easy mode (bass->dimmer, mid->barve, high->strobe, beat->bump) in pro mode (uporabniska pravila za mapiranje frekvencnih pasov na kanale)
 - **ESP-DSP Hardware FFT** — hardware-pospesan FFT z ESP-DSP knjiznico (Vector ISA / SIMD na ESP32-S3), ~3x hitrejse od programske implementacije
 - **Audio vhod** — I2S line-in (WM8782S ADC) ali I2S MEMS mikrofon (INMP441)
 - **Beat detection** z BPM izracunom
@@ -49,7 +49,7 @@ Platforma se zazna samodejno prek `CONFIG_IDF_TARGET_ESP32S3` — ni rocne konfi
   - Skrivanje/razsirjanje posameznih kanalov ali celih fixture-ov
 - **Skupinski master dimmerji** — neodvisen intensity slider za vsako skupino + gang, BO, FO, solo na ravni skupine
 - **Beat sistem** — 12 programov (Pulse, Chase, Sine, Strobe, Rainbow, Build, Random, Alternate, Wave, Stack, Sparkle, Scanner), subdivizije (1/4x-4x), per-group programi, dimmer krivulje, barvne palete, chaining
-- **Manual beat** — tap tempo ali rocni BPM brez zvocnega vira
+- **Manual beat** — tap tempo, rocni BPM, avdio BPM sinhronizacija (samodejno sledenje tempu iz glasbe) ali Ableton Link
 - **Pametna detekcija telefona** — samodejno prilagodi UI (skrije beat gumbe, prikaze meni) z JS detekcijo touch naprave
 - **Zgodovina stanj** (3 avtomatski snapshot-i ob preklopu)
 - **2D Layout Editor** — interaktivni oder s SVG vizualizacijo fixtur, drag & drop pozicioniranje, zoom (20%-300%), pan, barvne pike z realnim DMX izhodom, prosto risanje odrskih elementov, auto-arrange (linija, lok, krog, mreza)

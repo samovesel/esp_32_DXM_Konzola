@@ -6,7 +6,7 @@ To je **profesionalni sistem za upravljanje razsvetljave** na osnovi ESP32, ki z
 
 - **ArtNet / sACN --> DMX512 pretvornik** (gateway) prek WiFi
 - **Samostojno mesalno mizo** (mixer) z web vmesnikom
-- **Zvocno reaktivno razsvetljavo** z ESP-DSP hardware FFT analizo in detekcijo udarca (beat detection)
+- **Zvocno reaktivno razsvetljavo** z ESP-DSP hardware FFT analizo, parametricnim EQ (nastavljiva center frekvenca in Q faktor za vsak pas) in detekcijo udarca (beat detection)
 - **Upravljanje profilov svetil** in scen s crossfade funkcijo
 - **Ableton Link** sinhronizacijo s DJ programsko opremo (BPM/beat grid)
 - **ESP-NOW brezvicni DMX** za peer-to-peer oddajanje na slave sprejemnike (<1ms latenca)
