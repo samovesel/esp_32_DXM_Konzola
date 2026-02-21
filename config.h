@@ -26,6 +26,10 @@
 #define CROSSFADE_DEFAULT_MS 1500  // 1.5 sekunde
 #define DMX_MAX_CHANNELS   512
 
+// Persona vmesniki (LittleFS)
+#define PATH_PERSONA_CFG "/persona.json"
+#define PATH_PERSONA_DIR "/p"
+
 // ============================================================================
 //  GPIO DODELITVE + PLATFORMA
 // ============================================================================

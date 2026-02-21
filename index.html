@@ -977,6 +977,69 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <div id="cfgStorage" style="margin-top:10px;font-size:0.7em;color:#666"></div>
     <div id="cfgWarn" style="display:none;background:#a33;color:#fff;padding:6px 10px;border-radius:4px;margin-top:6px;font-size:0.8em"></div>
   </div>
+
+  <div class="card">
+    <h3>Persona vmesniki <a href="/portal" style="color:#0af;font-size:0.7em;font-weight:normal;margin-left:8px">&#8594; Odpri portal</a></h3>
+    <p style="font-size:0.7em;color:#666;margin:-4px 0 8px">Poenostavljeni vmesniki za razli&#269;ne uporabnike. Nastavi katere scene/presete uporablja vsak vmesnik.</p>
+
+    <details style="margin-bottom:8px">
+      <summary style="cursor:pointer;color:#27ae60;font-size:0.85em;font-weight:600">&#127860; Osebje lokala</summary>
+      <div id="personaStaffCfg" style="padding:6px 0;font-size:0.8em">
+        <div id="staffPresets"></div>
+        <button onclick="addStaffPreset()" style="margin-top:4px;font-size:0.8em">+ Dodaj preset</button>
+      </div>
+    </details>
+
+    <details style="margin-bottom:8px">
+      <summary style="cursor:pointer;color:#3498db;font-size:0.85em;font-weight:600">&#127911; Tonski mojster</summary>
+      <div id="personaSoundCfg" style="padding:6px 0;font-size:0.8em">
+        <p style="color:#888;margin-bottom:4px">Scene (slot indeksi, lo&#269;eni z vejico):</p>
+        <input id="sndEngScenes" style="width:100%;margin-bottom:4px" placeholder="0,1,2,3,4,5,6,7">
+        <p style="color:#888;margin-bottom:4px">Labeli (lo&#269;eni z vejico):</p>
+        <input id="sndEngLabels" style="width:100%;margin-bottom:4px" placeholder="Intro,Verse,Chorus,...">
+        <p style="color:#888;margin-bottom:4px">Skupine (indeksi, lo&#269;eni z vejico):</p>
+        <input id="sndEngGroups" style="width:100%" placeholder="0,1,2,3">
+      </div>
+    </details>
+
+    <details style="margin-bottom:8px">
+      <summary style="cursor:pointer;color:#e74c3c;font-size:0.85em;font-weight:600">&#127917; Gledali&#353;&#269;e</summary>
+      <div style="padding:6px 0;font-size:0.8em">
+        <label style="color:#888">House lights scena (slot): </label>
+        <input id="theaterHouse" type="number" min="-1" max="19" value="2" style="width:60px">
+      </div>
+    </details>
+
+    <details style="margin-bottom:8px">
+      <summary style="cursor:pointer;color:#9b59b6;font-size:0.85em;font-weight:600">&#127926; DJ</summary>
+      <div id="personaDjCfg" style="padding:6px 0;font-size:0.8em">
+        <div id="djMoods"></div>
+        <button onclick="addDjMood()" style="margin-top:4px;font-size:0.8em">+ Dodaj mood</button>
+      </div>
+    </details>
+
+    <details style="margin-bottom:8px">
+      <summary style="cursor:pointer;color:#f39c12;font-size:0.85em;font-weight:600">&#127882; Zabava / poroka</summary>
+      <div id="personaEventCfg" style="padding:6px 0;font-size:0.8em">
+        <div id="eventPhases"></div>
+        <button onclick="addEventPhase()" style="margin-top:4px;font-size:0.8em">+ Dodaj fazo</button>
+      </div>
+    </details>
+
+    <details style="margin-bottom:8px">
+      <summary style="cursor:pointer;color:#1abc9c;font-size:0.85em;font-weight:600">&#127928; Busker</summary>
+      <div id="personaBuskerCfg" style="padding:6px 0;font-size:0.8em">
+        <div id="buskerLooks"></div>
+        <button onclick="addBuskerLook()" style="margin-top:4px;font-size:0.8em">+ Dodaj look</button>
+      </div>
+    </details>
+
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button onclick="savePersonaCfg()" style="background:#27ae60;color:#fff">Shrani persona konfig</button>
+      <button onclick="loadPersonaCfg()">Osve&#382;i</button>
+    </div>
+    <div id="personaMsg" style="font-size:0.75em;color:#888;margin-top:4px"></div>
+  </div>
 </div>
 
 <!-- TAB 6: DMX MONITOR -->
@@ -3632,6 +3695,167 @@ function showMsg(t,ok){const m=document.getElementById('msg');m.textContent=t;m.
 function toggleFsBottom(id,btn){var el=document.getElementById(id);if(!el)return;el.classList.toggle('collapsed');btn.textContent=el.classList.contains('collapsed')?'\u25b4':'_';}
 
 // ============================================================================
+//  PERSONA CONFIG
+// ============================================================================
+var _personaCfg = {};
+
+function loadPersonaCfg(){
+  fetch('/api/persona-cfg').then(r=>r.json()).then(d=>{
+    _personaCfg=d||{};renderPersonaCfg();
+    document.getElementById('personaMsg').textContent='Persona konfig naložen';
+  }).catch(()=>{_personaCfg={};renderPersonaCfg();});
+}
+
+function renderPersonaCfg(){
+  // Staff presets
+  var sp=(_personaCfg.staff&&_personaCfg.staff.presets)||[
+    {name:'Odprtje',scene:0,icon:'sunrise'},{name:'Večer',scene:3,icon:'moon'},
+    {name:'Zabava',scene:5,icon:'party'},{name:'Zadnja',scene:7,icon:'bell'},
+    {name:'Zaprto',scene:12,icon:'lock'},{name:'Izklop',scene:-1,icon:'power'}
+  ];
+  var sh='';
+  for(var i=0;i<sp.length;i++){
+    sh+='<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center">'+
+      '<input value="'+sp[i].name+'" style="width:80px" class="sp-name">'+
+      '<input type="number" min="-1" max="19" value="'+sp[i].scene+'" style="width:50px" class="sp-scene" title="Scene slot (-1=blackout)">'+
+      '<button onclick="this.parentElement.remove()" style="font-size:0.7em;padding:2px 6px">&times;</button></div>';
+  }
+  document.getElementById('staffPresets').innerHTML=sh;
+
+  // Sound eng
+  var se=_personaCfg.sound_eng||{scenes:[0,1,2,3,4,5,6,7],labels:['Scene 1','Scene 2','Scene 3','Scene 4','Scene 5','Scene 6','Scene 7','Scene 8'],groups:[0,1,2,3]};
+  document.getElementById('sndEngScenes').value=(se.scenes||[]).join(',');
+  document.getElementById('sndEngLabels').value=(se.labels||[]).join(',');
+  document.getElementById('sndEngGroups').value=(se.groups||[]).join(',');
+
+  // Theater
+  document.getElementById('theaterHouse').value=(_personaCfg.theater&&_personaCfg.theater.house_scene!==undefined)?_personaCfg.theater.house_scene:2;
+
+  // DJ moods
+  var dm=(_personaCfg.dj&&_personaCfg.dj.moods)||[
+    {name:'Chill',scene:0,stl_preset:4},{name:'Warm',scene:3,stl_preset:1},
+    {name:'Neon',scene:5,stl_preset:5},{name:'Rave',scene:7,stl_preset:3}
+  ];
+  var dh='';
+  for(var i=0;i<dm.length;i++){
+    dh+='<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center">'+
+      '<input value="'+dm[i].name+'" style="width:60px" class="dj-name">'+
+      '<input type="number" min="0" max="19" value="'+dm[i].scene+'" style="width:45px" class="dj-scene" title="Scene slot">'+
+      '<input type="number" min="0" max="5" value="'+(dm[i].stl_preset||0)+'" style="width:40px" class="dj-stl" title="STL preset">'+
+      '<button onclick="this.parentElement.remove()" style="font-size:0.7em;padding:2px 6px">&times;</button></div>';
+  }
+  document.getElementById('djMoods').innerHTML=dh;
+
+  // Event timeline
+  var et=(_personaCfg.event&&_personaCfg.event.timeline)||[
+    {name:'Gostje',time:'17:00',scene:0,fade:3000},{name:'Ceremonija',time:'17:30',scene:2,fade:5000},
+    {name:'Večerja',time:'18:30',scene:3,fade:3000},{name:'Zabava',time:'21:00',scene:7,fade:1500,stl:true}
+  ];
+  var eh='';
+  for(var i=0;i<et.length;i++){
+    eh+='<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center;flex-wrap:wrap">'+
+      '<input value="'+et[i].name+'" style="width:70px" class="ev-name">'+
+      '<input type="time" value="'+et[i].time+'" style="width:70px" class="ev-time">'+
+      '<input type="number" min="0" max="19" value="'+et[i].scene+'" style="width:40px" class="ev-scene" title="Scene">'+
+      '<input type="number" min="0" max="10000" step="500" value="'+et[i].fade+'" style="width:55px" class="ev-fade" title="Fade ms">'+
+      '<label style="font-size:0.7em"><input type="checkbox" class="ev-stl"'+(et[i].stl?' checked':'')+'>STL</label>'+
+      '<button onclick="this.parentElement.remove()" style="font-size:0.7em;padding:2px 6px">&times;</button></div>';
+  }
+  document.getElementById('eventPhases').innerHTML=eh;
+
+  // Busker looks
+  var bl=(_personaCfg.busker&&_personaCfg.busker.looks)||[
+    {name:'Warm',scene:0},{name:'Cool',scene:3},{name:'Neon',scene:5},{name:'Chill',scene:7}
+  ];
+  var bh='';
+  for(var i=0;i<bl.length;i++){
+    bh+='<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center">'+
+      '<input value="'+bl[i].name+'" style="width:80px" class="bk-name">'+
+      '<input type="number" min="0" max="19" value="'+bl[i].scene+'" style="width:50px" class="bk-scene" title="Scene slot">'+
+      '<button onclick="this.parentElement.remove()" style="font-size:0.7em;padding:2px 6px">&times;</button></div>';
+  }
+  document.getElementById('buskerLooks').innerHTML=bh;
+}
+
+function addStaffPreset(){
+  var c=document.getElementById('staffPresets');
+  c.insertAdjacentHTML('beforeend','<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center">'+
+    '<input value="Novo" style="width:80px" class="sp-name"><input type="number" min="-1" max="19" value="0" style="width:50px" class="sp-scene">'+
+    '<button onclick="this.parentElement.remove()" style="font-size:0.7em;padding:2px 6px">&times;</button></div>');
+}
+function addDjMood(){
+  var c=document.getElementById('djMoods');
+  c.insertAdjacentHTML('beforeend','<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center">'+
+    '<input value="Mood" style="width:60px" class="dj-name"><input type="number" min="0" max="19" value="0" style="width:45px" class="dj-scene">'+
+    '<input type="number" min="0" max="5" value="5" style="width:40px" class="dj-stl">'+
+    '<button onclick="this.parentElement.remove()" style="font-size:0.7em;padding:2px 6px">&times;</button></div>');
+}
+function addEventPhase(){
+  var c=document.getElementById('eventPhases');
+  c.insertAdjacentHTML('beforeend','<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center;flex-wrap:wrap">'+
+    '<input value="Faza" style="width:70px" class="ev-name"><input type="time" value="18:00" style="width:70px" class="ev-time">'+
+    '<input type="number" min="0" max="19" value="0" style="width:40px" class="ev-scene">'+
+    '<input type="number" min="0" max="10000" step="500" value="2000" style="width:55px" class="ev-fade">'+
+    '<label style="font-size:0.7em"><input type="checkbox" class="ev-stl">STL</label>'+
+    '<button onclick="this.parentElement.remove()" style="font-size:0.7em;padding:2px 6px">&times;</button></div>');
+}
+function addBuskerLook(){
+  var c=document.getElementById('buskerLooks');
+  c.insertAdjacentHTML('beforeend','<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center">'+
+    '<input value="Look" style="width:80px" class="bk-name"><input type="number" min="0" max="19" value="0" style="width:50px" class="bk-scene">'+
+    '<button onclick="this.parentElement.remove()" style="font-size:0.7em;padding:2px 6px">&times;</button></div>');
+}
+
+function savePersonaCfg(){
+  var cfg={};
+  // Staff
+  var sRows=document.querySelectorAll('#staffPresets > div');
+  cfg.staff={presets:[]};
+  sRows.forEach(function(r){
+    cfg.staff.presets.push({name:r.querySelector('.sp-name').value,scene:+r.querySelector('.sp-scene').value,icon:'star'});
+  });
+  // Sound eng
+  var seS=document.getElementById('sndEngScenes').value.split(',').map(Number).filter(function(n){return !isNaN(n);});
+  var seL=document.getElementById('sndEngLabels').value.split(',').map(function(s){return s.trim();});
+  var seG=document.getElementById('sndEngGroups').value.split(',').map(Number).filter(function(n){return !isNaN(n);});
+  cfg.sound_eng={scenes:seS,labels:seL,groups:seG};
+  // Theater
+  cfg.theater={house_scene:+document.getElementById('theaterHouse').value};
+  // DJ
+  var dRows=document.querySelectorAll('#djMoods > div');
+  cfg.dj={moods:[]};
+  dRows.forEach(function(r){
+    cfg.dj.moods.push({name:r.querySelector('.dj-name').value,scene:+r.querySelector('.dj-scene').value,stl_preset:+r.querySelector('.dj-stl').value});
+  });
+  // Event
+  var eRows=document.querySelectorAll('#eventPhases > div');
+  cfg.event={timeline:[]};
+  eRows.forEach(function(r){
+    cfg.event.timeline.push({
+      name:r.querySelector('.ev-name').value,time:r.querySelector('.ev-time').value,
+      scene:+r.querySelector('.ev-scene').value,fade:+r.querySelector('.ev-fade').value,
+      stl:r.querySelector('.ev-stl').checked
+    });
+  });
+  // Busker
+  var bRows=document.querySelectorAll('#buskerLooks > div');
+  cfg.busker={looks:[]};
+  bRows.forEach(function(r){
+    cfg.busker.looks.push({name:r.querySelector('.bk-name').value,scene:+r.querySelector('.bk-scene').value});
+  });
+
+  _personaCfg=cfg;
+  fetch('/api/persona-cfg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)})
+    .then(function(r){return r.json();}).then(function(d){
+      showMsg(d.ok?'Persona konfig shranjen':'Napaka pri shranjevanju',d.ok);
+      document.getElementById('personaMsg').textContent=d.ok?'Shranjeno!':'Napaka';
+    }).catch(function(){showMsg('Napaka pri shranjevanju',false);});
+}
+
+// Load persona config on page load (deferred)
+setTimeout(loadPersonaCfg, 2000);
+
+// ============================================================================
 //  2D LAYOUT EDITOR
 // ============================================================================
 var layActive=false,layStageEdit=false;
@@ -4915,8 +5139,52 @@ var _xyWandActive=false,_xyWandBeta0=null,_xyWandGamma0=null;
 var _xyWandRange=50; // degrees each side from center → full pan/tilt range
 var _xyWandLastSend=0;
 
+function needsSecureWizard(){
+  if(window.isSecureContext)return false;
+  var ua=navigator.userAgent;
+  return /Chrome\//.test(ua)&&/Android/.test(ua)&&!/OPR\/|Edg\//.test(ua);
+}
+function showSecureWizard(){
+  var m=document.getElementById('secureWizard');
+  if(m){m.style.display='flex';return;}
+  // Create wizard modal
+  m=document.createElement('div');m.id='secureWizard';
+  m.style.cssText='display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;align-items:center;justify-content:center;padding:16px';
+  m.innerHTML='<div style="background:#1a1a2e;border-radius:12px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto">'+
+    '<h3 style="color:#f39c12;margin:0 0 10px">&#128274; Giroskop potrebuje dovoljenje</h3>'+
+    '<p style="font-size:0.85em;color:#ccc;margin-bottom:12px">Chrome na Androidu blokira giroskop na HTTP straneh. Sledi korakom za omogočanje:</p>'+
+    '<div style="background:#222;border-radius:8px;padding:10px;margin-bottom:10px">'+
+      '<p style="font-size:0.8em;color:#0af;font-weight:600;margin:0 0 4px">1. Kopiraj ta naslov:</p>'+
+      '<div style="display:flex;gap:6px;align-items:center">'+
+        '<code style="font-size:0.7em;color:#f90;background:#111;padding:4px 8px;border-radius:4px;flex:1;word-break:break-all">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code>'+
+        '<button onclick="navigator.clipboard.writeText(\'chrome://flags/#unsafely-treat-insecure-origin-as-secure\').then(function(){showMsg(\'Kopirano!\',true)}).catch(function(){})" style="padding:6px 10px;font-size:0.75em;white-space:nowrap">Kopiraj</button>'+
+      '</div>'+
+    '</div>'+
+    '<div style="background:#222;border-radius:8px;padding:10px;margin-bottom:10px">'+
+      '<p style="font-size:0.8em;color:#0af;font-weight:600;margin:0 0 4px">2. Odpri nov tab in prilepi ta naslov v naslovno vrstico</p>'+
+    '</div>'+
+    '<div style="background:#222;border-radius:8px;padding:10px;margin-bottom:10px">'+
+      '<p style="font-size:0.8em;color:#0af;font-weight:600;margin:0 0 4px">3. V besedilno polje vnesi naslov te naprave:</p>'+
+      '<div style="display:flex;gap:6px;align-items:center">'+
+        '<code style="font-size:0.75em;color:#f90;background:#111;padding:4px 8px;border-radius:4px;flex:1" id="wizDeviceUrl">'+location.origin+'</code>'+
+        '<button onclick="navigator.clipboard.writeText(location.origin).then(function(){showMsg(\'Kopirano!\',true)}).catch(function(){})" style="padding:6px 10px;font-size:0.75em;white-space:nowrap">Kopiraj</button>'+
+      '</div>'+
+    '</div>'+
+    '<div style="background:#222;border-radius:8px;padding:10px;margin-bottom:10px">'+
+      '<p style="font-size:0.8em;color:#0af;font-weight:600;margin:0 0 4px">4. Nastavi na "Enabled" in tapni "Relaunch"</p>'+
+    '</div>'+
+    '<div style="background:#222;border-radius:8px;padding:10px;margin-bottom:12px">'+
+      '<p style="font-size:0.8em;color:#0af;font-weight:600;margin:0 0 4px">5. Vrni se sem in poskusi Wand znova</p>'+
+    '</div>'+
+    '<p style="font-size:0.7em;color:#888;margin-bottom:12px">To je enkratna nastavitev. Po Relaunch bo giroskop deloval.</p>'+
+    '<button onclick="document.getElementById(\'secureWizard\').style.display=\'none\'" style="width:100%;padding:10px;font-size:1em">Zapri</button>'+
+  '</div>';
+  document.body.appendChild(m);
+}
 function xyWandToggle(){
   if(_xyWandActive){xyWandStop();return;}
+  // Chrome Android: needs secure context for gyroscope
+  if(needsSecureWizard()){showSecureWizard();return;}
   // iOS 13+ requires permission request from user gesture
   if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
     DeviceOrientationEvent.requestPermission().then(function(state){

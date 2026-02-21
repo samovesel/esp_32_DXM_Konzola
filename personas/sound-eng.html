@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DMX Sound">
+<meta name="theme-color" content="#3498db">
+<link rel="manifest" href="/manifest-sound-eng.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>DMX Sound Engineer</title>
+<style>
+:root{--accent:#3498db}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:8px}
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;
+  text-align:center;padding:8px;font-size:0.85em;z-index:100}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;
+  padding:8px 20px;border-radius:20px;font-size:0.85em;opacity:0;transition:opacity 0.3s;z-index:100}
+.wrap{width:100%;max-width:600px}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.hdr h1{font-size:1.1em;color:var(--accent)}
+.hdr a{color:#888;text-decoration:none;font-size:0.8em}
+.card{background:#1a1a2e;border-radius:10px;padding:10px;margin-bottom:8px}
+.topbar{display:flex;align-items:center;gap:6px}
+.btn-bo{background:#c0392b;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:0.85em;
+  font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-bo.active{background:#e74c3c;box-shadow:0 0 12px #e74c3c80}
+.btn-flash{background:#f39c12;color:#111;border:none;border-radius:8px;padding:10px 14px;font-size:0.85em;
+  font-weight:600;cursor:pointer;white-space:nowrap;user-select:none}
+.btn-flash.active{background:#f1c40f;box-shadow:0 0 12px #f1c40f80}
+.master-wrap{flex:1;display:flex;align-items:center;gap:6px}
+.master-wrap input[type=range]{flex:1;height:8px;-webkit-appearance:none;background:#333;border-radius:4px;outline:none}
+.master-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);cursor:pointer}
+.master-val{font-size:0.8em;color:#aaa;min-width:30px;text-align:right}
+
+.scene-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.scene-btn{background:#222;border:2px solid #333;border-radius:8px;padding:10px 4px;text-align:center;
+  font-size:0.78em;color:#ccc;cursor:pointer;transition:all 0.15s;min-height:44px;display:flex;align-items:center;justify-content:center}
+.scene-btn:active{transform:scale(0.95)}
+.scene-btn.active{border-color:var(--accent);color:#fff;background:#1a2a4a}
+
+.stl-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.btn-stl{background:#222;border:2px solid #333;border-radius:8px;padding:8px 12px;color:#ccc;
+  font-size:0.8em;cursor:pointer;transition:all 0.15s}
+.btn-stl.on{border-color:#27ae60;color:#27ae60;background:#1a2e1a}
+.env-btn{background:#222;border:1px solid #444;border-radius:6px;padding:6px 10px;color:#aaa;
+  font-size:0.72em;cursor:pointer}
+.env-btn:active{background:#333}
+
+.grp-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.grp-row label{font-size:0.75em;color:#888;min-width:32px}
+.grp-row input[type=range]{flex:1;height:6px;-webkit-appearance:none;background:#333;border-radius:3px;outline:none}
+.grp-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer}
+.grp-val{font-size:0.7em;color:#888;min-width:24px;text-align:right}
+
+.fft-wrap{display:flex;align-items:flex-end;height:70px;gap:3px;padding:4px 0}
+.fft-bar{flex:1;background:linear-gradient(to top,#27ae60,#f39c12,#e74c3c);border-radius:3px 3px 0 0;
+  min-height:2px;transition:height 0.08s}
+.bpm-row{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.bpm-val{font-size:1.1em;font-weight:700;color:var(--accent)}
+.beat-dot{width:12px;height:12px;border-radius:50%;background:#333;transition:all 0.1s}
+.beat-dot.on{background:#e74c3c;box-shadow:0 0 10px #e74c3c}
+
+.cf-bar{height:6px;background:#222;border-radius:3px;overflow:hidden;margin-top:6px}
+.cf-fill{height:100%;background:var(--accent);width:0;transition:width 0.1s}
+.cf-label{font-size:0.65em;color:#666;margin-top:2px}
+
+.footer{text-align:center;margin-top:8px}
+.footer a{color:#888;text-decoration:none;font-size:0.75em}
+</style>
+</head>
+<body>
+<div id="offlineBanner"></div>
+<div class="wrap">
+  <div class="hdr"><h1>&#127911; Tonski mojster</h1><a href="/portal">&#9664; Portal</a></div>
+
+  <div class="card">
+    <div class="topbar">
+      <button class="btn-bo" id="btnBo" onclick="toggleBo()">BLACKOUT</button>
+      <div class="master-wrap">
+        <input type="range" min="0" max="255" value="255" id="masterSlider"
+               oninput="onMaster(this.value)" ontouchstart="this.dataset.touch=1" ontouchend="delete this.dataset.touch">
+        <span class="master-val" id="masterVal">100%</span>
+      </div>
+      <button class="btn-flash" id="btnFlash"
+              onmousedown="flashOn()" onmouseup="flashOff()" onmouseleave="flashOff()"
+              ontouchstart="flashOn()" ontouchend="flashOff()">FLASH</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="scene-grid" id="sceneGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="stl-row">
+      <button class="btn-stl" id="btnStl" onclick="toggleStl()">&#9835; STL</button>
+      <button class="env-btn" onclick="setEnv(4)">Tiha</button>
+      <button class="env-btn" onclick="setEnv(5)">Club</button>
+      <button class="env-btn" onclick="setEnv(1)">Koncert</button>
+    </div>
+  </div>
+
+  <div class="card" id="grpCard">
+    <div id="grpSliders"></div>
+  </div>
+
+  <div class="card">
+    <div class="fft-wrap" id="fftBars"></div>
+    <div class="bpm-row">
+      <span class="bpm-val" id="bpmVal">-- BPM</span>
+      <span class="beat-dot" id="beatDot"></span>
+    </div>
+    <div class="cf-bar"><div class="cf-fill" id="cfFill"></div></div>
+    <div class="cf-label" id="cfLabel"></div>
+  </div>
+
+  <div class="footer"><a href="/portal">&#127968; Portal</a></div>
+</div>
+<div id="toast"></div>
+
+<script src="/persona-core.js"></script>
+<script>
+var cfg = {scenes:[0,1,2,3,4,5,6,7], labels:['Scene 1','Scene 2','Scene 3','Scene 4','Scene 5','Scene 6','Scene 7','Scene 8'], groups:[0,1,2,3]};
+var boState = false;
+var stlOn = false;
+var lastPreset = 5;
+var activeScene = -1;
+var sceneNames = [];
+var beatTimeout = null;
+
+// Init FFT bars
+(function(){
+    var c = document.getElementById('fftBars');
+    for (var i = 0; i < 8; i++) {
+        var b = document.createElement('div');
+        b.className = 'fft-bar';
+        b.style.height = '2px';
+        b.id = 'fb' + i;
+        c.appendChild(b);
+    }
+})();
+
+function renderScenes() {
+    var g = document.getElementById('sceneGrid');
+    g.innerHTML = '';
+    for (var i = 0; i < cfg.scenes.length; i++) {
+        var btn = document.createElement('div');
+        btn.className = 'scene-btn';
+        btn.dataset.idx = i;
+        btn.textContent = cfg.labels[i] || ('Scene ' + (cfg.scenes[i]+1));
+        btn.onclick = (function(idx) { return function() { recallScene(idx); }; })(i);
+        g.appendChild(btn);
+    }
+}
+
+function renderGroups() {
+    var c = document.getElementById('grpSliders');
+    c.innerHTML = '';
+    for (var i = 0; i < cfg.groups.length; i++) {
+        var gi = cfg.groups[i];
+        var row = document.createElement('div');
+        row.className = 'grp-row';
+        row.innerHTML = '<label>Sk.' + (gi+1) + '</label>' +
+            '<input type="range" min="0" max="255" value="255" id="grp' + gi + '" oninput="onGrp(' + gi + ',this.value)">' +
+            '<span class="grp-val" id="grpV' + gi + '">100%</span>';
+        c.appendChild(row);
+    }
+}
+
+function recallScene(idx) {
+    var slot = cfg.scenes[idx];
+    activeScene = slot;
+    PersonaCore.send({cmd:'scene_recall', slot:slot, fade:1500});
+    updateSceneHighlight();
+}
+
+function updateSceneHighlight() {
+    var btns = document.querySelectorAll('.scene-btn');
+    for (var i = 0; i < btns.length; i++) {
+        btns[i].classList.toggle('active', cfg.scenes[i] === activeScene);
+    }
+}
+
+function toggleBo() {
+    boState = !boState;
+    PersonaCore.send({cmd:'blackout', v:boState?1:0});
+}
+
+function flashOn() {
+    PersonaCore.send({cmd:'flash', v:1, l:255});
+    document.getElementById('btnFlash').classList.add('active');
+}
+function flashOff() {
+    PersonaCore.send({cmd:'flash', v:0});
+    document.getElementById('btnFlash').classList.remove('active');
+}
+
+function onMaster(v) {
+    PersonaCore.send({cmd:'master', v:parseInt(v)});
+    document.getElementById('masterVal').textContent = Math.round(v/2.55) + '%';
+}
+
+function onGrp(g, v) {
+    PersonaCore.send({cmd:'grpdim', g:g, v:parseInt(v)});
+    var ve = document.getElementById('grpV'+g);
+    if (ve) ve.textContent = Math.round(v/2.55) + '%';
+}
+
+function toggleStl() {
+    stlOn = !stlOn;
+    PersonaCore.send({cmd:'easy', en:stlOn?1:0, preset:lastPreset});
+    document.getElementById('btnStl').classList.toggle('on', stlOn);
+}
+
+function setEnv(preset) {
+    lastPreset = preset;
+    stlOn = true;
+    PersonaCore.send({cmd:'easy', en:1, preset:preset});
+    document.getElementById('btnStl').classList.add('on');
+}
+
+PersonaCore.connect();
+PersonaCore.loadConfig(function(c) {
+    if (c && c.sound_eng) {
+        if (c.sound_eng.scenes) cfg.scenes = c.sound_eng.scenes;
+        if (c.sound_eng.labels) cfg.labels = c.sound_eng.labels;
+        if (c.sound_eng.groups) cfg.groups = c.sound_eng.groups;
+    }
+    renderScenes();
+    renderGroups();
+});
+
+PersonaCore.loadScenes(function(scenes) {
+    sceneNames = scenes;
+    // Override labels from actual scene names where available
+    for (var i = 0; i < cfg.scenes.length; i++) {
+        var s = scenes[cfg.scenes[i]];
+        if (s && s.name && s.name.length > 0 && (!cfg.labels[i] || cfg.labels[i].indexOf('Scene') === 0)) {
+            cfg.labels[i] = s.name;
+        }
+    }
+    renderScenes();
+});
+
+PersonaCore.onStatus(function(d) {
+    // Master
+    var ms = document.getElementById('masterSlider');
+    if (ms && !ms.dataset.touch && document.activeElement !== ms) {
+        ms.value = d.master;
+        document.getElementById('masterVal').textContent = Math.round(d.master/2.55) + '%';
+    }
+    // Blackout
+    boState = !!d.bo;
+    document.getElementById('btnBo').classList.toggle('active', boState);
+    // Group dimmers
+    if (d.gd) {
+        for (var i = 0; i < cfg.groups.length; i++) {
+            var gi = cfg.groups[i];
+            var ge = document.getElementById('grp'+gi);
+            if (ge && document.activeElement !== ge) {
+                ge.value = d.gd[gi];
+                var ve = document.getElementById('grpV'+gi);
+                if (ve) ve.textContent = Math.round(d.gd[gi]/2.55) + '%';
+            }
+        }
+    }
+    // FFT
+    if (d.fft) {
+        for (var i = 0; i < 8; i++) {
+            var bar = document.getElementById('fb'+i);
+            if (bar && d.fft.b && d.fft.b[i] !== undefined) {
+                bar.style.height = Math.max(2, (d.fft.b[i]/255)*68) + 'px';
+            }
+        }
+        // BPM
+        var bpm = d.fft.bpm || (d.mb && d.mb.bpm) || 0;
+        document.getElementById('bpmVal').textContent = bpm > 0 ? bpm.toFixed(1) + ' BPM' : '-- BPM';
+        // Beat
+        if (d.fft.beat) {
+            document.getElementById('beatDot').classList.add('on');
+            if (beatTimeout) clearTimeout(beatTimeout);
+            beatTimeout = setTimeout(function(){ document.getElementById('beatDot').classList.remove('on'); }, 150);
+        }
+    }
+    // Crossfade
+    var cf = d.cf;
+    if (cf) {
+        document.getElementById('cfFill').style.width = cf.active ? cf.progress + '%' : '0';
+        document.getElementById('cfLabel').textContent = cf.active ? 'Crossfade ' + cf.progress + '%' : '';
+        if (cf.target >= 0) activeScene = cf.target;
+    }
+    updateSceneHighlight();
+});
+</script>
+</body>
+</html>

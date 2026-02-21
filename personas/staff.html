@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DMX Staff">
+<meta name="theme-color" content="#27ae60">
+<link rel="manifest" href="/manifest-staff.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>DMX Staff</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 16px}
+.wrap{width:100%;max-width:400px;display:flex;flex-direction:column;gap:12px}
+
+/* Header */
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+header h1{font-size:1.3em;color:#27ae60}
+header a{color:#888;text-decoration:none;font-size:0.8em;padding:4px 10px;
+  border:1px solid #333;border-radius:8px}
+header a:hover{color:#27ae60;border-color:#27ae60}
+
+/* Offline banner */
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;
+  text-align:center;padding:8px;font-size:0.85em;z-index:100}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;
+  padding:8px 20px;border-radius:20px;font-size:0.85em;opacity:0;transition:opacity 0.3s;z-index:100}
+
+/* Preset buttons */
+.preset-btn{display:flex;align-items:center;width:100%;height:70px;
+  background:#1a1a2e;border:2px solid #333;border-radius:12px;
+  color:#eee;font-size:1em;font-weight:600;cursor:pointer;
+  padding:0 20px;gap:14px;transition:border-color 0.2s,box-shadow 0.2s,transform 0.1s;
+  -webkit-tap-highlight-color:transparent;outline:none}
+.preset-btn:active{transform:scale(0.97)}
+.preset-btn .p-icon{font-size:1.8em;flex-shrink:0;width:44px;text-align:center}
+.preset-btn .p-name{font-size:1.1em}
+.preset-btn.active{border-color:#27ae60;box-shadow:0 0 15px #27ae6050}
+
+/* Brightness section */
+.bright-section{margin-top:6px;padding:16px;background:#1a1a2e;border-radius:12px;border:2px solid #333}
+.bright-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.bright-header span{font-size:0.9em;color:#aaa}
+.bright-header .pct{font-size:1.1em;color:#27ae60;font-weight:700}
+
+/* Range slider */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;
+  border-radius:4px;background:#333;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:28px;height:28px;border-radius:50%;background:#27ae60;cursor:pointer;
+  border:2px solid #1a1a2e;box-shadow:0 0 6px #27ae6060}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;
+  background:#27ae60;cursor:pointer;border:2px solid #1a1a2e;box-shadow:0 0 6px #27ae6060}
+input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:#333}
+
+/* Footer */
+.footer{text-align:center;margin-top:8px}
+.footer span{font-size:0.7em;color:#555}
+</style>
+</head>
+<body>
+<div id="offlineBanner"></div>
+
+<div class="wrap">
+  <header>
+    <h1 id="deviceName">DMX Staff</h1>
+    <a href="/portal">Portal</a>
+  </header>
+
+  <div id="presets"></div>
+
+  <div class="bright-section">
+    <div class="bright-header">
+      <span>Svetlost</span>
+      <span class="pct" id="brightPct">100%</span>
+    </div>
+    <input type="range" id="masterSlider" min="0" max="255" value="255">
+  </div>
+
+  <div class="footer">
+    <span id="deviceInfo"></span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="/persona-core.js"></script>
+<script>
+(function(){
+'use strict';
+
+var defaultPresets = [
+    {name:'Odprtje', scene:0, icon:'\u2600'},
+    {name:'Ve\u010der', scene:3, icon:'\uD83C\uDF19'},
+    {name:'Zabava', scene:5, icon:'\uD83C\uDF89', stl:true},
+    {name:'Zadnja ura', scene:7, icon:'\uD83D\uDD14'},
+    {name:'Zaprto', scene:12, icon:'\uD83D\uDD12'},
+    {name:'Izklop', scene:-1, icon:'\u23FB'}
+];
+
+var presets = defaultPresets;
+var activeIdx = -1;
+var slider = document.getElementById('masterSlider');
+var pctLabel = document.getElementById('brightPct');
+var presetsEl = document.getElementById('presets');
+var blackoutIdx = -1; // index of preset with scene === -1
+
+function renderPresets() {
+    presetsEl.innerHTML = '';
+    blackoutIdx = -1;
+    for (var i = 0; i < presets.length; i++) {
+        if (presets[i].scene === -1) blackoutIdx = i;
+        var btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.setAttribute('data-idx', i);
+        btn.innerHTML = '<span class="p-icon">' + presets[i].icon + '</span><span class="p-name">' + presets[i].name + '</span>';
+        btn.addEventListener('click', onPresetTap);
+        presetsEl.appendChild(btn);
+    }
+    updateActiveUI();
+}
+
+function updateActiveUI() {
+    var btns = presetsEl.querySelectorAll('.preset-btn');
+    for (var i = 0; i < btns.length; i++) {
+        if (i === activeIdx) {
+            btns[i].classList.add('active');
+        } else {
+            btns[i].classList.remove('active');
+        }
+    }
+}
+
+function onPresetTap(e) {
+    var btn = e.currentTarget;
+    var idx = parseInt(btn.getAttribute('data-idx'));
+    var p = presets[idx];
+
+    activeIdx = idx;
+    updateActiveUI();
+
+    if (p.scene === -1) {
+        // Blackout
+        PersonaCore.send({cmd:'blackout', v:1});
+        PersonaCore.showMsg('Izklop');
+    } else if (p.stl) {
+        // Club / STL preset
+        PersonaCore.send({cmd:'easy', en:1, preset:5});
+        PersonaCore.send({cmd:'scene_recall', slot:p.scene, fade:2000});
+        PersonaCore.showMsg(p.name);
+    } else {
+        // Normal scene — un-blackout first
+        PersonaCore.send({cmd:'blackout', v:0});
+        PersonaCore.send({cmd:'scene_recall', slot:p.scene, fade:2000});
+        PersonaCore.showMsg(p.name);
+    }
+}
+
+// Brightness slider
+function updatePct() {
+    var v = parseInt(slider.value);
+    pctLabel.textContent = Math.round(v / 255 * 100) + '%';
+    updateSliderFill();
+}
+
+function updateSliderFill() {
+    var pct = ((+slider.value - +slider.min) / (+slider.max - +slider.min)) * 100;
+    slider.style.background = 'linear-gradient(to right,#27ae60 0%,#27ae60 ' + pct + '%,#333 ' + pct + '%,#333 100%)';
+}
+
+slider.addEventListener('input', function() {
+    updatePct();
+    PersonaCore.send({cmd:'master', v:parseInt(slider.value)});
+});
+
+updatePct();
+
+// Status callback
+PersonaCore.onStatus(function(d) {
+    // Sync master slider if user is not actively dragging
+    if (typeof d.master !== 'undefined' && document.activeElement !== slider) {
+        slider.value = d.master;
+        updatePct();
+    }
+    // Sync blackout state
+    if (d.bo === true && blackoutIdx >= 0) {
+        activeIdx = blackoutIdx;
+        updateActiveUI();
+    }
+});
+
+// Hello callback
+PersonaCore.onHello(function(d) {
+    var name = d.hostname || d.name || 'DMX Staff';
+    document.getElementById('deviceName').textContent = name;
+    document.title = name + ' \u2014 Staff';
+    var info = document.getElementById('deviceInfo');
+    if (info) info.textContent = location.host;
+});
+
+// Init
+PersonaCore.connect();
+PersonaCore.loadConfig(function(cfg) {
+    if (cfg && cfg.staff && cfg.staff.presets && cfg.staff.presets.length) {
+        presets = cfg.staff.presets;
+    }
+    renderPresets();
+});
+
+})();
+</script>
+</body>
+</html>
