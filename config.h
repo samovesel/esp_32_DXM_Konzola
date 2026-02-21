@@ -193,6 +193,13 @@ struct PatchEntry {
   bool soundReactive;
   bool active;            // Ali je ta slot v uporabi
   int8_t profileIndex;    // Indeks v profileArray[] (-1 = ni naložen)
+  // Pan/Tilt omejitve in obračanje osi
+  bool invertPan;         // Obrni Pan os (za zrcalno postavljene luči)
+  bool invertTilt;        // Obrni Tilt os
+  uint8_t panMin;         // Spodnja meja Pan (0-255, privzeto 0)
+  uint8_t panMax;         // Zgornja meja Pan (0-255, privzeto 255)
+  uint8_t tiltMin;        // Spodnja meja Tilt (0-255, privzeto 0)
+  uint8_t tiltMax;        // Zgornja meja Tilt (0-255, privzeto 255)
 };
 
 struct GroupDef {
@@ -303,6 +310,14 @@ enum BeatSubdiv : uint8_t {
   SUBDIV_QUAD    = 4   // 4x — hitreje
 };
 
+// FX simetrija (smer izvajanja efektov)
+enum FxSymmetry : uint8_t {
+  SYM_FORWARD    = 0,  // Normalno (1→2→3→4) — privzeto
+  SYM_REVERSE    = 1,  // Obratno (4→3→2→1)
+  SYM_CENTER_OUT = 2,  // Iz sredine navzven (3→2→4→1)
+  SYM_ENDS_IN    = 3   // Zunaj-noter (1→4→2→3)
+};
+
 // Dimmer krivulje za beat programe
 enum DimmerCurve : uint8_t {
   DIM_LINEAR      = 0,  // Brez spremembe
@@ -361,6 +376,8 @@ struct ManualBeatConfig {
   // --- Faza 4: barvne palete ---
   uint8_t  palette;           // ColorPalette
   uint16_t customHues[4];     // Custom paleta (0-360°)
+  // --- FX simetrija ---
+  uint8_t  symmetry;            // FxSymmetry (smer izvajanja efektov)
   // --- Faza 6: per-group override ---
   GroupBeatOverride groupOverrides[MAX_GROUPS];
 };
@@ -379,6 +396,7 @@ static const ManualBeatConfig MANUAL_BEAT_DEFAULTS = {
   0,              // decayMs
   PAL_RAINBOW,    // palette
   {0,90,180,270}, // customHues
+  SYM_FORWARD,     // symmetry
   {{GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
    {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},
    {GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT,GROUP_BEAT_INHERIT},

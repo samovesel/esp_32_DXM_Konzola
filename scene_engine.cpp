@@ -169,6 +169,13 @@ float SceneEngine::getCrossfadeProgress() const {
   return (float)elapsed / (float)_cf.durationMs;
 }
 
+// Ali je tip kanala "trd" (snap, brez fade-a)?
+// Gobo, Prism, Shutter, Macro, Preset kolesa ne smejo drseti — vmesne vrednosti so grde.
+static bool isSnapChannel(uint8_t type) {
+  return type == CH_GOBO || type == CH_SHUTTER || type == CH_PRISM ||
+         type == CH_MACRO || type == CH_PRESET;
+}
+
 bool SceneEngine::updateCrossfade(uint8_t* outDmx) {
   if (!_cf.active) return false;
 
@@ -188,9 +195,34 @@ bool SceneEngine::updateCrossfade(uint8_t* outDmx) {
   uint32_t alpha = (elapsed * 256) / _cf.durationMs;  // 0-256
   if (alpha > 256) alpha = 256;
 
+  // Zgradi snap masko: kateri DMX naslovi so "trdi" kanali (gobo/prism/shutter)
+  // Snap kanali preskočijo na cilj na polovici crossfade-a (alpha >= 128)
+  // namesto da drsijo čez vmesne vrednosti.
+  bool snapMask[DMX_MAX_CHANNELS];
+  memset(snapMask, 0, sizeof(snapMask));
+  if (_fixtures) {
+    for (int fi = 0; fi < MAX_FIXTURES; fi++) {
+      const PatchEntry* fx = _fixtures->getFixture(fi);
+      if (!fx || !fx->active || fx->profileIndex < 0) continue;
+      uint8_t chCount = _fixtures->fixtureChannelCount(fi);
+      for (int ch = 0; ch < chCount; ch++) {
+        const ChannelDef* def = _fixtures->fixtureChannel(fi, ch);
+        if (def && isSnapChannel(def->type)) {
+          uint16_t addr = fx->dmxAddress + ch - 1;
+          if (addr < DMX_MAX_CHANNELS) snapMask[addr] = true;
+        }
+      }
+    }
+  }
+
   for (int i = 0; i < DMX_MAX_CHANNELS; i++) {
-    int16_t diff = (int16_t)_cf.toDmx[i] - (int16_t)_cf.fromDmx[i];
-    outDmx[i] = _cf.fromDmx[i] + (int16_t)((diff * (int32_t)alpha) / 256);
+    if (snapMask[i]) {
+      // Snap: preskoči na cilj na polovici fada
+      outDmx[i] = (alpha >= 128) ? _cf.toDmx[i] : _cf.fromDmx[i];
+    } else {
+      int16_t diff = (int16_t)_cf.toDmx[i] - (int16_t)_cf.fromDmx[i];
+      outDmx[i] = _cf.fromDmx[i] + (int16_t)((diff * (int32_t)alpha) / 256);
+    }
   }
 
   return true;

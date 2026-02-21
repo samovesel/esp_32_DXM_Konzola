@@ -737,6 +737,28 @@ void SoundEngine::applyManualBeatProgram(const uint8_t* manualValues, uint8_t* d
       useBeatCount = _mbBeatCount;
     }
 
+    // FX Symmetry: transformiraj useSi glede na smer izvajanja
+    if (useSrN > 1) {
+      switch (_mbCfg.symmetry) {
+        case SYM_REVERSE:
+          useSi = useSrN - 1 - useSi;
+          break;
+        case SYM_CENTER_OUT: {
+          int mid = useSrN / 2;
+          useSi = (useSi < mid) ? (mid - 1 - useSi) : (useSi - mid);
+          if (useSrN % 2 == 1 && useSi == 0 && si == useSrN / 2) useSi = 0;
+          break;
+        }
+        case SYM_ENDS_IN: {
+          int mid = useSrN / 2;
+          int dist = (useSi < mid) ? useSi : (useSrN - 1 - useSi);
+          useSi = mid - dist;
+          break;
+        }
+        default: break; // SYM_FORWARD — brez spremembe
+      }
+    }
+
     float dimMod = 0;
     float colorHue = -1;
 

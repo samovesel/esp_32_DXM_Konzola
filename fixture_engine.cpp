@@ -203,6 +203,12 @@ bool FixtureEngine::addFixture(const char* name, const char* profileId,
       _patch[i].soundReactive = soundReactive;
       _patch[i].active        = true;
       _patch[i].profileIndex  = -1;
+      _patch[i].invertPan     = false;
+      _patch[i].invertTilt    = false;
+      _patch[i].panMin        = 0;
+      _patch[i].panMax        = 255;
+      _patch[i].tiltMin       = 0;
+      _patch[i].tiltMax       = 255;
 
       // Poskusi povezati profil
       for (int j = 0; j < _profileCount; j++) {

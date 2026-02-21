@@ -462,6 +462,7 @@ void setup() {
 
   // Scene engine
   scenes.begin();
+  scenes.setFixtureEngine(&fixtures);
 
   // Mixer
   mixer.begin(&fixtures, &scenes);

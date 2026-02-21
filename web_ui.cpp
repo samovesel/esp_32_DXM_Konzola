@@ -190,6 +190,8 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     mb.dimCurve     = doc["dc"]   | (uint8_t)DIM_LINEAR;
     mb.attackMs     = doc["atk"]  | (uint16_t)0;
     mb.decayMs      = doc["dcy"]  | (uint16_t)0;
+    // FX simetrija
+    mb.symmetry     = doc["sym"]  | (uint8_t)SYM_FORWARD;
     // Faza 4: paleta
     mb.palette      = doc["pal"]  | (uint8_t)PAL_RAINBOW;
     if (doc["cpal"].is<JsonArray>()) {
@@ -307,6 +309,9 @@ static void apiGetFixtures(AsyncWebServerRequest* req) {
     const PatchEntry* fx=_fix->getFixture(i); if(!fx||!fx->active)continue;
     JsonObject o=fArr.add<JsonObject>(); o["idx"]=i; o["name"]=fx->name; o["profileId"]=fx->profileId;
     o["dmxAddress"]=fx->dmxAddress; o["groupMask"]=fx->groupMask; o["soundReactive"]=fx->soundReactive;
+    if(fx->invertPan) o["invertPan"]=true; if(fx->invertTilt) o["invertTilt"]=true;
+    if(fx->panMin>0) o["panMin"]=fx->panMin; if(fx->panMax<255) o["panMax"]=fx->panMax;
+    if(fx->tiltMin>0) o["tiltMin"]=fx->tiltMin; if(fx->tiltMax<255) o["tiltMax"]=fx->tiltMax;
     if(fx->profileIndex>=0){
       const FixtureProfile* p=_fix->getProfile(fx->profileIndex);
       if(p){
@@ -355,6 +360,12 @@ static void apiPostFixtures(AsyncWebServerRequest* req, uint8_t* data, size_t le
       if(!doc["fixture"]["dmxAddress"].isNull()) fx->dmxAddress=doc["fixture"]["dmxAddress"]|1;
       if(!doc["fixture"]["groupMask"].isNull()) fx->groupMask=doc["fixture"]["groupMask"]|0;
       if(!doc["fixture"]["soundReactive"].isNull()) fx->soundReactive=doc["fixture"]["soundReactive"]|false;
+      if(!doc["fixture"]["invertPan"].isNull()) fx->invertPan=doc["fixture"]["invertPan"]|false;
+      if(!doc["fixture"]["invertTilt"].isNull()) fx->invertTilt=doc["fixture"]["invertTilt"]|false;
+      if(!doc["fixture"]["panMin"].isNull()) fx->panMin=doc["fixture"]["panMin"]|0;
+      if(!doc["fixture"]["panMax"].isNull()) fx->panMax=doc["fixture"]["panMax"]|255;
+      if(!doc["fixture"]["tiltMin"].isNull()) fx->tiltMin=doc["fixture"]["tiltMin"]|0;
+      if(!doc["fixture"]["tiltMax"].isNull()) fx->tiltMax=doc["fixture"]["tiltMax"]|255;
       ok=true;
     }
   }
@@ -592,6 +603,12 @@ static void apiCfgSave(AsyncWebServerRequest* req, uint8_t* data, size_t len, si
     o["dmxAddress"] = fx->dmxAddress;
     o["groupMask"] = fx->groupMask;
     o["soundReactive"] = fx->soundReactive;
+    if (fx->invertPan)    o["invertPan"]  = true;
+    if (fx->invertTilt)   o["invertTilt"] = true;
+    if (fx->panMin > 0)   o["panMin"]     = fx->panMin;
+    if (fx->panMax < 255) o["panMax"]     = fx->panMax;
+    if (fx->tiltMin > 0)  o["tiltMin"]    = fx->tiltMin;
+    if (fx->tiltMax < 255)o["tiltMax"]     = fx->tiltMax;
   }
 
   // --- Groups ---
@@ -736,6 +753,16 @@ static void apiCfgLoad(AsyncWebServerRequest* req, uint8_t* data, size_t len, si
     for (JsonObject o : pArr) {
       if (slot >= MAX_FIXTURES) break;
       _fix->addFixture(o["name"]|"?", o["profileId"]|"", o["dmxAddress"]|1, o["groupMask"]|0, o["soundReactive"]|false);
+      // Pan/Tilt omejitve
+      PatchEntry* pe = _fix->getFixtureMut(slot);
+      if (pe) {
+        pe->invertPan  = o["invertPan"]  | false;
+        pe->invertTilt = o["invertTilt"] | false;
+        pe->panMin     = o["panMin"]     | 0;
+        pe->panMax     = o["panMax"]     | 255;
+        pe->tiltMin    = o["tiltMin"]    | 0;
+        pe->tiltMax    = o["tiltMax"]    | 255;
+      }
       slot++;
     }
   }
@@ -1203,6 +1230,8 @@ void webLoop() {
     mb["dc"]=mbc.dimCurve;
     mb["atk"]=mbc.attackMs;
     mb["dcy"]=mbc.decayMs;
+    // FX simetrija
+    mb["sym"]=mbc.symmetry;
     // Faza 4: paleta
     mb["pal"]=mbc.palette;
     // Faza 5: chain status

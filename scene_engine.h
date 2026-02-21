@@ -2,6 +2,7 @@
 #define SCENE_ENGINE_H
 
 #include "config.h"
+#include "fixture_engine.h"
 
 // ============================================================================
 //  SceneEngine
@@ -15,6 +16,7 @@ class MixerEngine;  // Forward declaration
 class SceneEngine {
 public:
   void begin();
+  void setFixtureEngine(FixtureEngine* fix) { _fixtures = fix; }
 
   // --- Scene CRUD ---
   bool saveScene(int slot, const char* name, const uint8_t* dmxData);
@@ -57,6 +59,7 @@ public:
 
 private:
   Scene* _scenes = nullptr;
+  FixtureEngine* _fixtures = nullptr;
   CrossfadeState _cf;
 
   // Cue List
