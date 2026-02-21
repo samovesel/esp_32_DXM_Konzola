@@ -448,12 +448,23 @@ struct BandParam {
   uint8_t  qFactor;     // Q * 10 (1-100 → 0.1-10.0)
 };
 
+// Beat detection nastavitve (ločene od parametric EQ)
+struct BeatDetectConfig {
+  uint8_t  sensitivity;   // Threshold multiplier * 10 (8-25 → 0.8x-2.5x, default 14)
+  uint16_t freqLow;       // Spodnja frekvenčna meja Hz (default 30)
+  uint16_t freqHigh;      // Zgornja frekvenčna meja Hz (default 150)
+  uint8_t  lockoutMs;     // Min interval med beatoma / 10 (10-50 → 100-500ms, default 20)
+};
+
+static const BeatDetectConfig BEAT_DETECT_DEFAULTS = {14, 30, 150, 20};
+
 // AGC nastavitve (ločena struktura za binarno kompatibilnost z V3)
 struct STLAgcConfig {
   float     bandGains[STL_BAND_COUNT]; // Per-band gain množilnik (0.0 - 3.0)
   float     agcSpeed;                   // AGC hitrost prilagajanja (0.0=počasi, 1.0=hitro)
   float     noiseGate;                  // Noise gate prag (0.0=izključen, 1.0=agresiven)
   BandParam bandParams[STL_BAND_COUNT]; // Per-band center freq + Q (parametric EQ)
+  BeatDetectConfig beatDetect;          // Beat detection nastavitve (ločene od EQ)
 };
 
 static const STLAgcConfig STL_AGC_DEFAULTS = {
@@ -461,7 +472,8 @@ static const STLAgcConfig STL_AGC_DEFAULTS = {
   0.5f,  // agcSpeed — srednji
   0.3f,  // noiseGate — zmeren
   // bandParams: centerFreq (Hz), qFactor (Q*10) — default = geometrijska sredina BAND_EDGES, Q=0.7
-  {{42,7},{85,7},{173,7},{354,7},{707,7},{1414,7},{2828,7},{6633,7}}
+  {{42,7},{85,7},{173,7},{354,7},{707,7},{1414,7},{2828,7},{6633,7}},
+  {14, 30, 150, 20}  // beatDetect — default sensitivity 1.4x, bass 30-150Hz, lockout 200ms
 };
 
 // Pro mode pravilo

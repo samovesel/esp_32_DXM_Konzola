@@ -88,9 +88,8 @@ td{padding:4px 6px;border-bottom:1px solid #222}
 .eq-col .eq-lbl{font-size:0.6em;color:#888;white-space:nowrap}
 .eq-freq{width:44px;background:#1a1a2e;color:#0af;border:1px solid #333;border-radius:3px;font-size:0.58em;text-align:center;padding:1px;margin-top:1px}
 .eq-freq::-webkit-inner-spin-button{-webkit-appearance:none}
-.eq-q-row{display:flex;align-items:center;gap:1px;margin-top:1px}
-.eq-q-row input[type=range]{writing-mode:horizontal-tb;width:32px;height:10px;accent-color:#f90;margin:0}
-.eq-q-val{font-size:0.5em;color:#f90;white-space:nowrap}
+.eq-q-row{margin-top:1px;text-align:center}
+.eq-q-row select{width:44px;background:#1a1a2e;color:#f90;border:1px solid #555;border-radius:3px;font-size:0.58em;padding:1px;text-align:center;-webkit-appearance:none;appearance:none}
 .env-presets{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
 .env-presets button{padding:4px 10px;font-size:0.8em;background:#222;border:1px solid #444;border-radius:4px}
 .env-presets button.ep-sel{background:#27ae60;color:#fff;border-color:#27ae60}
@@ -473,13 +472,20 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 <ul style="margin:4px 0">
 <li><b>Gain</b> (0.0–3.0): Množilnik energije pasu. Privzeto 1.0 = brez spremembe.</li>
 <li><b>Center frekvenca</b> (20–11000 Hz): Središčna frekvenca zvonaste krivulje. Nastavi na točno frekvenco, ki jo želiš izpostaviti (npr. 80 Hz za kick drum, 400 Hz za vokal).</li>
-<li><b>Q faktor</b> (0.1–10.0): Širina pasu. Nizek Q (0.3–1.0) = širok pas (zajame več frekvenc). Visok Q (3.0–10.0) = ozek, kirurški pas (cilja na specifično frekvenco).</li>
+<li><b>Q faktor</b>: Širina pasu (dropdown). 0.3 = zelo širok (~3 okt.), 0.7 = privzeto (~1.5 okt.), 2.0 = tesen (~0.5 okt.), 5.0 = kirurški (~0.2 okt.).</li>
 </ul>
 <p style="color:#aaa;font-size:0.9em">Primeri: Povečaj gain na bandu 1 (85 Hz) na 2.0 → močnejši odziv na bas boben. Premakni center frekvenco banda 4 na 400 Hz in Q na 3.0 → ozek pas za vokal.</p>
-<p style="color:#f90;font-size:0.85em;margin:4px 0"><b>Opomba:</b> Beat detekcija temelji na prvih dveh pasovih (privzeto 42 Hz in 85 Hz). Če premakneš te pasove, se bo beat detekcija spremenila.</p>
 
 <p><b>AGC hitrost</b> (0–1.0): Kako hitro se sistem prilagodi spremembi glasnosti. <b>Počasi (0.1–0.3)</b> = stabilno za šov, glasnost se ne spreminja hitro. <b>Hitro (0.7–1.0)</b> = odzivno za testiranje pri različnih glasnostih.</p>
 <p><b>Noise gate</b> (0–1.0): Filtrira šum ko ni glasbe. <b>0</b> = izključen (vedno reagira — tudi na šum klime). <b>0.3</b> = zmeren (ignorira tihe zvoke). <b>0.8+</b> = agresiven (samo glasna glasba gre skozi).</p>
+
+<p><b>Beat detekcija</b> (ločena od EQ): Deluje neposredno na raw FFT bine — premikanje EQ bandov ne vpliva na zaznavo beatov.</p>
+<ul style="margin:4px 0">
+<li><b>Občutljivost</b> (0.8x–2.5x): Prag za zaznavo beata. Nižje = bolj občutljivo, višje = samo močni udari.</li>
+<li><b>Frekv. pas</b>: Sub (30–80 Hz), Bass (30–150 Hz), Wide (30–300 Hz), Kick (60–200 Hz).</li>
+<li><b>Lockout</b> (100–500 ms): Min razmik med beati. Nižje za hitro EDM, višje za stabilnost.</li>
+</ul>
+<p style="color:#aaa;font-size:0.9em">BPM se izračuna z median filtrom (16 intervalov) — odpornejši na zgrešene beate kot povprečenje.</p>
 
 <p style="color:#f90;margin:6px 0"><b>Primer — nastavi za tiho sobo doma:</b></p>
 <ol style="margin:4px 0;padding-left:18px">
@@ -660,19 +666,26 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <div class="env-hint" id="envHint">Club / bar (~80 dB): srednje ojačanje, zmeren noise gate. Primerno za manjše prostore z glasbo iz zvočnikov.</div>
     <p style="font-size:0.7em;color:#aaa;margin:8px 0 2px">Parametric EQ (gain / center freq / Q):</p>
     <div class="eq-row" id="eqRow">
-      <div class="eq-col"><span class="eq-val" id="eqV0">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq0" oninput="onEqChange(0)"><span class="eq-lbl" id="eqL0">42Hz</span><input type="number" min="20" max="11000" value="42" id="eqF0" onchange="onEqParamChange(0)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ0" oninput="onEqParamChange(0)"><span class="eq-q-val" id="eqQV0">0.7</span></div></div>
-      <div class="eq-col"><span class="eq-val" id="eqV1">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq1" oninput="onEqChange(1)"><span class="eq-lbl" id="eqL1">85Hz</span><input type="number" min="20" max="11000" value="85" id="eqF1" onchange="onEqParamChange(1)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ1" oninput="onEqParamChange(1)"><span class="eq-q-val" id="eqQV1">0.7</span></div></div>
-      <div class="eq-col"><span class="eq-val" id="eqV2">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq2" oninput="onEqChange(2)"><span class="eq-lbl" id="eqL2">173Hz</span><input type="number" min="20" max="11000" value="173" id="eqF2" onchange="onEqParamChange(2)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ2" oninput="onEqParamChange(2)"><span class="eq-q-val" id="eqQV2">0.7</span></div></div>
-      <div class="eq-col"><span class="eq-val" id="eqV3">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq3" oninput="onEqChange(3)"><span class="eq-lbl" id="eqL3">354Hz</span><input type="number" min="20" max="11000" value="354" id="eqF3" onchange="onEqParamChange(3)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ3" oninput="onEqParamChange(3)"><span class="eq-q-val" id="eqQV3">0.7</span></div></div>
-      <div class="eq-col"><span class="eq-val" id="eqV4">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq4" oninput="onEqChange(4)"><span class="eq-lbl" id="eqL4">707Hz</span><input type="number" min="20" max="11000" value="707" id="eqF4" onchange="onEqParamChange(4)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ4" oninput="onEqParamChange(4)"><span class="eq-q-val" id="eqQV4">0.7</span></div></div>
-      <div class="eq-col"><span class="eq-val" id="eqV5">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq5" oninput="onEqChange(5)"><span class="eq-lbl" id="eqL5">1.4kHz</span><input type="number" min="20" max="11000" value="1414" id="eqF5" onchange="onEqParamChange(5)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ5" oninput="onEqParamChange(5)"><span class="eq-q-val" id="eqQV5">0.7</span></div></div>
-      <div class="eq-col"><span class="eq-val" id="eqV6">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq6" oninput="onEqChange(6)"><span class="eq-lbl" id="eqL6">2.8kHz</span><input type="number" min="20" max="11000" value="2828" id="eqF6" onchange="onEqParamChange(6)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ6" oninput="onEqParamChange(6)"><span class="eq-q-val" id="eqQV6">0.7</span></div></div>
-      <div class="eq-col"><span class="eq-val" id="eqV7">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq7" oninput="onEqChange(7)"><span class="eq-lbl" id="eqL7">6.6kHz</span><input type="number" min="20" max="11000" value="6633" id="eqF7" onchange="onEqParamChange(7)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ7" oninput="onEqParamChange(7)"><span class="eq-q-val" id="eqQV7">0.7</span></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV0">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq0" oninput="onEqChange(0)"><span class="eq-lbl" id="eqL0">42Hz</span><input type="number" min="20" max="11000" value="42" id="eqF0" onchange="onEqParamChange(0)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><select id="eqQ0" onchange="onEqParamChange(0)"><option value="3">0.3</option><option value="5">0.5</option><option value="7" selected>0.7</option><option value="10">1.0</option><option value="14">1.4</option><option value="20">2.0</option><option value="30">3.0</option><option value="50">5.0</option></select></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV1">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq1" oninput="onEqChange(1)"><span class="eq-lbl" id="eqL1">85Hz</span><input type="number" min="20" max="11000" value="85" id="eqF1" onchange="onEqParamChange(1)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><select id="eqQ1" onchange="onEqParamChange(1)"><option value="3">0.3</option><option value="5">0.5</option><option value="7" selected>0.7</option><option value="10">1.0</option><option value="14">1.4</option><option value="20">2.0</option><option value="30">3.0</option><option value="50">5.0</option></select></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV2">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq2" oninput="onEqChange(2)"><span class="eq-lbl" id="eqL2">173Hz</span><input type="number" min="20" max="11000" value="173" id="eqF2" onchange="onEqParamChange(2)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><select id="eqQ2" onchange="onEqParamChange(2)"><option value="3">0.3</option><option value="5">0.5</option><option value="7" selected>0.7</option><option value="10">1.0</option><option value="14">1.4</option><option value="20">2.0</option><option value="30">3.0</option><option value="50">5.0</option></select></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV3">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq3" oninput="onEqChange(3)"><span class="eq-lbl" id="eqL3">354Hz</span><input type="number" min="20" max="11000" value="354" id="eqF3" onchange="onEqParamChange(3)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><select id="eqQ3" onchange="onEqParamChange(3)"><option value="3">0.3</option><option value="5">0.5</option><option value="7" selected>0.7</option><option value="10">1.0</option><option value="14">1.4</option><option value="20">2.0</option><option value="30">3.0</option><option value="50">5.0</option></select></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV4">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq4" oninput="onEqChange(4)"><span class="eq-lbl" id="eqL4">707Hz</span><input type="number" min="20" max="11000" value="707" id="eqF4" onchange="onEqParamChange(4)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><select id="eqQ4" onchange="onEqParamChange(4)"><option value="3">0.3</option><option value="5">0.5</option><option value="7" selected>0.7</option><option value="10">1.0</option><option value="14">1.4</option><option value="20">2.0</option><option value="30">3.0</option><option value="50">5.0</option></select></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV5">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq5" oninput="onEqChange(5)"><span class="eq-lbl" id="eqL5">1.4kHz</span><input type="number" min="20" max="11000" value="1414" id="eqF5" onchange="onEqParamChange(5)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><select id="eqQ5" onchange="onEqParamChange(5)"><option value="3">0.3</option><option value="5">0.5</option><option value="7" selected>0.7</option><option value="10">1.0</option><option value="14">1.4</option><option value="20">2.0</option><option value="30">3.0</option><option value="50">5.0</option></select></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV6">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq6" oninput="onEqChange(6)"><span class="eq-lbl" id="eqL6">2.8kHz</span><input type="number" min="20" max="11000" value="2828" id="eqF6" onchange="onEqParamChange(6)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><select id="eqQ6" onchange="onEqParamChange(6)"><option value="3">0.3</option><option value="5">0.5</option><option value="7" selected>0.7</option><option value="10">1.0</option><option value="14">1.4</option><option value="20">2.0</option><option value="30">3.0</option><option value="50">5.0</option></select></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV7">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq7" oninput="onEqChange(7)"><span class="eq-lbl" id="eqL7">6.6kHz</span><input type="number" min="20" max="11000" value="6633" id="eqF7" onchange="onEqParamChange(7)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><select id="eqQ7" onchange="onEqParamChange(7)"><option value="3">0.3</option><option value="5">0.5</option><option value="7" selected>0.7</option><option value="10">1.0</option><option value="14">1.4</option><option value="20">2.0</option><option value="30">3.0</option><option value="50">5.0</option></select></div></div>
     </div>
     <div class="fade-row"><label>AGC hitrost:</label><input type="range" min="0" max="100" step="5" value="50" id="agcSpd" oninput="onAgcChange()"><span class="val" id="agcSpdV">0.5</span></div>
     <p class="env-hint">Počasi = stabilno za koncerte (AGC se prilagaja v ~10s). Hitro = odzivno za testiranje (~0.7s).</p>
     <div class="fade-row"><label>Noise gate:</label><input type="range" min="0" max="100" step="5" value="30" id="agcNg" oninput="onAgcChange()"><span class="val" id="agcNgV">0.3</span></div>
     <p class="env-hint">0 = izključen (vedno reagira). Višje = agresivnejše filtriranje šuma v tišini.</p>
+    <p style="font-size:0.7em;color:#aaa;margin:10px 0 2px">Beat detekcija:</p>
+    <div class="fade-row"><label>Občutljivost:</label><input type="range" min="8" max="25" step="1" value="14" id="beatSens" oninput="onBeatDetChange()"><span class="val" id="beatSensV" style="color:#e74c3c">1.4x</span></div>
+    <p class="env-hint">Nižje = bolj občutljivo (sproži na šibke beate). Višje = samo močni beati.</p>
+    <div class="fade-row"><label>Frekv. pas:</label><select id="beatRange" onchange="onBeatDetChange()" style="background:#1a1a2e;color:#e74c3c;border:1px solid #444;border-radius:4px;padding:2px 4px;font-size:0.85em"><option value="30-80">Sub (30–80 Hz)</option><option value="30-150" selected>Bass (30–150 Hz)</option><option value="30-300">Wide (30–300 Hz)</option><option value="60-200">Kick (60–200 Hz)</option></select></div>
+    <p class="env-hint">Frekvenčno območje za zaznavo beata. Neodvisno od parametric EQ.</p>
+    <div class="fade-row"><label>Lockout:</label><input type="range" min="10" max="50" step="1" value="20" id="beatLock" oninput="onBeatDetChange()"><span class="val" id="beatLockV" style="color:#e74c3c">200ms</span></div>
+    <p class="env-hint">Min razmik med beati. Nižje = dovoli hitrejše beate (EDM).</p>
     <button onclick="saveSoundCfg()" style="margin-top:8px;background:#555">Shrani nastavitve</button>
   </div>
 
@@ -2789,13 +2802,13 @@ function saveSoundCfg(){wsSend({cmd:'save_sound'});showMsg('Sound nastavitve shr
 var agcSynced=false,curEnvPreset='club';
 var eqDefaultBp=[{f:42,q:7},{f:85,q:7},{f:173,q:7},{f:354,q:7},{f:707,q:7},{f:1414,q:7},{f:2828,q:7},{f:6633,q:7}];
 var envPresets={
-  quiet:{bg:[2.0,2.0,1.8,1.5,1.5,1.2,1.0,1.0],spd:0.8,ng:0.1,bp:eqDefaultBp,
+  quiet:{bg:[2.0,2.0,1.8,1.5,1.5,1.2,1.0,1.0],spd:0.8,ng:0.1,bp:eqDefaultBp,bsens:10,bflo:30,bfhi:150,block:20,
     hint:'Tiha soba (~50 dB): visoko ojačanje, hiter AGC, nizek noise gate. Za testiranje doma ali v studiu.'},
-  club:{bg:[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],spd:0.5,ng:0.3,bp:eqDefaultBp,
+  club:{bg:[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],spd:0.5,ng:0.3,bp:eqDefaultBp,bsens:14,bflo:30,bfhi:150,block:20,
     hint:'Club / bar (~80 dB): srednje ojačanje, zmeren noise gate. Primerno za manjše prostore z glasbo iz zvočnikov.'},
-  concert:{bg:[0.6,0.7,0.8,1.0,1.0,0.9,0.7,0.5],spd:0.2,ng:0.6,bp:eqDefaultBp,
+  concert:{bg:[0.6,0.7,0.8,1.0,1.0,0.9,0.7,0.5],spd:0.2,ng:0.6,bp:eqDefaultBp,bsens:18,bflo:30,bfhi:150,block:25,
     hint:'Koncert / festival (~100 dB): nižje ojačanje, počasen AGC, visok noise gate. Za velike odre z močnim PA.'},
-  custom:{bg:null,spd:null,ng:null,bp:null,
+  custom:{bg:null,spd:null,ng:null,bp:null,bsens:null,bflo:null,bfhi:null,block:null,
     hint:'Po meri: ročno nastavi vse parametre. Prilagodi za tvoj specifični prostor in opremo.'}
 };
 function setEnvPreset(key){
@@ -2814,7 +2827,6 @@ function setEnvPreset(key){
     if(p.bp&&p.bp[i]){
       document.getElementById('eqF'+i).value=p.bp[i].f;
       document.getElementById('eqQ'+i).value=p.bp[i].q;
-      document.getElementById('eqQV'+i).textContent=(p.bp[i].q/10).toFixed(1);
       document.getElementById('eqL'+i).textContent=eqFreqLabel(p.bp[i].f);
     }
   }
@@ -2822,6 +2834,20 @@ function setEnvPreset(key){
   document.getElementById('agcSpdV').textContent=p.spd.toFixed(1);
   document.getElementById('agcNg').value=Math.round(p.ng*100);
   document.getElementById('agcNgV').textContent=p.ng.toFixed(1);
+  // Beat detection preseti
+  if(p.bsens!==null){
+    document.getElementById('beatSens').value=p.bsens;
+    document.getElementById('beatSensV').textContent=(p.bsens/10).toFixed(1)+'x';
+  }
+  if(p.bflo!==null&&p.bfhi!==null){
+    var sel=document.getElementById('beatRange');
+    var target=p.bflo+'-'+p.bfhi;
+    for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===target){sel.selectedIndex=i;break;}}
+  }
+  if(p.block!==null){
+    document.getElementById('beatLock').value=p.block;
+    document.getElementById('beatLockV').textContent=(p.block*10)+'ms';
+  }
   sendAgc();
 }
 function eqFreqLabel(f){return f<1000?f+'Hz':(f/1000).toFixed(1)+'kHz'}
@@ -2833,8 +2859,6 @@ function onEqChange(b){
 }
 function onEqParamChange(b){
   var f=+document.getElementById('eqF'+b).value;
-  var q=+document.getElementById('eqQ'+b).value;
-  document.getElementById('eqQV'+b).textContent=(q/10).toFixed(1);
   document.getElementById('eqL'+b).textContent=eqFreqLabel(f);
   selectCustomEnv();
   sendAgc();
@@ -2851,14 +2875,23 @@ function selectCustomEnv(){
   btns.forEach(function(b,i){b.className=i===3?'ep-sel':''});
   document.getElementById('envHint').textContent=envPresets.custom.hint;
 }
+function onBeatDetChange(){
+  document.getElementById('beatSensV').textContent=(+document.getElementById('beatSens').value/10).toFixed(1)+'x';
+  document.getElementById('beatLockV').textContent=(+document.getElementById('beatLock').value*10)+'ms';
+  sendAgc();
+}
 function sendAgc(){
   var bg=[],bp=[];
   for(var i=0;i<8;i++){
     bg.push(+document.getElementById('eq'+i).value/100);
     bp.push({f:+document.getElementById('eqF'+i).value,q:+document.getElementById('eqQ'+i).value});
   }
+  var range=document.getElementById('beatRange').value.split('-');
   wsSend({cmd:'agc',spd:+document.getElementById('agcSpd').value/100,
-    ng:+document.getElementById('agcNg').value/100,bg:bg,bp:bp});
+    ng:+document.getElementById('agcNg').value/100,bg:bg,bp:bp,
+    bsens:+document.getElementById('beatSens').value,
+    bflo:+range[0],bfhi:+range[1],
+    block:+document.getElementById('beatLock').value});
 }
 function syncAgcFromStatus(fft){
   if(!fft.abg||agcSynced)return;
@@ -2873,8 +2906,14 @@ function syncAgcFromStatus(fft){
       var fe=document.getElementById('eqF'+i);
       var qe=document.getElementById('eqQ'+i);
       if(fe)fe.value=fft.abp[i].f;
-      if(qe)qe.value=fft.abp[i].q;
-      document.getElementById('eqQV'+i).textContent=(fft.abp[i].q/10).toFixed(1);
+      if(qe){
+        qe.value=fft.abp[i].q;
+        if(qe.selectedIndex<0){
+          var opts=qe.options,best=0,bestDiff=999;
+          for(var j=0;j<opts.length;j++){var d=Math.abs(+opts[j].value-fft.abp[i].q);if(d<bestDiff){bestDiff=d;best=j}}
+          qe.selectedIndex=best;
+        }
+      }
       document.getElementById('eqL'+i).textContent=eqFreqLabel(fft.abp[i].f);
     }
   }
@@ -2885,6 +2924,22 @@ function syncAgcFromStatus(fft){
   if(fft.ang!==undefined){
     document.getElementById('agcNg').value=Math.round(fft.ang*100);
     document.getElementById('agcNgV').textContent=fft.ang.toFixed(1);
+  }
+  // Sync beat detection controls
+  if(fft.bsens!==undefined){
+    document.getElementById('beatSens').value=fft.bsens;
+    document.getElementById('beatSensV').textContent=(fft.bsens/10).toFixed(1)+'x';
+  }
+  if(fft.bflo!==undefined&&fft.bfhi!==undefined){
+    var sel=document.getElementById('beatRange');
+    var target=fft.bflo+'-'+fft.bfhi;
+    for(var i=0;i<sel.options.length;i++){
+      if(sel.options[i].value===target){sel.selectedIndex=i;break;}
+    }
+  }
+  if(fft.block!==undefined){
+    document.getElementById('beatLock').value=fft.block;
+    document.getElementById('beatLockV').textContent=(fft.block*10)+'ms';
   }
   // Detect matching preset
   var keys=['quiet','club','concert'];

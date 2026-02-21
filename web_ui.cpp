@@ -232,6 +232,11 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
         i++;
       }
     }
+    // Beat detection nastavitve (ločene od parametric EQ)
+    if (!doc["bsens"].isNull()) agc.beatDetect.sensitivity = doc["bsens"] | 14;
+    if (!doc["bflo"].isNull())  agc.beatDetect.freqLow     = doc["bflo"]  | 30;
+    if (!doc["bfhi"].isNull())  agc.beatDetect.freqHigh    = doc["bfhi"]  | 150;
+    if (!doc["block"].isNull()) agc.beatDetect.lockoutMs   = doc["block"] | 20;
     _snd->resetAgcPeaks();
   }
   else if (strcmp(cmd, "save_sound") == 0 && _snd) {
@@ -774,6 +779,12 @@ static void apiCfgSave(AsyncWebServerRequest* req, uint8_t* data, size_t len, si
       bpo["f"] = agc.bandParams[i].centerFreq;
       bpo["q"] = agc.bandParams[i].qFactor;
     }
+    // Beat detection config
+    JsonObject bdObj = agcObj["beatDetect"].to<JsonObject>();
+    bdObj["sens"] = agc.beatDetect.sensitivity;
+    bdObj["flo"]  = agc.beatDetect.freqLow;
+    bdObj["fhi"]  = agc.beatDetect.freqHigh;
+    bdObj["lock"] = agc.beatDetect.lockoutMs;
   }
 
   // --- Mixer ---
@@ -976,6 +987,14 @@ static void apiCfgLoad(AsyncWebServerRequest* req, uint8_t* data, size_t len, si
           agc.bandParams[j].qFactor    = bpo["q"] | STL_AGC_DEFAULTS.bandParams[j].qFactor;
           j++;
         }
+      }
+      // Beat detection config
+      if (agcObj.containsKey("beatDetect")) {
+        JsonObject bdObj = agcObj["beatDetect"];
+        agc.beatDetect.sensitivity = bdObj["sens"] | BEAT_DETECT_DEFAULTS.sensitivity;
+        agc.beatDetect.freqLow     = bdObj["flo"]  | BEAT_DETECT_DEFAULTS.freqLow;
+        agc.beatDetect.freqHigh    = bdObj["fhi"]  | BEAT_DETECT_DEFAULTS.freqHigh;
+        agc.beatDetect.lockoutMs   = bdObj["lock"] | BEAT_DETECT_DEFAULTS.lockoutMs;
       }
       _snd->setAgcConfig(agc);
     }
@@ -1340,6 +1359,11 @@ void webLoop() {
       bpo["f"]=agc.bandParams[i].centerFreq;
       bpo["q"]=agc.bandParams[i].qFactor;
     }
+    // Beat detection config za UI sinhronizacijo
+    fft["bsens"]=agc.beatDetect.sensitivity;
+    fft["bflo"]=agc.beatDetect.freqLow;
+    fft["bfhi"]=agc.beatDetect.freqHigh;
+    fft["block"]=agc.beatDetect.lockoutMs;
     // Fixture sound levels za preview
     if(_snd->isActive()){
       JsonArray fxl=doc["fxl"].to<JsonArray>();

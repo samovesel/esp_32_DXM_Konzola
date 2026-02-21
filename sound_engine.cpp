@@ -72,6 +72,11 @@ void SoundEngine::begin(AudioInput* audio, FixtureEngine* fixtures) {
   // Ableton Link
   _link.begin();
 
+  // BPM median filter init
+  memset(_bpmIntervals, 0, sizeof(_bpmIntervals));
+  _bpmIntervalsCount = 0;
+  _bpmIntervalsIdx = 0;
+
   loadConfig();
   Serial.println("[SND] Sound engine inicializiran");
 }
@@ -223,7 +228,17 @@ void SoundEngine::extractBands(float dt) {
 // ============================================================================
 
 void SoundEngine::detectBeat(float dt) {
-  float energy = _bands.bands[0] + _bands.bands[1];
+  // Izračunaj bas energijo neposredno iz raw FFT binov (neodvisno od parametric EQ)
+  float freqPerBin = (float)FFT_SAMPLE_RATE / FFT_SAMPLES;
+  int binLow  = max(1, (int)(_agc.beatDetect.freqLow / freqPerBin));
+  int binHigh = min(FFT_BINS - 1, (int)(_agc.beatDetect.freqHigh / freqPerBin));
+
+  float energy = 0;
+  int count = max(1, binHigh - binLow + 1);
+  for (int i = binLow; i <= binHigh; i++) energy += _vReal[i];
+  energy /= count;
+
+  // Adaptivni prag iz zgodovine energije
   _beatHistory[_beatHistIdx] = energy;
   _beatHistIdx = (_beatHistIdx + 1) % BEAT_HISTORY_SIZE;
 
@@ -231,25 +246,41 @@ void SoundEngine::detectBeat(float dt) {
   for (int i = 0; i < BEAT_HISTORY_SIZE; i++) avg += _beatHistory[i];
   avg /= BEAT_HISTORY_SIZE;
 
-  float threshold = avg * 1.4f + 0.05f;
+  // Nastavljiv threshold (sensitivity) namesto hardkodiranega 1.4x
+  float sens = (float)_agc.beatDetect.sensitivity / 10.0f;
+  float threshold = avg * sens + 0.05f;
+  uint16_t lockout = (uint16_t)_agc.beatDetect.lockoutMs * 10;
   unsigned long now = millis();
   bool beat = false;
 
-  if (energy > threshold && (now - _lastBeatTime > 200)) {
+  if (energy > threshold && (now - _lastBeatTime > lockout)) {
     beat = true;
 
     if (_lastBeatTime > 0) {
       float interval = now - _lastBeatTime;
-      if (interval > 250 && interval < 2000) {
-        float bpm = 60000.0f / interval;
-        _bpmAccum += bpm;
-        _bpmCount++;
-        if (_bpmCount >= 8) {
-          _bands.bpm = _bpmAccum / _bpmCount;
-          _bpmAccum = 0;
-          _bpmCount = 0;
-          // Posodobi beat interval za sync
-          _beatIntervalMs = interval;
+      if (interval > 200 && interval < 2000) {
+        // Shrani interval v krožni buffer za median filter
+        _bpmIntervals[_bpmIntervalsIdx] = interval;
+        _bpmIntervalsIdx = (_bpmIntervalsIdx + 1) % 16;
+        if (_bpmIntervalsCount < 16) _bpmIntervalsCount++;
+
+        // Median filter — robustnejši od povprečenja (zavrže outlierje)
+        if (_bpmIntervalsCount >= 4) {
+          float sorted[16];
+          memcpy(sorted, _bpmIntervals, sizeof(float) * _bpmIntervalsCount);
+          // Insertion sort (N<=16, zanemarljiv CPU)
+          for (int i = 1; i < _bpmIntervalsCount; i++) {
+            float key = sorted[i];
+            int j = i - 1;
+            while (j >= 0 && sorted[j] > key) { sorted[j + 1] = sorted[j]; j--; }
+            sorted[j + 1] = key;
+          }
+          int mid = _bpmIntervalsCount / 2;
+          float medianInterval = (_bpmIntervalsCount % 2 == 0)
+            ? (sorted[mid - 1] + sorted[mid]) / 2.0f
+            : sorted[mid];
+          _bands.bpm = 60000.0f / medianInterval;
+          _beatIntervalMs = medianInterval;
         }
       }
     }
@@ -1033,13 +1064,15 @@ int SoundEngine::getRuleCount() const {
 #define SND_MAGIC_V3 0xB0  // V3: razširjen ManualBeatConfig + ProgramChain
 #define SND_MAGIC_V4 0xB1  // V4: + STLAgcConfig (per-band gain, AGC hitrost, noise gate)
 #define SND_MAGIC_V5 0xB2  // V5: + BandParam per band (parametric EQ v STLAgcConfig)
+#define SND_MAGIC_V6 0xB3  // V6: + BeatDetectConfig v STLAgcConfig
 #define SND_V2_MBCFG_SIZE 20  // Velikost starega ManualBeatConfig (brez novih polj)
 #define SND_V4_AGC_SIZE   (sizeof(float) * STL_BAND_COUNT + sizeof(float) * 2)  // 40 bytes (brez BandParam)
+#define SND_V5_AGC_SIZE   (sizeof(float) * STL_BAND_COUNT + sizeof(float) * 2 + sizeof(BandParam) * STL_BAND_COUNT)  // brez BeatDetectConfig
 
 void SoundEngine::saveConfig() {
   File f = LittleFS.open(PATH_SOUND_CFG, "w");
   if (!f) { Serial.println("[SND] Napaka pri pisanju"); return; }
-  uint8_t magic = SND_MAGIC_V5;
+  uint8_t magic = SND_MAGIC_V6;
   f.write(&magic, 1);
   f.write((uint8_t*)&_easy, sizeof(STLEasyConfig));
   f.write((uint8_t*)_rules, sizeof(_rules));
@@ -1047,7 +1080,7 @@ void SoundEngine::saveConfig() {
   f.write((uint8_t*)&_chain, sizeof(ProgramChain));
   f.write((uint8_t*)&_agc, sizeof(STLAgcConfig));
   f.close();
-  Serial.printf("[SND] Konfiguracija shranjena (V5, agc=%d)\n", sizeof(STLAgcConfig));
+  Serial.printf("[SND] Konfiguracija shranjena (V6, agc=%d)\n", sizeof(STLAgcConfig));
 }
 
 void SoundEngine::loadConfig() {
@@ -1056,23 +1089,32 @@ void SoundEngine::loadConfig() {
   uint8_t magic = 0;
   f.read(&magic, 1);
   if (magic != SND_MAGIC && magic != SND_MAGIC_V2 && magic != SND_MAGIC_V3
-      && magic != SND_MAGIC_V4 && magic != SND_MAGIC_V5) { f.close(); return; }
+      && magic != SND_MAGIC_V4 && magic != SND_MAGIC_V5 && magic != SND_MAGIC_V6) { f.close(); return; }
   if (f.read((uint8_t*)&_easy, sizeof(STLEasyConfig)) != sizeof(STLEasyConfig)) {
     _easy = STL_EASY_DEFAULTS;
   }
   f.read((uint8_t*)_rules, sizeof(_rules));
-  if (magic == SND_MAGIC_V5 || magic == SND_MAGIC_V4 || magic == SND_MAGIC_V3) {
-    // V3/V4/V5: polna nova struktura
+  if (magic == SND_MAGIC_V6 || magic == SND_MAGIC_V5 || magic == SND_MAGIC_V4 || magic == SND_MAGIC_V3) {
+    // V3/V4/V5/V6: polna nova struktura
     if (f.read((uint8_t*)&_mbCfg, sizeof(ManualBeatConfig)) != sizeof(ManualBeatConfig)) {
       _mbCfg = MANUAL_BEAT_DEFAULTS;
     }
     if (f.read((uint8_t*)&_chain, sizeof(ProgramChain)) != sizeof(ProgramChain)) {
       memset(&_chain, 0, sizeof(_chain));
     }
-    // V5: polna STLAgcConfig z BandParam
-    if (magic == SND_MAGIC_V5) {
+    // V6: polna STLAgcConfig z BandParam + BeatDetectConfig
+    if (magic == SND_MAGIC_V6) {
       if (f.read((uint8_t*)&_agc, sizeof(STLAgcConfig)) != sizeof(STLAgcConfig)) {
         _agc = STL_AGC_DEFAULTS;
+      }
+    }
+    // V5: STLAgcConfig z BandParam, brez BeatDetectConfig
+    else if (magic == SND_MAGIC_V5) {
+      _agc = STL_AGC_DEFAULTS;  // Začni z defaulti (vključno z beatDetect)
+      uint8_t oldAgcBuf[SND_V5_AGC_SIZE];
+      if (f.read(oldAgcBuf, SND_V5_AGC_SIZE) == SND_V5_AGC_SIZE) {
+        memcpy(&_agc, oldAgcBuf, SND_V5_AGC_SIZE);  // Kopira bandGains, agcSpeed, noiseGate, bandParams
+        // beatDetect ostane na STL_AGC_DEFAULTS
       }
     }
     // V4: stara STLAgcConfig brez BandParam

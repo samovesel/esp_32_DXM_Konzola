@@ -94,7 +94,18 @@ Polno parametricni izenacevalnik z nastavljivimi parametri za vsak pas:
 
 - **Gain** (0.0–3.0): Mnozilnik energije pasu. Privzeto 1.0 = brez spremembe.
 - **Center frekvenca** (20–11000 Hz): Srediscna frekvenca zvonaste krivulje. Nastavi na tocno frekvenco, ki jo zelis izpostaviti (npr. 80 Hz za kick drum, 400 Hz za vokal).
-- **Q faktor** (0.1–10.0): Sirina pasu. Nizek Q (0.3–1.0) = sirok pas (zajame vec frekvenc). Visok Q (3.0–10.0) = ozek, kirurski pas (cilja na specificno frekvenco).
+- **Q faktor**: Sirina pasu. Izbiraj med prednastavljenimi vrednostmi:
+
+| Q   | Sirina     | Uporaba                              |
+|-----|------------|--------------------------------------|
+| 0.3 | Zelo sirok | ~3 oktave, zajame celoten razpon     |
+| 0.5 | Sirok      | ~2 oktavi, splosen poudarek          |
+| 0.7 | Privzeto   | ~1.5 oktave, uravnotezeno            |
+| 1.0 | Srednji    | ~1 oktava, zmeren poudarek           |
+| 1.4 | Ozek       | ~0.7 oktave, bolj natancno           |
+| 2.0 | Tesen      | ~0.5 oktave, precizno ciljanje       |
+| 3.0 | Oster      | ~0.33 oktave, izolacija frekvence    |
+| 5.0 | Kirurski   | ~0.2 oktave, ozek notch/boost        |
 
 Primeri uporabe:
 
@@ -103,7 +114,7 @@ Primeri uporabe:
 - Premakni **center frekvenco** banda 4 na 400 Hz in povecaj **Q** na 3.0 → ozek pas za vokal
 - Premakni **center frekvenco** banda 1 na 60 Hz in **Q** na 5.0 → precizen odziv na kick drum brez basa kitare
 
-> **Opomba:** Beat detekcija temelji na prvih dveh pasovih (privzeto 42 Hz in 85 Hz). Ce premaknes te pasove na visje frekvence, se bo beat detekcija spremenila — to je pricakovano obnasanje.
+> **Opomba:** Beat detekcija od verzije V6 dalje deluje neodvisno od parametric EQ — bere neposredno iz raw FFT binov v nastavljenem frekvencnem obmocju (privzeto 30–150 Hz). Spreminjanje parametric EQ ne vpliva na beat detekcijo.
 
 ### AGC hitrost (0–1.0)
 
@@ -134,7 +145,29 @@ Filtrira sum ko ni glasbe.
 2. Band 1: nastavi center frekvenco na **60 Hz**, Q na **5.0**, gain na **2.0**
 3. Band 2: nastavi center frekvenco na **120 Hz**, Q na **3.0**, gain na **1.5**
 4. Ostale bande pusti na privzetih vrednostih
-5. Beat detekcija bo zdaj natancno sledila kick drumu
+5. Vizualni odziv bo zdaj natancno sledil kick drumu
+
+### Beat detekcija
+
+Beat detekcija deluje **neodvisno od parametric EQ** — bere neposredno iz raw FFT binov v nastavljenem frekvencnem obmocju. Premikanje EQ bandov za vizualne efekte ne vpliva na zaznavo beatov.
+
+- **Obcutljivost** (0.8x–2.5x): Prag za zaznavo beata. Nizje = bolj obcutljivo (sproze na sibke beate). Visje = samo mocni udari. Privzeto 1.4x.
+- **Frekv. pas**: Frekvencno obmocje za beat detekcijo:
+  - **Sub (30–80 Hz)** — samo globok bas, brez kitare
+  - **Bass (30–150 Hz)** — privzeto, pokriva kick drum in bas
+  - **Wide (30–300 Hz)** — sirok pas za raznovrsten ritem
+  - **Kick (60–200 Hz)** — ozek pas za kick drum
+- **Lockout** (100–500 ms): Minimalni razmik med dvema beatoma. Nizje = dovoli hitrejse beate (EDM z double-kick). Visje = stabilnejse za pocasno glasbo. Privzeto 200 ms.
+
+BPM se izracuna z **median filtrom** (namesto povprecja) — to pomeni, da posamezen zgresen ali podvojen beat ne premakne BPM izracuna. Sistem hrani zadnjih 16 inter-beat intervalov in vzame mediano, kar zagotavlja stabilen BPM prikaz.
+
+### Primer — nastavitev za EDM
+
+1. Odpri Audio EQ & AGC → Beat detekcija
+2. Obcutljivost: **1.2x** (nizka, za mocne kicke v EDM)
+3. Frekv. pas: **Kick (60–200 Hz)**
+4. Lockout: **150 ms** (dovoli do ~400 BPM za double-kick)
+5. BPM se stabilno prikazuje v statusni vrstici
 
 ---
 
