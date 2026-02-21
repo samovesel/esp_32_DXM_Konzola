@@ -1051,6 +1051,25 @@ static void apiCfgUpload(AsyncWebServerRequest* req, const String& filename, siz
 }
 
 // ============================================================================
+//  Persona file upload — naloži .gz/.json/.png v /p/ prek brskalnika
+// ============================================================================
+
+static void apiPersonaUpload(AsyncWebServerRequest* req, const String& filename, size_t index, uint8_t* data, size_t len, bool final) {
+  static File uploadFile;
+  if (index == 0) {
+    if (!LittleFS.exists("/p")) LittleFS.mkdir("/p");
+    String path = String("/p/") + filename;
+    uploadFile = LittleFS.open(path, "w");
+    Serial.printf("[WEB] Persona upload: %s\n", path.c_str());
+  }
+  if (uploadFile) uploadFile.write(data, len);
+  if (final) {
+    if (uploadFile) uploadFile.close();
+    req->send(200, "application/json", "{\"ok\":true}");
+  }
+}
+
+// ============================================================================
 //  WiFi skeniranje
 // ============================================================================
 
@@ -1286,6 +1305,7 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   server->on("/api/cfgdelete",HTTP_POST,[](AsyncWebServerRequest* req){},NULL,apiCfgDelete);
   server->on("/api/cfgdownload",HTTP_GET,apiCfgDownload);
   server->on("/api/cfgupload",HTTP_POST,[](AsyncWebServerRequest* req){},apiCfgUpload);
+  server->on("/api/persona/upload",HTTP_POST,[](AsyncWebServerRequest* req){},apiPersonaUpload);
 
   // OTA firmware update
   server->on("/api/update", HTTP_POST,
