@@ -218,6 +218,20 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
         i++;
       }
     }
+    // Parametric EQ: band params (center freq + Q)
+    JsonArray bp = doc["bp"].as<JsonArray>();
+    if (bp) {
+      int i = 0;
+      for (JsonVariant v : bp) {
+        if (i >= STL_BAND_COUNT) break;
+        JsonObject bpo = v.as<JsonObject>();
+        if (bpo) {
+          if (!bpo["f"].isNull()) agc.bandParams[i].centerFreq = bpo["f"] | agc.bandParams[i].centerFreq;
+          if (!bpo["q"].isNull()) agc.bandParams[i].qFactor    = bpo["q"] | agc.bandParams[i].qFactor;
+        }
+        i++;
+      }
+    }
     _snd->resetAgcPeaks();
   }
   else if (strcmp(cmd, "save_sound") == 0 && _snd) {
@@ -753,6 +767,13 @@ static void apiCfgSave(AsyncWebServerRequest* req, uint8_t* data, size_t len, si
     agcObj["noiseGate"] = agc.noiseGate;
     JsonArray bgArr = agcObj["bandGains"].to<JsonArray>();
     for (int i = 0; i < STL_BAND_COUNT; i++) bgArr.add(agc.bandGains[i]);
+    // Parametric EQ band params
+    JsonArray bpArr = agcObj["bandParams"].to<JsonArray>();
+    for (int i = 0; i < STL_BAND_COUNT; i++) {
+      JsonObject bpo = bpArr.add<JsonObject>();
+      bpo["f"] = agc.bandParams[i].centerFreq;
+      bpo["q"] = agc.bandParams[i].qFactor;
+    }
   }
 
   // --- Mixer ---
@@ -942,6 +963,17 @@ static void apiCfgLoad(AsyncWebServerRequest* req, uint8_t* data, size_t len, si
         for (JsonVariant v : bgArr) {
           if (j >= STL_BAND_COUNT) break;
           agc.bandGains[j] = v | 1.0f;
+          j++;
+        }
+      }
+      // Parametric EQ band params
+      JsonArray bpArr = agcObj["bandParams"].as<JsonArray>();
+      if (bpArr) {
+        int j = 0;
+        for (JsonObject bpo : bpArr) {
+          if (j >= STL_BAND_COUNT) break;
+          agc.bandParams[j].centerFreq = bpo["f"] | STL_AGC_DEFAULTS.bandParams[j].centerFreq;
+          agc.bandParams[j].qFactor    = bpo["q"] | STL_AGC_DEFAULTS.bandParams[j].qFactor;
           j++;
         }
       }
@@ -1301,6 +1333,13 @@ void webLoop() {
     fft["aspd"]=agc.agcSpeed; fft["ang"]=agc.noiseGate;
     JsonArray abg=fft["abg"].to<JsonArray>();
     for(int i=0;i<STL_BAND_COUNT;i++) abg.add(agc.bandGains[i]);
+    // Parametric EQ band params za UI sinhronizacijo
+    JsonArray abp=fft["abp"].to<JsonArray>();
+    for(int i=0;i<STL_BAND_COUNT;i++){
+      JsonObject bpo=abp.add<JsonObject>();
+      bpo["f"]=agc.bandParams[i].centerFreq;
+      bpo["q"]=agc.bandParams[i].qFactor;
+    }
     // Fixture sound levels za preview
     if(_snd->isActive()){
       JsonArray fxl=doc["fxl"].to<JsonArray>();
