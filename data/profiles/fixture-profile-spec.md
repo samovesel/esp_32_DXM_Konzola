@@ -470,6 +470,19 @@ Razlaga: Vrstni red kanalov v profilu mora ustrezati DMX vrstnemu redu! Dimmer j
 
 ---
 
+## Zakaj je pravilno tipiziranje kanalov KRITIČNO
+
+Naprava uporablja `type` polje za več ključnih funkcij:
+
+1. **HSV → RGBW+A+UV pretvorba**: Barvno kolo v UI pošlje HSV na ESP32, ki **po tipu kanalov** razporedi barvo na R/G/B/W/A/UV kanale. Napačen tip = napačna barva!
+2. **Sound-to-Light Easy Mode**: Bass poganja `intensity`, mid poganja `color_r`/`color_g`/`color_b`, high poganja `strobe`. Napačen tip = efekt ne deluje.
+3. **Pixel Mapper**: Fixture Mirror način bere `color_r`/`color_g`/`color_b` za preslikavo na LED trak.
+4. **Gang kontrola**: UI poveže kanale po tipu, ne po zaporedju. Napačen tip = gang ne deluje pravilno.
+5. **Pametni Blackout**: Izklopi samo `intensity` in barvne kanale. `pan`/`tilt`/`gobo` ostanejo. Napačen tip = napačno vedenje.
+6. **Locate/Highlight**: Nastavi `intensity`=255, barve=bela, `pan`/`tilt`=128, `zoom`=wide, `gobo`=0.
+
+---
+
 ## Kontrolna lista pred oddajo
 
 1. ☐ `name` profila ≤ 27 znakov

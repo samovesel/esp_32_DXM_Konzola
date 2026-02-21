@@ -106,7 +106,111 @@ Podpora za MIDI kontrolerje prek Web MIDI API (deluje v Chrome/Edge):
 - **Mapiranja** — CC (Control Change) → faderji, Note → priklic scen
 - **Zbriši mapiranja** — pobriši vse MIDI mapiranja
 
-### 6. OSC Server
+### 6. Igralni plošček (Gamepad)
+
+Podpora za igralne ploščke prek brskalnikovega Gamepad API-ja (deluje v Chrome/Edge).
+
+#### Omogočanje
+
+- **Vklopi igralni plošček** — aktivira Gamepad vhod v spletnem vmesniku
+
+#### Združljivi kontrolerji
+
+- PlayStation DualShock (PS3, PS4) in DualSense (PS5)
+- Xbox kontrolerji (Xbox One, Xbox Series)
+- Generični USB ali Bluetooth igralni ploščki
+
+#### Mapiranje kontrol
+
+| Kontrola | Funkcija |
+|----------|----------|
+| Levi analog (stick) | Pan/Tilt za Skupino 1 |
+| Desni analog (stick) | Pan/Tilt za Skupino 2 |
+| R2 sprožilec (trigger) | Master dimmer (0–255) |
+| Gumb X (□ na PlayStation) | Flash — drži za polno intenziteto |
+| Gumb B (○ na PlayStation) | Blackout preklop (toggle) |
+
+#### Mrtva cona (Deadzone)
+
+- Nastavljiva mrtva cona za analogne palice (privzeto **15 %**)
+- Preprečuje nehoteno premikanje (drift), ko palica ni dotaknjena
+- Nižja vrednost = večja občutljivost, višja = manj neželenih premikov
+
+#### Primer uporabe
+
+1. Poveži PS5 kontroler prek Bluetooth-a na prenosni računalnik
+2. Odpri spletni vmesnik konzole v brskalniku Chrome
+3. V zavihku Nastavitve vklopi **Igralni plošček**
+4. Kontroliraj Pan/Tilt s palicama, Master dimmer z R2, Blackout z gumbom ○
+
+### 7. Pixel Mapper — LED trak (samo ESP32-S3)
+
+Krmiljenje zunanjih WS2812 / NeoPixel LED trakov prek RMT periferije (brez obremenitve procesorja).
+
+#### Priključek
+
+- **Pin:** GPIO 16 (fiksno določen)
+
+#### Nastavitve
+
+- **Vklopi / Izklopi** — omogoči ali onemogoči LED trak
+- **Število LED-ic** — nastavi od 1 do 144
+- **Svetlost** — nastavi od 0 do 255
+- **Način delovanja (Mode):**
+
+| Način | Opis |
+|-------|------|
+| **Fixture Mirror** | Preslika RGB barve izbranega fixture-a ali skupine na LED segmente. Izberi fixture ali skupino. |
+| **VU Meter** | Indikator glasnosti zvoka: zelena (nizko) → rumena (srednje) → rdeča (visoko) |
+| **Spectrum** | 8 FFT frekvenčnih pasov prikazanih kot mavrično obarvane stolpce vzdolž traku |
+| **Beat Pulse** | Vse LED-ice utripnejo na udarec (beat) z vrteče se spreminjajočo barvo (hue) |
+
+- **Izbira fixture-a / skupine** — vidno samo v načinu Fixture Mirror; izberi kateri fixture ali skupino se preslika na trak
+
+#### Shranjevanje
+
+Konfiguracija Pixel Mapper-ja se shrani v datoteko `/pixmap.bin` in se ohrani ob ponovnem zagonu.
+
+#### Primer uporabe
+
+1. Namesti 60-LED WS2812 trak za DJ pult
+2. Poveži podatkovni pin traku na GPIO 16 na ESP32-S3
+3. V nastavitvah vklopi Pixel Mapper, nastavi 60 LED-ic
+4. Izberi način **Spectrum** — uživaj v vizualizaciji zvoka v realnem času
+
+### 8. ESP-NOW — Brezžični DMX
+
+Brezžični prenos DMX signala prek ESP-NOW protokola brez potrebe po usmerjevalniku (routerju).
+
+#### Omogočanje
+
+- **Vklopi / Izklopi** — omogoči ali onemogoči ESP-NOW oddajanje
+
+#### Upravljanje sprejemnikov (slave)
+
+- **Dodaj sprejemnik** — vpiši MAC naslov v formatu `AA:BB:CC:DD:EE:FF`
+- Podprtih je do **4 sprejemnikov** (peer-ov)
+- **Odstrani** — klikni gumb X ob sprejemniku za odstranitev
+- **Shrani** — konfiguracija se ohrani ob ponovnem zagonu
+
+#### Kako deluje
+
+1. **Master ESP32** (konzola) razdeli 512-bajtni DMX buffer na pakete po 200 bajtov
+2. Paketi se pošljejo prek **ESP-NOW** peer-to-peer protokola z latenco **< 1 ms**
+3. **Slave ESP32** (cenovna rešitev: ESP32 modul + MAX485, ~3 EUR) prejme pakete in sestavi DMX buffer
+4. Slave pošlje DMX signal prek UART na MAX485 → XLR izhod
+
+#### Opomba
+
+ESP-NOW deluje na istem Wi-Fi kanalu kot AP način konzole — ni potreben zunanji usmerjevalnik. Povezava je direktna med napravami.
+
+#### Primer uporabe
+
+1. Ena master konzola za glavni oder
+2. Dva slave sprejemnika — eden na stranskem odru, eden na balkonu
+3. Brezžični DMX povsod, brez kablov in brez routerja
+
+### 9. OSC Server
 
 Vgrajen UDP Open Sound Control (OSC) strežnik na **portu 8000**.
 
@@ -123,7 +227,7 @@ Podprti naslovi:
 
 Kompatibilen z: TouchOSC, QLab, Resolume, ipd.
 
-### 7. Shranjevanje in ponastavitev
+### 10. Shranjevanje in ponastavitev
 
 - **Shrani in ponovni zagon** — shrani vse nastavitve in resetira ESP32
 - **Tovarniška ponastavitev** — pobriše vse nastavitve, fixture-e, scene in konfiguracijo. Zahteva potrditev
@@ -180,8 +284,10 @@ DMX Monitor pošilja podatke prek WebSocket-a in rahlo poveča obremenitev. Izkl
 
 ## OTA posodobitev firmware-a
 
-Gumb **⟲ FW** v zgornji vrstici odpre dialog za brezžično posodobitev:
+Gumb **⟲ FW** v zgornji vrstici odpre dialog za brezžično posodobitev (Over-The-Air):
 
 1. Izberi `.bin` datoteko s firmware-om
 2. Počakaj na nalaganje (ne izklopi naprave!)
 3. Po uspešnem nalaganju se ESP32 samodejno resetira
+
+Posodobitve firmware-a je mogoče izvesti brezžično kadarkoli prek spletnega vmesnika — fizični dostop do naprave ni potreben. Na ta način lahko namestite nove funkcionalnosti, popravke napak in izboljšave brez potrebe po USB povezavi.

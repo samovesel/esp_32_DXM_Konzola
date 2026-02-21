@@ -83,3 +83,39 @@ Scene so dostopne tudi iz:
 - **Celozaslonska konzola** — scene gumbi na dnu zaslona
 - **2D Oder** — scene gumbi na dnu zaslona
 - **Shrani sceno** gumb je na voljo v obeh pogledih
+
+---
+
+## 5. Daljinsko upravljanje scen
+
+Scene lahko priklicujete tudi prek zunanjih protokolov:
+
+### OSC (Open Sound Control)
+
+Pošljite OSC ukaz `/scene/N` (brez argumentov) na UDP port 8000 za priklic scene N (s crossfade-om 1.5s).
+
+Kompatibilne aplikacije: **TouchOSC**, **QLab**, **Resolume**, ipd.
+
+### Web MIDI
+
+Z MIDI kontrolerjem (prek Chrome/Edge brskalnika):
+- Uporabite **MIDI Learn** za mapiranje Note sporočil na scene
+- Primer: Note C3 → Scene 1, Note D3 → Scene 2, itd.
+- Podpira vse MIDI kontrolerje z Note izhodom
+
+### Igralni plošček (Gamepad)
+
+Z igralnim ploščkom (PlayStation/Xbox):
+- **X gumb (□ na PS)** — Flash (prisilno 100% intenziteta na vseh fixture-ih, dokler držite)
+- **B gumb (○ na PS)** — Blackout preklop
+
+---
+
+## 6. Multiplayer sinhronizacija
+
+Ob sprožitvi scene se crossfade sinhronizira na **vse povezane naprave** prek WebSocket-a v realnem času:
+
+- Ko operater sproži sceno na svoji napravi, se prehod prikaže na vseh ostalih zaslonih
+- Več operaterjev lahko hkrati upravlja scene — zadnja sprožena scena prevlada
+- Novo povezana naprava takoj prejme trenutno stanje (vključno z aktivnim crossfade-om)
+- Primer: operater sproži Cue List s tabličnega računalnika, pomočnik na telefonu vidi napredek crossfade-a v realnem času

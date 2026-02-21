@@ -19,7 +19,27 @@ Horizontalni drsnik (0–255) ki nadzoruje globalno svetilnost vseh fixture-ov. 
 
 ---
 
-## 3. Pogledi
+## 3. Igralni plošček (Gamepad)
+
+Mixer podpira povezavo igralnega ploščka (gamepad) za hitro in intuitivno upravljanje luči v živo.
+
+### Kontrole
+
+- **Leva palica** — krmili Pan/Tilt za vse fixture-e v **Skupini 1** (Group 1). Levo/desno = Pan, gor/dol = Tilt
+- **Desna palica** — krmili Pan/Tilt za vse fixture-e v **Skupini 2** (Group 2). Levo/desno = Pan, gor/dol = Tilt
+- **R2 sprožilec (trigger)** — nastavlja Master dimmer proporcionalno (analogno). Brez pritiska = 0%, poln pritisk = 255
+- **Gumb X** — Flash (drži za prisilno polno intenziteto na vseh fixture-ih). Spusti za vrnitev v prejšnje stanje
+- **Gumb B** — Blackout preklop (toggle). En klik vklopi blackout, naslednji ga izklopi
+
+### Primer uporabe
+
+DJ z igralnim ploščkom: z levo palico usmeri sprednje wash luči po odru, z desno palico krmili moving heade za odrom, z R2 sprožilcem nastavlja skupno svetilnost. Gumb X za flash ob vrhuncih glasbe, gumb B za takojšen blackout pred naslednjo pesmijo.
+
+> **Opomba:** Gamepad mora biti podprt s strani brskalnika (Gamepad API). Večina modernih brskalnikov podpira standardne USB in Bluetooth igralne ploščke. Ob priključitvi se gamepad samodejno zazna.
+
+---
+
+## 4. Pogledi
 
 ### Kompakt (Compact)
 
@@ -89,7 +109,7 @@ Interaktivni vizualni oder za pozicioniranje luči v prostoru.
 
 ---
 
-## 4. Zgodovina stanj
+## 5. Zgodovina stanj
 
 Samodejni snapshoti ob preklopu med načini (ArtNet ↔ Lokalno). Klikni na vnos za obnovo stanja.
 
@@ -99,7 +119,7 @@ Samodejni snapshoti ob preklopu med načini (ArtNet ↔ Lokalno). Klikni na vnos
 
 ---
 
-## 5. Barvna paleta (Color Picker)
+## 6. Barvna paleta (Color Picker)
 
 V kompakt pogledu ali 2D layout popupu klikni na barvni kanal fixture-a za odprtje barvnega kola:
 
@@ -108,12 +128,84 @@ V kompakt pogledu ali 2D layout popupu klikni na barvni kanal fixture-a za odprt
 - **Predogled** — kvadrat z izbrano barvo + HEX koda
 - **Paleta hitrih barv** — vnaprej definirane barve za hitro izbiro
 
+### HSV barvno kolo — samodejno mapiranje kanalov
+
+Barvno kolo pošilja HSV vrednosti (Hue, Saturation, Value) neposredno na ESP32, kjer se izvede pretvorba na strani strežnika. To prinaša naslednje prednosti:
+
+- **ESP32 samodejno mapira HSV v ustrezne kanale** glede na profil fixture-a:
+  - **RGB** — osnovna pretvorba HSV v rdeča (R), zelena (G), modra (B) kanale
+  - **RGBW** — če ima fixture kanal za belo (`color_w`), se bela komponenta izloči iz nenasičenega dela barve. Rezultat: čistejši beli toni in daljša življenjska doba LED-ic
+  - **Amber (`color_a`)** — če ima fixture amber kanal, se amber vrednost izpelje iz toplih tonov barve (oranžna/rumena regija)
+  - **UV (`color_uv`)** — če ima fixture UV kanal, se UV intenziteta nastavi na podlagi modrega/vijoličnega odtenka (hue v območju 240°–300°)
+- **Ena WebSocket poruka na spremembo barve** namesto 3–6 ločenih sporočil (eno za vsak kanal). To zmanjša obremenitev omrežja in zagotavlja, da se vsi kanali spremenijo simultano brez utripanja
+- **Ni potrebe po ročnem nastavljanju** posameznih barvnih kanalov — preprosto izberite barvo na kolesu in ESP32 poskrbi za pravilno razdelitev med vse razpoložljive barvne kanale
+
+#### Primer uporabe
+
+Izberite 6-kanalni RGBAW fixture in izberite barvo na barvnem kolesu. ESP32 samodejno nastavi kanale R, G, B, A in W na pravilne vrednosti. Na primer: topla bela barva bo aktivirala beli kanal in amber kanal, medtem ko bodo RGB kanali nastavljeni na minimalno vrednost za fino korekcijo odtenka. Ni potrebe po ročnem nastavljanju vsakega barvnega kanala posebej!
+
 ---
 
-## 6. XY Pad popup
+## 7. XY Pad popup
 
 Za natančno Pan/Tilt kontrolo na moving headih:
 
 - **Canvas 200×200px** — horizontalna os = Pan, vertikalna os = Tilt
 - **Klikni/vleci** — nastavi Pan in Tilt hkrati
 - Prikazuje trenutne vrednosti (0–255) za oba kanala
+
+### Čarobna palica (Magic Wand)
+
+XY Pad popup vključuje gumb za čarobno palico, ki omogoča krmiljenje Pan/Tilt z žiroskopom telefona.
+
+#### Kako deluje
+
+Uporablja brskalnikov DeviceOrientation API za branje podatkov žiroskopa telefona. Nagibanje telefona krmili Pan (levo/desno) in Tilt (naprej/nazaj) izbranih fixture-ov.
+
+#### Aktivacija
+
+1. Odprite XY Pad popup (kliknite zeleno piko na fixture-u v 2D Layout pogledu)
+2. Kliknite gumb s palico (ikona: wand/UFO)
+3. Ob prvem kliku se izvede **kalibracija** — trenutni položaj telefona se nastavi kot sredinska (nevtralna) točka
+4. Ikona palice prikaže aktivno stanje (spremenjena barva/slog)
+
+#### Deaktivacija
+
+- Kliknite gumb s palico ponovno, ali
+- Zaprite XY Pad popup
+
+#### Obseg gibanja
+
+- Privzeto: **±50°** nagiba telefona se preslika na celoten obseg Pan/Tilt (0–255)
+- Obseg je nastavljiv za bolj ali manj občutljivo krmiljenje
+
+#### Najboljše prakse
+
+- **Držite telefon ravno** pred seboj v višini prsi za najboljšo kontrolo
+- **Majhni, premišljeni gibi** za natančno pozicioniranje
+- Deluje na **vseh pametnih telefonih in tablicah** z žiroskopom
+- **iOS zahteva HTTPS** povezavo (varnostna omejitev brskalnika Safari)
+- **Deluje samo na mobilnih napravah** — na namiznih računalnikih brez žiroskopa funkcija ni na voljo
+
+#### Primer uporabe
+
+Odprite 2D Layout, kliknite na moving head fixture, kliknite zeleno piko za XY Pad popup, kliknite gumb s palico. Sedaj nagnite telefon levo/desno za Pan, naprej/nazaj za Tilt. Kot da s čarobno palico usmerjate reflektor!
+
+---
+
+## 8. Multiplayer sinhronizacija
+
+Mixer podpira sočasno upravljanje z več naprav hkrati prek WebSocket povezave.
+
+### Kako deluje
+
+- **Več naprav** lahko krmili isti ESP32 sočasno — brez omejitev števila povezanih odjemalcev
+- **Ob novi povezavi** naprava takoj prejme celotno trenutno stanje (vse faderje, barve, scene, blackout status itd.)
+- **Vse spremembe se prenašajo v realnem času** na vse povezane naprave. Ko en uporabnik premakne fader, vsi ostali vidijo spremembo takoj
+- **Ni konflikta** — zadnja sprememba vedno prevlada (last-write-wins). Če dva uporabnika hkrati spremenita isti kanal, se uporabi zadnja prejeta vrednost
+
+### Primer uporabe
+
+Svetlobni tehnik upravlja mixer na prenosnem računalniku z mišjo za natančno nastavljanje scen. DJ na telefonu krmili master dimmer in flash gumb med nastopom. Pomočnik na tablici v 2D Layout pogledu usmerja moving heade. Vsi trije vidijo in krmilijo isto stanje mixerja — spremembe enega se takoj odrazijo pri ostalih.
+
+> **Opomba:** Vse naprave morajo biti povezane na isto WiFi omrežje kot ESP32. Priporočena je stabilna WiFi povezava za nemoteno sinhronizacijo.
