@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DMX Busker">
+<meta name="theme-color" content="#1abc9c">
+<link rel="manifest" href="/manifest-busker.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>DMX Busker</title>
+<style>
+:root{--accent:#1abc9c}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:12px}
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;
+  text-align:center;padding:8px;font-size:0.85em;z-index:100}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;
+  padding:8px 20px;border-radius:20px;font-size:0.85em;opacity:0;transition:opacity 0.3s;z-index:100}
+.wrap{width:100%;max-width:400px}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.hdr h1{font-size:1.2em;color:var(--accent)}
+.hdr a{color:#888;text-decoration:none;font-size:0.8em}
+.card{background:#1a1a2e;border-radius:12px;padding:12px;margin-bottom:10px}
+
+.fft-wrap{display:flex;align-items:flex-end;height:80px;gap:4px;padding:4px 0}
+.fft-bar{flex:1;background:linear-gradient(to top,#1abc9c,#27ae60,#f39c12,#e74c3c);border-radius:4px 4px 0 0;
+  min-height:3px;transition:height 0.08s}
+
+.sound-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.stl-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.stl-toggle .switch{width:56px;height:30px;background:#333;border-radius:15px;position:relative;transition:background 0.2s}
+.stl-toggle .switch.on{background:var(--accent)}
+.stl-toggle .switch::after{content:'';position:absolute;width:26px;height:26px;border-radius:50%;
+  background:#fff;top:2px;left:2px;transition:left 0.2s}
+.stl-toggle .switch.on::after{left:28px}
+.stl-label{font-size:1em;font-weight:600}
+.bpm-info{font-size:1em;font-weight:700;color:var(--accent)}
+.beat-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#333;
+  margin-left:6px;transition:all 0.1s;vertical-align:middle}
+.beat-dot.on{background:#e74c3c;box-shadow:0 0 8px #e74c3c}
+
+.look-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.look-btn{background:#222;border:2px solid #333;border-radius:12px;padding:20px 10px;text-align:center;
+  font-size:1.1em;font-weight:600;color:#ccc;cursor:pointer;transition:all 0.15s;min-height:70px;
+  display:flex;align-items:center;justify-content:center}
+.look-btn:active{transform:scale(0.95)}
+.look-btn.active{border-color:var(--accent);color:#fff;background:#1a2e2e}
+
+.master-row{display:flex;align-items:center;gap:8px}
+.master-row label{font-size:0.85em;color:#888;white-space:nowrap}
+.master-row input[type=range]{flex:1;height:8px;-webkit-appearance:none;background:#333;border-radius:4px;outline:none}
+.master-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--accent);cursor:pointer}
+.master-val{font-size:0.85em;color:#aaa;min-width:36px;text-align:right}
+
+.footer{text-align:center;margin-top:12px}
+.footer a{color:#888;text-decoration:none;font-size:0.8em}
+</style>
+</head>
+<body>
+<div id="offlineBanner"></div>
+<div class="wrap">
+  <div class="hdr"><h1>&#127928; Busker</h1><a href="/portal">&#9664; Portal</a></div>
+
+  <div class="card">
+    <div class="fft-wrap" id="fftBars"></div>
+    <div class="sound-row">
+      <div class="stl-toggle" onclick="toggleStl()">
+        <div class="switch" id="stlSwitch"></div>
+        <span class="stl-label" id="stlLabel">Zvok: OFF</span>
+      </div>
+      <div>
+        <span class="bpm-info" id="bpmVal">-- BPM</span>
+        <span class="beat-dot" id="beatDot"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="look-grid" id="lookGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="master-row">
+      <label>Svetlost</label>
+      <input type="range" min="0" max="255" value="200" id="masterSlider"
+             oninput="onMaster(this.value)" ontouchstart="this.dataset.touch=1" ontouchend="delete this.dataset.touch">
+      <span class="master-val" id="masterVal">78%</span>
+    </div>
+  </div>
+
+  <div class="footer"><a href="/portal">&#127968; Portal</a></div>
+</div>
+<div id="toast"></div>
+
+<script src="/persona-core.js"></script>
+<script>
+var looks = [
+    {name:'Warm', scene:0},
+    {name:'Cool', scene:3},
+    {name:'Neon', scene:5},
+    {name:'Chill', scene:7}
+];
+var stlOn = false;
+var curLook = -1;
+var beatTimeout = null;
+
+// Init FFT bars
+(function(){
+    var c = document.getElementById('fftBars');
+    for (var i = 0; i < 8; i++) {
+        var b = document.createElement('div');
+        b.className = 'fft-bar'; b.style.height = '3px'; b.id = 'fb'+i;
+        c.appendChild(b);
+    }
+})();
+
+function renderLooks() {
+    var g = document.getElementById('lookGrid');
+    g.innerHTML = '';
+    for (var i = 0; i < looks.length; i++) {
+        var btn = document.createElement('div');
+        btn.className = 'look-btn';
+        btn.textContent = looks[i].name;
+        btn.onclick = (function(idx){ return function(){ selectLook(idx); }; })(i);
+        g.appendChild(btn);
+    }
+}
+
+function selectLook(idx) {
+    curLook = idx;
+    var l = looks[idx];
+    PersonaCore.send({cmd:'scene_recall', slot:l.scene, fade:1500});
+    updateLookHighlight();
+}
+
+function updateLookHighlight() {
+    var btns = document.querySelectorAll('.look-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', i === curLook);
+}
+
+function toggleStl() {
+    stlOn = !stlOn;
+    PersonaCore.send({cmd:'easy', en:stlOn?1:0, preset:5});
+    document.getElementById('stlSwitch').classList.toggle('on', stlOn);
+    document.getElementById('stlLabel').textContent = 'Zvok: ' + (stlOn ? 'ON' : 'OFF');
+}
+
+function onMaster(v) {
+    PersonaCore.send({cmd:'master', v:parseInt(v)});
+    document.getElementById('masterVal').textContent = Math.round(v/2.55) + '%';
+}
+
+PersonaCore.connect();
+PersonaCore.loadConfig(function(c) {
+    if (c && c.busker && c.busker.looks) looks = c.busker.looks;
+    renderLooks();
+});
+
+PersonaCore.onStatus(function(d) {
+    // Master
+    var ms = document.getElementById('masterSlider');
+    if (ms && !ms.dataset.touch && document.activeElement !== ms) {
+        ms.value = d.master;
+        document.getElementById('masterVal').textContent = Math.round(d.master/2.55) + '%';
+    }
+    // FFT
+    if (d.fft && d.fft.b) {
+        for (var i = 0; i < 8; i++) {
+            var bar = document.getElementById('fb'+i);
+            if (bar) bar.style.height = Math.max(3, (d.fft.b[i]/255)*78) + 'px';
+        }
+        // BPM
+        var bpm = d.fft.bpm || (d.mb && d.mb.bpm) || 0;
+        document.getElementById('bpmVal').textContent = bpm > 0 ? bpm.toFixed(0) + ' BPM' : '-- BPM';
+        // Beat
+        if (d.fft.beat) {
+            document.getElementById('beatDot').classList.add('on');
+            if (beatTimeout) clearTimeout(beatTimeout);
+            beatTimeout = setTimeout(function(){ document.getElementById('beatDot').classList.remove('on'); }, 150);
+        }
+    }
+});
+</script>
+</body>
+</html>

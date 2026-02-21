@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DMX Event">
+<meta name="theme-color" content="#f39c12">
+<link rel="manifest" href="/manifest-event.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>DMX Event</title>
+<style>
+:root{--accent:#f39c12}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:8px}
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;
+  text-align:center;padding:8px;font-size:0.85em;z-index:100}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;
+  padding:8px 20px;border-radius:20px;font-size:0.85em;opacity:0;transition:opacity 0.3s;z-index:100}
+.wrap{width:100%;max-width:450px}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.hdr h1{font-size:1.1em;color:var(--accent)}
+.hdr a{color:#888;text-decoration:none;font-size:0.8em}
+.card{background:#1a1a2e;border-radius:10px;padding:10px;margin-bottom:8px}
+
+.clock{text-align:center;font-size:2em;font-weight:700;color:var(--accent);padding:6px 0}
+
+.timeline{max-height:50vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.tl-entry{display:flex;align-items:center;gap:8px;padding:10px 8px;border-left:3px solid #333;
+  cursor:pointer;transition:all 0.15s;border-radius:0 6px 6px 0;margin-bottom:2px}
+.tl-entry:active{background:#222}
+.tl-entry.past{opacity:0.4;border-left-color:#27ae60}
+.tl-entry.current{background:#2a2a1e;border-left-color:var(--accent);opacity:1}
+.tl-entry.upcoming{opacity:0.7}
+.tl-time{font-size:0.8em;color:#888;min-width:44px;font-weight:600}
+.tl-name{flex:1;font-size:0.9em}
+.tl-fade{font-size:0.65em;color:#666}
+.tl-stl{font-size:0.6em;color:#27ae60}
+.tl-check{font-size:0.8em;color:#27ae60;min-width:16px}
+
+.nav-row{display:flex;gap:8px}
+.nav-btn{flex:1;padding:14px;font-size:1em;font-weight:600;background:#222;color:#ccc;
+  border:2px solid #444;border-radius:10px;cursor:pointer;text-align:center;transition:all 0.1s}
+.nav-btn:active{transform:scale(0.96)}
+.nav-btn.advance{border-color:var(--accent);color:var(--accent)}
+
+.auto-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.auto-label{font-size:0.8em;color:#aaa}
+.auto-toggle{width:50px;height:28px;background:#333;border-radius:14px;position:relative;cursor:pointer;transition:background 0.2s}
+.auto-toggle.on{background:var(--accent)}
+.auto-toggle::after{content:'';position:absolute;width:24px;height:24px;border-radius:50%;background:#fff;
+  top:2px;left:2px;transition:left 0.2s}
+.auto-toggle.on::after{left:24px}
+
+.ctrl-row{display:flex;gap:6px;align-items:center;margin-top:8px}
+.btn-party{flex:1;padding:10px;background:#222;border:2px solid #333;border-radius:8px;color:#ccc;
+  font-size:0.85em;cursor:pointer;text-align:center}
+.btn-party.on{border-color:#27ae60;color:#27ae60;background:#1a2e1a}
+.btn-bo{padding:10px 14px;background:#c0392b;color:#fff;border:none;border-radius:8px;font-size:0.85em;
+  font-weight:600;cursor:pointer}
+.btn-bo.active{background:#e74c3c;box-shadow:0 0 12px #e74c3c80}
+
+.master-row{display:flex;align-items:center;gap:6px;margin-top:8px}
+.master-row label{font-size:0.75em;color:#888}
+.master-row input[type=range]{flex:1;height:6px;-webkit-appearance:none;background:#333;border-radius:3px;outline:none}
+.master-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer}
+.master-val{font-size:0.7em;color:#888;min-width:30px}
+
+.cf-bar{height:6px;background:#222;border-radius:3px;overflow:hidden;margin-top:8px}
+.cf-fill{height:100%;background:var(--accent);width:0;transition:width 0.1s}
+
+.wake-notice{font-size:0.6em;color:#555;text-align:center;margin-top:6px}
+.footer{text-align:center;margin-top:8px}
+.footer a{color:#888;text-decoration:none;font-size:0.75em}
+</style>
+</head>
+<body>
+<div id="offlineBanner"></div>
+<div class="wrap">
+  <div class="hdr"><h1>&#127882; Zabava</h1><a href="/portal">&#9664; Portal</a></div>
+
+  <div class="card">
+    <div class="clock" id="clock">--:--</div>
+  </div>
+
+  <div class="card">
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <div class="card">
+    <div class="nav-row">
+      <div class="nav-btn" onclick="goBack()">&#9664; Nazaj</div>
+      <div class="nav-btn advance" onclick="goForward()">Naprej &#9654;</div>
+    </div>
+    <div class="auto-row">
+      <span class="auto-label">&#9200; Samodejno napredovanje</span>
+      <div class="auto-toggle" id="autoToggle" onclick="toggleAuto()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctrl-row">
+      <div class="btn-party" id="btnParty" onclick="toggleParty()">&#127925; Party mode</div>
+      <button class="btn-bo" id="btnBo" onclick="toggleBo()">BLACKOUT</button>
+    </div>
+    <div class="master-row">
+      <label>Svetlost:</label>
+      <input type="range" min="0" max="255" value="255" id="masterSlider" oninput="onMaster(this.value)">
+      <span class="master-val" id="masterVal">100%</span>
+    </div>
+    <div class="cf-bar"><div class="cf-fill" id="cfFill"></div></div>
+  </div>
+
+  <div class="wake-notice" id="wakeNotice"></div>
+  <div class="footer"><a href="/portal">&#127968; Portal</a></div>
+</div>
+<div id="toast"></div>
+
+<script src="/persona-core.js"></script>
+<script>
+var timeline = [
+    {name:'Gostje prihajajo', time:'17:00', scene:0, fade:3000},
+    {name:'Ceremonija', time:'17:30', scene:2, fade:5000},
+    {name:'Ve\u010Derja', time:'18:30', scene:3, fade:3000},
+    {name:'Prvi ples', time:'21:00', scene:5, fade:2000},
+    {name:'Zabava', time:'21:05', scene:7, fade:1500, stl:true},
+    {name:'Zadnji ples', time:'23:30', scene:12, fade:5000}
+];
+var currentPhase = -1;
+var autoAdvance = false;
+var boState = false;
+var partyOn = false;
+var wakeLock = null;
+var checkInterval = null;
+
+function parseTime(t) {
+    var p = t.split(':');
+    return parseInt(p[0]) * 60 + parseInt(p[1]);
+}
+
+function renderTimeline() {
+    var c = document.getElementById('timeline');
+    c.innerHTML = '';
+    for (var i = 0; i < timeline.length; i++) {
+        var e = document.createElement('div');
+        e.className = 'tl-entry';
+        if (i < currentPhase) e.classList.add('past');
+        else if (i === currentPhase) e.classList.add('current');
+        else e.classList.add('upcoming');
+        e.innerHTML =
+            '<span class="tl-check">' + (i < currentPhase ? '&#10003;' : (i === currentPhase ? '&#9654;' : '')) + '</span>' +
+            '<span class="tl-time">' + timeline[i].time + '</span>' +
+            '<span class="tl-name">' + timeline[i].name + '</span>' +
+            '<span class="tl-fade">' + (timeline[i].fade/1000).toFixed(1) + 's</span>' +
+            (timeline[i].stl ? '<span class="tl-stl">&#9835;</span>' : '');
+        e.dataset.idx = i;
+        e.onclick = (function(idx){ return function(){ goToPhase(idx); }; })(i);
+        c.appendChild(e);
+    }
+    // Scroll current into view
+    var cur = c.querySelector('.current');
+    if (cur) cur.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+function goToPhase(idx) {
+    if (idx < 0 || idx >= timeline.length) return;
+    currentPhase = idx;
+    var p = timeline[idx];
+    PersonaCore.send({cmd:'scene_recall', slot:p.scene, fade:p.fade || 3000});
+    if (p.stl) {
+        partyOn = true;
+        PersonaCore.send({cmd:'easy', en:1, preset:5});
+        document.getElementById('btnParty').classList.add('on');
+    }
+    renderTimeline();
+    PersonaCore.showMsg(p.name);
+}
+
+function goForward() {
+    goToPhase(currentPhase + 1);
+}
+
+function goBack() {
+    goToPhase(Math.max(0, currentPhase - 1));
+}
+
+function toggleAuto() {
+    autoAdvance = !autoAdvance;
+    document.getElementById('autoToggle').classList.toggle('on', autoAdvance);
+    if (autoAdvance) requestWakeLock();
+}
+
+function checkTimeline() {
+    if (!autoAdvance) return;
+    var now = new Date();
+    var mins = now.getHours() * 60 + now.getMinutes();
+    // Find the latest phase whose time has passed
+    for (var i = timeline.length - 1; i >= 0; i--) {
+        if (mins >= parseTime(timeline[i].time) && i > currentPhase) {
+            goToPhase(i);
+            break;
+        }
+    }
+}
+
+function toggleBo() {
+    boState = !boState;
+    PersonaCore.send({cmd:'blackout', v:boState?1:0});
+}
+
+function toggleParty() {
+    partyOn = !partyOn;
+    PersonaCore.send({cmd:'easy', en:partyOn?1:0, preset:5});
+    document.getElementById('btnParty').classList.toggle('on', partyOn);
+}
+
+function onMaster(v) {
+    PersonaCore.send({cmd:'master', v:parseInt(v)});
+    document.getElementById('masterVal').textContent = Math.round(v/2.55) + '%';
+}
+
+function updateClock() {
+    var now = new Date();
+    var h = now.getHours().toString().padStart(2,'0');
+    var m = now.getMinutes().toString().padStart(2,'0');
+    document.getElementById('clock').textContent = h + ':' + m;
+}
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            document.getElementById('wakeNotice').textContent = 'Zaslon ostane prižgan';
+        }
+    } catch(e) {
+        document.getElementById('wakeNotice').textContent = '';
+    }
+}
+
+PersonaCore.connect();
+PersonaCore.loadConfig(function(c) {
+    if (c && c.event && c.event.timeline) timeline = c.event.timeline;
+    renderTimeline();
+});
+
+PersonaCore.onStatus(function(d) {
+    // Blackout
+    boState = !!d.bo;
+    document.getElementById('btnBo').classList.toggle('active', boState);
+    // Master
+    var ms = document.getElementById('masterSlider');
+    if (ms && document.activeElement !== ms) {
+        ms.value = d.master;
+        document.getElementById('masterVal').textContent = Math.round(d.master/2.55) + '%';
+    }
+    // Crossfade
+    if (d.cf) {
+        document.getElementById('cfFill').style.width = d.cf.active ? d.cf.progress + '%' : '0';
+    }
+});
+
+// Clock + auto-advance check
+updateClock();
+setInterval(updateClock, 1000);
+checkInterval = setInterval(checkTimeline, 5000);
+</script>
+</body>
+</html>

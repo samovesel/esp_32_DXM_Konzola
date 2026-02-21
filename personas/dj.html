@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DMX DJ">
+<meta name="theme-color" content="#9b59b6">
+<link rel="manifest" href="/manifest-dj.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>DMX DJ</title>
+<style>
+:root{--accent:#9b59b6}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:8px}
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;
+  text-align:center;padding:8px;font-size:0.85em;z-index:100}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;
+  padding:8px 20px;border-radius:20px;font-size:0.85em;opacity:0;transition:opacity 0.3s;z-index:100}
+.wrap{width:100%;max-width:500px}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.hdr h1{font-size:1.1em;color:var(--accent)}
+.hdr a{color:#888;text-decoration:none;font-size:0.8em}
+.card{background:#1a1a2e;border-radius:10px;padding:10px;margin-bottom:8px}
+
+.bpm-display{text-align:center;padding:8px 0}
+.bpm-big{font-size:2.8em;font-weight:800;color:var(--accent);letter-spacing:-1px}
+.bpm-label{font-size:0.7em;color:#888;margin-top:-4px}
+.beat-dots{display:flex;justify-content:center;gap:6px;margin:8px 0}
+.beat-dot{width:14px;height:14px;border-radius:50%;background:#333;transition:all 0.1s}
+.beat-dot.on{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+
+.phase-bar{height:6px;background:#222;border-radius:3px;overflow:hidden;margin:4px 0}
+.phase-fill{height:100%;background:var(--accent);width:0%;transition:width 0.05s linear}
+
+.tap-btn{width:100%;padding:16px;font-size:1.2em;font-weight:700;background:#222;color:var(--accent);
+  border:2px solid var(--accent);border-radius:12px;cursor:pointer;margin-top:6px;transition:all 0.1s}
+.tap-btn:active{background:var(--accent);color:#111;transform:scale(0.97)}
+
+.source-row{display:flex;gap:4px;margin-top:8px}
+.src-btn{flex:1;padding:8px 4px;background:#222;border:1px solid #444;border-radius:6px;color:#aaa;
+  font-size:0.72em;text-align:center;cursor:pointer}
+.src-btn.active{border-color:var(--accent);color:var(--accent);background:#1a1a3e}
+.link-info{font-size:0.65em;color:#888;margin-top:4px;text-align:center}
+
+.ctrl-row{display:flex;gap:6px}
+.btn-bo{flex:1;background:#c0392b;color:#fff;border:none;border-radius:8px;padding:12px;font-size:0.9em;
+  font-weight:600;cursor:pointer}
+.btn-bo.active{background:#e74c3c;box-shadow:0 0 12px #e74c3c80}
+.btn-strobe{flex:1;background:#f39c12;color:#111;border:none;border-radius:8px;padding:12px;font-size:0.9em;
+  font-weight:600;cursor:pointer;user-select:none}
+.btn-strobe.active{background:#f1c40f;box-shadow:0 0 12px #f1c40f80}
+
+.mood-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mood-btn{background:#222;border:2px solid #333;border-radius:10px;padding:14px 4px;text-align:center;
+  font-size:0.85em;color:#ccc;cursor:pointer;transition:all 0.15s}
+.mood-btn:active{transform:scale(0.95)}
+.mood-btn.active{border-color:var(--accent);color:#fff;background:#1a1a3e}
+
+.prog-row{display:flex;gap:4px;flex-wrap:wrap}
+.prog-btn{background:#222;border:1px solid #444;border-radius:6px;padding:6px 10px;color:#aaa;
+  font-size:0.72em;cursor:pointer}
+.prog-btn.active{border-color:#e74c3c;color:#e74c3c;background:#2a1a1a}
+
+.sub-row{display:flex;gap:4px;align-items:center;margin-top:6px}
+.sub-row label{font-size:0.7em;color:#888}
+.sub-btn{background:#222;border:1px solid #444;border-radius:6px;padding:5px 10px;color:#aaa;
+  font-size:0.72em;cursor:pointer}
+.sub-btn.active{border-color:var(--accent);color:var(--accent)}
+
+.intensity-row{display:flex;align-items:center;gap:6px;margin-top:8px}
+.intensity-row label{font-size:0.75em;color:#888;white-space:nowrap}
+.intensity-row input[type=range]{flex:1;height:6px;-webkit-appearance:none;background:#333;border-radius:3px;outline:none}
+.intensity-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer}
+.intensity-val{font-size:0.7em;color:#888;min-width:30px}
+
+.fft-wrap{display:flex;align-items:flex-end;height:60px;gap:3px;padding:4px 0}
+.fft-bar{flex:1;background:linear-gradient(to top,#9b59b6,#e74c3c);border-radius:3px 3px 0 0;
+  min-height:2px;transition:height 0.08s}
+
+.footer{text-align:center;margin-top:8px}
+.footer a{color:#888;text-decoration:none;font-size:0.75em}
+</style>
+</head>
+<body>
+<div id="offlineBanner"></div>
+<div class="wrap">
+  <div class="hdr"><h1>&#127926; DJ</h1><a href="/portal">&#9664; Portal</a></div>
+
+  <div class="card">
+    <div class="bpm-display">
+      <div class="bpm-big" id="bpmBig">---</div>
+      <div class="bpm-label">BPM</div>
+    </div>
+    <div class="beat-dots" id="beatDots">
+      <span class="beat-dot"></span><span class="beat-dot"></span>
+      <span class="beat-dot"></span><span class="beat-dot"></span>
+    </div>
+    <div class="phase-bar"><div class="phase-fill" id="phaseFill"></div></div>
+    <button class="tap-btn" id="tapBtn" onclick="doTap()">TAP</button>
+    <div class="source-row">
+      <div class="src-btn active" id="srcAudio" onclick="setSrc(0)">Audio</div>
+      <div class="src-btn" id="srcTap" onclick="setSrc(1)">Manual</div>
+      <div class="src-btn" id="srcLink" onclick="setSrc(4)">Link</div>
+    </div>
+    <div class="link-info" id="linkInfo"></div>
+  </div>
+
+  <div class="card">
+    <div class="ctrl-row">
+      <button class="btn-bo" id="btnBo" onclick="toggleBo()">BLACKOUT</button>
+      <button class="btn-strobe" id="btnStrobe"
+              onmousedown="flashOn()" onmouseup="flashOff()" onmouseleave="flashOff()"
+              ontouchstart="flashOn()" ontouchend="flashOff()">STROBE</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="mood-grid" id="moodGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="prog-row" id="progRow"></div>
+    <div class="sub-row">
+      <label>Subdiv:</label>
+      <div class="sub-btn" onclick="setSub(0)">1/4x</div>
+      <div class="sub-btn" onclick="setSub(1)">1/2x</div>
+      <div class="sub-btn active" onclick="setSub(2)">1x</div>
+      <div class="sub-btn" onclick="setSub(3)">2x</div>
+      <div class="sub-btn" onclick="setSub(4)">4x</div>
+    </div>
+    <div class="intensity-row">
+      <label>Intenziteta:</label>
+      <input type="range" min="10" max="100" value="100" id="intensitySlider" oninput="onIntensity(this.value)">
+      <span class="intensity-val" id="intensityVal">100%</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="fft-wrap" id="fftBars"></div>
+  </div>
+
+  <div class="footer"><a href="/portal">&#127968; Portal</a></div>
+</div>
+<div id="toast"></div>
+
+<script src="/persona-core.js"></script>
+<script>
+var moods = [
+    {name:'Chill', scene:0, stl_preset:4},
+    {name:'Warm', scene:3, stl_preset:1},
+    {name:'Neon', scene:5, stl_preset:5},
+    {name:'Rave', scene:7, stl_preset:3}
+];
+var progNames = ['Pulse','Chase','Rainbow','Strobe','Scanner','Fire'];
+var progIds = [0,1,2,3,8,10];
+var boState = false;
+var curSrc = 0;
+var curSub = 2;
+var curProg = 0;
+var curMood = -1;
+var beatTimeout = null;
+var beatCount = 0;
+
+// Init FFT
+(function(){
+    var c = document.getElementById('fftBars');
+    for (var i = 0; i < 8; i++) {
+        var b = document.createElement('div');
+        b.className = 'fft-bar'; b.style.height = '2px'; b.id = 'fb'+i;
+        c.appendChild(b);
+    }
+})();
+
+function renderMoods() {
+    var g = document.getElementById('moodGrid');
+    g.innerHTML = '';
+    for (var i = 0; i < moods.length; i++) {
+        var btn = document.createElement('div');
+        btn.className = 'mood-btn';
+        btn.textContent = moods[i].name;
+        btn.dataset.idx = i;
+        btn.onclick = (function(idx){ return function(){ selectMood(idx); }; })(i);
+        g.appendChild(btn);
+    }
+}
+
+function renderProgs() {
+    var c = document.getElementById('progRow');
+    c.innerHTML = '';
+    for (var i = 0; i < progNames.length; i++) {
+        var btn = document.createElement('div');
+        btn.className = 'prog-btn';
+        btn.textContent = progNames[i];
+        btn.onclick = (function(idx){ return function(){ setProg(idx); }; })(i);
+        c.appendChild(btn);
+    }
+}
+
+function selectMood(idx) {
+    curMood = idx;
+    var m = moods[idx];
+    PersonaCore.send({cmd:'scene_recall', slot:m.scene, fade:1500});
+    if (m.stl_preset !== undefined) {
+        PersonaCore.send({cmd:'easy', en:1, preset:m.stl_preset});
+    }
+    updateMoodHighlight();
+}
+
+function updateMoodHighlight() {
+    var btns = document.querySelectorAll('.mood-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', i === curMood);
+}
+
+function doTap() {
+    PersonaCore.send({cmd:'tap'});
+    var btn = document.getElementById('tapBtn');
+    btn.style.background = 'var(--accent)'; btn.style.color = '#111';
+    setTimeout(function(){ btn.style.background = '#222'; btn.style.color = 'var(--accent)'; }, 100);
+}
+
+function setSrc(s) {
+    curSrc = s;
+    sendMbCfg();
+    document.getElementById('srcAudio').classList.toggle('active', s===0);
+    document.getElementById('srcTap').classList.toggle('active', s===1);
+    document.getElementById('srcLink').classList.toggle('active', s===4);
+}
+
+function setSub(s) {
+    curSub = s;
+    sendMbCfg();
+    var btns = document.querySelectorAll('.sub-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', i === s);
+}
+
+function setProg(idx) {
+    curProg = progIds[idx];
+    sendMbCfg();
+    var btns = document.querySelectorAll('.prog-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', i === idx);
+}
+
+function onIntensity(v) {
+    document.getElementById('intensityVal').textContent = v + '%';
+    sendMbCfg();
+}
+
+function sendMbCfg() {
+    var intensity = +document.getElementById('intensitySlider').value;
+    PersonaCore.send({cmd:'mb_cfg', src:curSrc, prog:curProg, sub:curSub, intensity:intensity, en:1});
+}
+
+function toggleBo() {
+    boState = !boState;
+    PersonaCore.send({cmd:'blackout', v:boState?1:0});
+}
+
+function flashOn() {
+    PersonaCore.send({cmd:'flash', v:1, l:255});
+    document.getElementById('btnStrobe').classList.add('active');
+}
+function flashOff() {
+    PersonaCore.send({cmd:'flash', v:0});
+    document.getElementById('btnStrobe').classList.remove('active');
+}
+
+PersonaCore.connect();
+PersonaCore.loadConfig(function(c) {
+    if (c && c.dj && c.dj.moods) moods = c.dj.moods;
+    renderMoods();
+});
+renderProgs();
+
+PersonaCore.onStatus(function(d) {
+    // BPM
+    var bpm = 0;
+    if (d.mb && d.mb.bpm) bpm = d.mb.bpm;
+    else if (d.fft && d.fft.bpm) bpm = d.fft.bpm;
+    document.getElementById('bpmBig').textContent = bpm > 0 ? bpm.toFixed(1) : '---';
+
+    // Beat phase
+    var phase = 0;
+    if (d.mb && d.mb.phase !== undefined) phase = d.mb.phase;
+    document.getElementById('phaseFill').style.width = (phase * 100) + '%';
+
+    // Beat dots
+    if (d.fft && d.fft.beat) {
+        beatCount = (beatCount + 1) % 4;
+        var dots = document.querySelectorAll('.beat-dot');
+        for (var i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i <= beatCount);
+        if (beatTimeout) clearTimeout(beatTimeout);
+        beatTimeout = setTimeout(function(){
+            var dots = document.querySelectorAll('.beat-dot');
+            for (var i = 0; i < dots.length; i++) dots[i].classList.remove('on');
+        }, 200);
+    }
+
+    // Blackout
+    boState = !!d.bo;
+    document.getElementById('btnBo').classList.toggle('active', boState);
+
+    // FFT
+    if (d.fft && d.fft.b) {
+        for (var i = 0; i < 8; i++) {
+            var bar = document.getElementById('fb'+i);
+            if (bar) bar.style.height = Math.max(2, (d.fft.b[i]/255)*58) + 'px';
+        }
+    }
+
+    // Manual beat config sync
+    if (d.mb) {
+        if (d.mb.src !== undefined) curSrc = d.mb.src;
+        if (d.mb.sub !== undefined) curSub = d.mb.sub;
+        if (d.mb.prog !== undefined) curProg = d.mb.prog;
+    }
+
+    // Link info
+    if (d.mb && d.mb.link_on) {
+        var info = 'Link: ' + (d.mb.link_conn ? 'connected' : 'searching') +
+                   ' | Peers: ' + (d.mb.link_peers || 0) +
+                   (d.mb.link_bpm ? ' | ' + d.mb.link_bpm.toFixed(1) + ' BPM' : '');
+        document.getElementById('linkInfo').textContent = info;
+    } else {
+        document.getElementById('linkInfo').textContent = '';
+    }
+});
+</script>
+</body>
+</html>
