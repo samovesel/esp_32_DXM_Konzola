@@ -20,7 +20,7 @@
 //  - ESPAsyncWebServer (mathieucarbou fork za ESP32 core 3.x)
 //  - AsyncTCP (mathieucarbou fork)
 //  - ArduinoJson 7.x
-//  - arduinoFFT by Enrique Condes
+//  - ESP-DSP (vgrajen v ESP32 Arduino core — hardware FFT)
 //  - Adafruit_NeoPixel (samo za ESP32-S3 — vgrajena WS2812 LED)
 //  - LittleFS (vgrajen v ESP32 core)
 //

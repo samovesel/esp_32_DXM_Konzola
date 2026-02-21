@@ -65,7 +65,9 @@ private:
 
   // FFT
   float _vReal[FFT_SAMPLES];
-  float _vImag[FFT_SAMPLES];
+  float _window[FFT_SAMPLES];  // Pre-computed Hamming window
+  float* _fftBuf = nullptr;    // Interleaved complex buffer [re,im,...] (2*FFT_SAMPLES, PSRAM)
+  bool  _fftReady = false;     // ESP-DSP tables initialized
 
   // Frekvenčni pasovi
   FFTBands _bands;
