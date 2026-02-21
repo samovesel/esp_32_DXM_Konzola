@@ -19,6 +19,7 @@ static LfoEngine*      _lfo = nullptr;
 static ShapeGenerator* _shapeGen = nullptr;
 static unsigned long   _lastWsSend = 0;
 static bool            _dmxMonActive = false;
+static bool            _forceSendState = false;  // Trigger immediate full state broadcast
 
 // HTML_PAGE_GZ in HTML_PAGE_GZ_LEN sta definirani v web_ui_gz.h
 
@@ -37,6 +38,7 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     hDoc["flashUsed"]  = LittleFS.usedBytes();
     String hJson; serializeJson(hDoc, hJson);
     client->text(hJson);
+    _forceSendState = true;  // Trigger immediate full state broadcast for new client
     return;
   }
   if (type != WS_EVT_DATA) return;
@@ -54,6 +56,51 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   if (strcmp(cmd, "ch") == 0) _mix->setChannel(doc["a"]|0, doc["v"]|0);
   else if (strcmp(cmd, "fxch") == 0) _mix->setFixtureChannel(doc["f"]|0, doc["c"]|0, doc["v"]|0);
   else if (strcmp(cmd, "grch") == 0) _mix->setGroupChannel(doc["g"]|0, doc["c"]|0, doc["v"]|0);
+  else if (strcmp(cmd, "hue") == 0 && _fix) {
+    // HSV→RGBW+A+UV conversion on ESP32 — one message instead of 6-8
+    int fi = doc["f"] | -1;
+    float h = doc["h"] | 0.0f;  // Hue 0-360
+    float s = doc["s"] | 1.0f;  // Saturation 0-1
+    float v = doc["v"] | 1.0f;  // Value 0-1
+    const PatchEntry* fx = _fix->getFixture(fi);
+    if (fx && fx->active) {
+      // HSV → RGB
+      int hi = (int)(h / 60.0f) % 6;
+      float f = h / 60.0f - (int)(h / 60.0f);
+      float p = v * (1.0f - s), q = v * (1.0f - f * s), t = v * (1.0f - (1.0f - f) * s);
+      float rf, gf, bf;
+      switch (hi) {
+        case 0: rf=v; gf=t; bf=p; break; case 1: rf=q; gf=v; bf=p; break;
+        case 2: rf=p; gf=v; bf=t; break; case 3: rf=p; gf=q; bf=v; break;
+        case 4: rf=t; gf=p; bf=v; break; default: rf=v; gf=p; bf=q; break;
+      }
+      uint8_t r=(uint8_t)(rf*255), g=(uint8_t)(gf*255), b=(uint8_t)(bf*255);
+      // Scan fixture channels and set color values
+      uint8_t chCount = _fix->fixtureChannelCount(fi);
+      bool hasW=false, hasA=false, hasUV=false;
+      for (int c=0; c<chCount; c++) {
+        const ChannelDef* cd = _fix->fixtureChannel(fi, c);
+        if (cd) {
+          if (cd->type==CH_COLOR_W) hasW=true;
+          if (cd->type==CH_COLOR_A) hasA=true;
+          if (cd->type==CH_COLOR_UV) hasUV=true;
+        }
+      }
+      uint8_t wOut = hasW ? (uint8_t)fminf(r, fminf(g, b)) : 0;
+      uint8_t aOut = (hasA && r>100 && g>50 && b<100) ? (uint8_t)fminf(r, g) : 0;
+      uint8_t uvOut = (hasUV && r>80 && b>150 && g<50) ? (uint8_t)fminf(r, b) : 0;
+      for (int c=0; c<chCount; c++) {
+        const ChannelDef* cd = _fix->fixtureChannel(fi, c);
+        if (!cd) continue;
+        int8_t val = -1;
+        switch (cd->type) {
+          case CH_COLOR_R: val=r; break; case CH_COLOR_G: val=g; break; case CH_COLOR_B: val=b; break;
+          case CH_COLOR_W: val=wOut; break; case CH_COLOR_A: val=aOut; break; case CH_COLOR_UV: val=uvOut; break;
+        }
+        if (val >= 0) _mix->setFixtureChannel(fi, c, (uint8_t)val);
+      }
+    }
+  }
   else if (strcmp(cmd, "master") == 0) _mix->setMasterDimmer(doc["v"]|255);
   else if (strcmp(cmd, "grpdim") == 0) _mix->setGroupDimmer(doc["g"]|0, doc["v"]|255);
   else if (strcmp(cmd, "blackout") == 0) { if(doc["v"]|0) _mix->blackout(); else _mix->unBlackout(); }
@@ -1139,7 +1186,9 @@ void webLoop() {
     }
   }
 
-  unsigned long now=millis(); if(now-_lastWsSend<WS_UPDATE_INTERVAL)return; _lastWsSend=now;
+  unsigned long now=millis();
+  if(!_forceSendState && now-_lastWsSend<WS_UPDATE_INTERVAL)return;
+  _lastWsSend=now; _forceSendState=false;
   if(_ws->count()==0)return;
 
   JsonDocument doc;
