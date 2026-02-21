@@ -59,6 +59,17 @@ esp_32_DXM_Konzola/
 +-- data/
 |   +-- profiles/                  Definicije svetil (29 JSON datotek)
 |   +-- scenes/                    Binarne scene (536B vsaka)
++-- build_personas.sh              Gzip kompresija persona datotek za LittleFS
++-- personas/
+|   +-- persona-core.js            Skupna JS knjiznica (WebSocket, PWA, config)
+|   +-- portal.html                Portal za izbiro persone
+|   +-- staff.html                 Osebje lokala (veliki gumbi)
+|   +-- sound-eng.html             Tonski mojster (scene, STL, FFT)
+|   +-- theater.html               Gledalisce (GO/BACK, cue list)
+|   +-- dj.html                    DJ (BPM, tap, mood preseti)
+|   +-- event.html                 Poroke/zabave (timeline, auto-advance)
+|   +-- busker.html                Ulicni performer (STL, 4 looki)
+|   +-- manifest-*.json            PWA manifesti (7x)
 +-- README.md                       Dokumentacija (slovenscina)
 +-- PROFILE_SPEC.md               Specifikacija profilov svetil v2.0
 +-- CODE_REVIEW.md                 Ta dokument
@@ -69,7 +80,7 @@ esp_32_DXM_Konzola/
 +-- SOUND.md                       Dokumentacija zvocnega modula
 ```
 
-**Skupno vrstic kode:** ~11.500 (C++/Arduino) + ~5.500 (HTML/JS/CSS v index.html)
+**Skupno vrstic kode:** ~11.500 (C++/Arduino) + ~5.500 (HTML/JS/CSS v index.html) + ~1.500 (persona HTML/JS)
 
 ---
 
@@ -208,7 +219,23 @@ esp_32_DXM_Konzola/
 - Dispatch mehanizem za zunanje kontrolerje (TouchOSC, Lemur...)
 - Parsiranje OSC sporocil s float in int32 argumenti
 
-### 14. Web UI (`web_ui.h/cpp`, `index.html`) -- POSODOBLJEN
+### 14. Persona vmesniki (`personas/`, `persona-core.js`) -- NOV
+- **6 poenostavljenih spletnih vmesnikov** za razlicne uporabnike + portal za izbiro
+- Serviranje iz LittleFS prek `serveGzFile()` v `web_ui.cpp` (gzip + Content-Encoding header)
+- **persona-core.js** (~115 vrstic): skupna JS knjiznica z WebSocket reconnect, status callbacks, config/scenes/cues API
+- **PWA manifest** za vsako persono — `display: standalone` za fullscreen brez HTTPS
+- **Persona config API:** `GET/POST /api/persona-cfg` -> `/persona.json` na LittleFS
+- **Persone:**
+  - **staff.html** (~6 KB): veliki gumbi za scene presets, master dimmer, blackout
+  - **sound-eng.html** (~12 KB): scene grid, STL toggle, env preseti, skupinski dimmerji, FFT
+  - **theater.html** (~10 KB): GO/BACK/STOP, cue list prikaz, crossfade progress, house lights
+  - **dj.html** (~14 KB): BPM display, tap tempo, mood preseti, beat programi, Link info
+  - **event.html** (~16 KB): timeline s fazami, auto-advance (client-side timer), Wake Lock API
+  - **busker.html** (~8 KB): FFT vizualizacija, STL toggle, 4 look preseti
+- **Build:** `build_personas.sh` gzipa HTML/JS, kopira manifeste, generira placeholder ikone
+- **Secure Context Wizard:** vodic za Chrome Android flags bypass (DeviceOrientation brez HTTPS)
+
+### 15. Web UI (`web_ui.h/cpp`, `index.html`) -- POSODOBLJEN
 - **AsyncWebServer** na portu 80 z gzip strezi HTML-ja (~93KB stisnjen)
 - **WebSocket** (`/ws`) za posodobitve v realnem casu (~12fps)
 - **Multiplayer sinhronizacija:** `_forceSendState` ob novi WebSocket povezavi poslje celotno stanje
@@ -220,6 +247,9 @@ esp_32_DXM_Konzola/
 - **Ableton Link:** avtomatski vklop ob izbiri BSRC_LINK, status broadcast (peers, BPM, connected)
 - REST API za vse operacije
 - HTTP Basic Auth opcija
+- **Persona route:** 7 persona HTML + shared JS + 7 PWA manifestov + ikone iz LittleFS
+- **Persona config API:** `GET/POST /api/persona-cfg` za urejanje persona konfiguracije
+- **Secure Context Wizard** v XY Pad popupu za Chrome Android DeviceOrientation bypass
 
 #### Web UI zavihki (7+)
 | Zavihek | Vsebina |
@@ -229,7 +259,7 @@ esp_32_DXM_Konzola/
 | **Sound** | Easy/Pro/Manual beat nacin, FFT vizualizacija, AGC, preseti, beat programi |
 | **Fixtures** | Patch management, profili, skupine, fixture nastavitve |
 | **Nastavitve** | WiFi, ArtNet, audio vhod, LFO, Shape, **Gamepad**, **Pixel Mapper**, **ESP-NOW** |
-| **Konfig** | Hostname, univerza, avtentikacija, import/export, OTA |
+| **Konfig** | Hostname, univerza, avtentikacija, import/export, OTA, **persona konfiguracija** |
 | **DMX Mon** | DMX monitor v realnem casu (512 kanalov) |
 
 #### Nove Web UI funkcionalnosti
@@ -372,8 +402,10 @@ Prehod med nacini vsebuje 1-sekundno mehko prehajanje (mode crossfade) z linearn
 | Zvocne nastavitve (sound.bin, V6) | ~1 KB |
 | Pixel Mapper nastavitve (pixmap.bin) | <1 KB |
 | ESP-NOW nastavitve (espnow.bin) | <1 KB |
-| **Skupaj ESP32:** | ~65 KB od 2 MB |
-| **Skupaj ESP32-S3:** | ~65 KB od ~9.9 MB |
+| Persona datoteke (/p/) | ~35 KB |
+| Persona konfiguracija (persona.json) | ~1 KB |
+| **Skupaj ESP32:** | ~65 KB od 2 MB (brez person) |
+| **Skupaj ESP32-S3:** | ~100 KB od ~9.9 MB (s personami) |
 
 ### Particijska tabela (ESP32-S3, partitions.csv)
 | Particija | Tip | Velikost |
@@ -522,4 +554,4 @@ Prehod med nacini vsebuje 1-sekundno mehko prehajanje (mode crossfade) z linearn
 
 To je profesionalno zasnovan ESP32/ESP32-S3 sistem za upravljanje razsvetljave, ki pokriva celoten spekter od mreznega ArtNet/sACN sprejemanja, prek lokalnega mesanja s scenami in crossfade, do zvocno reaktivne razsvetljave z hardware FFT analizo. Novejse funkcionalnosti vkljucujejo **Ableton Link sinhronizacijo** za DJ-sko integracijo, **ESP-NOW brezvicni DMX** za poceni razsiritev dosega, in **Pixel Mapper** za krmiljenje addressable LED trakov.
 
-Koda je organizirana v 18+ modulov z jasno locenimi odgovornostmi, podpira dve strojni platformi (ESP32 in ESP32-S3) z eno kodno bazo, in sledi industrijskim standardom (DMX512, ArtNet III, sACN E1.31, Ableton Link) ob ucinkoviti uporabi omejenih virov ESP32. Web vmesnik s 7+ zavihki, podporo za giroskop telefona (Magic Wand) in Gamepad API, nudi polno kontrolo brez namescanja dodatne programske opreme.
+Koda je organizirana v 18+ modulov z jasno locenimi odgovornostmi, podpira dve strojni platformi (ESP32 in ESP32-S3) z eno kodno bazo, in sledi industrijskim standardom (DMX512, ArtNet III, sACN E1.31, Ableton Link) ob ucinkoviti uporabi omejenih virov ESP32. Web vmesnik s 7+ zavihki, podporo za giroskop telefona (Magic Wand) in Gamepad API, nudi polno kontrolo brez namescanja dodatne programske opreme. **Persona vmesniki** nudijo poenostavljene spletne strani za razlicne uporabnike (tonski mojster, gledalisce, DJ, osebje, organizator prireditev, ulicni performer) — servirane iz LittleFS s PWA podporo za fullscreen prikaz na mobilnih napravah.

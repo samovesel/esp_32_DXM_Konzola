@@ -391,6 +391,55 @@ Prikazuje porabo LittleFS flash pomnilnika. Opozorilo se prikaže, ko je prostor
 
 ---
 
+## PERSONA VMESNIKI (zavihek Konfig)
+
+Poenostavljeni spletni vmesniki za različne uporabnike. Konfiguracija določa, katere scene in presete uporablja vsak vmesnik.
+
+### Portal
+
+Odprite `/portal` v brskalniku za izbiro med personami. Portal prikaže 6 kartic z opisom vsake persone. Na portal kažejo tudi vse persona strani (link "Portal" v glavi/nogi).
+
+### Konfiguracija v polnem vmesniku
+
+V zavihku **Konfig** najdete razdelek **"Persona vmesniki"** z zložljivimi sekcijami za vsako persono:
+
+#### Osebje lokala (`/staff`)
+- **Preseti** — seznam gumbov, vsak s: ime, scena (slot indeks), ikona
+- Scena `-1` pomeni blackout
+- Ko uporabnik tapne preset, se pošlje `scene_recall` z ustreznim slotom
+
+#### Tonski mojster (`/sound-eng`)
+- **Scene** — seznam scene slot indeksov (ločeni z vejico), npr. `0,1,2,3,4,5,6,7`
+- **Labeli** — imena za vsako sceno (ločena z vejico)
+- **Skupine** — indeksi skupin za prikaz dimmerjev
+
+#### Gledališče (`/theater`)
+- **House lights scena** — slot indeks za dvoransko razsvetljavo (gumb HOUSE)
+
+#### DJ (`/dj`)
+- **Moods** — seznam razpoloženjskih presetov, vsak s: ime, scena, STL preset indeks
+
+#### Zabava / poroka (`/event`)
+- **Faze** — timeline vnosov, vsak s: ime, ura (HH:MM), scena, fade čas (ms), opcijski STL flag
+
+#### Busker (`/busker`)
+- **Looks** — 4 look preseti, vsak s: ime, scena
+
+### API
+
+| Metoda | URL | Opis |
+|--------|-----|------|
+| GET | `/api/persona-cfg` | Vrne persona konfiguracijo (JSON) |
+| POST | `/api/persona-cfg` | Shrani persona konfiguracijo |
+
+Konfiguracija se shrani v `/persona.json` na LittleFS.
+
+### PWA (Add to Home Screen)
+
+Vsaka persona stran vključuje PWA manifest. Na telefonu izberite "Dodaj na začetni zaslon" za celozaslonski prikaz brez brskalniškega okvirja. Deluje na Android Chrome in iOS Safari brez HTTPS.
+
+---
+
 ## DMX MONITOR (zavihek DMX Mon)
 
 Vizualni prikaz vseh 512 DMX kanalov v realnem času.

@@ -40,6 +40,7 @@ Platforma se zazna samodejno prek `CONFIG_IDF_TARGET_ESP32S3` — ni rocne konfi
 - **Zivi FFT spekter** v spletnem vmesniku
 - **Pametni Blackout** — izklopi samo svetlobne kanale (Intensity, barve, strobe). Pan/Tilt/Gobo/Focus/Zoom ostanejo nespremenjeni
 - **Flash (Blinder)** — drzi gumb za prisilno 100% intenziteto na vseh fixture-ih (deluje tudi med blackoutom)
+- **Persona vmesniki** — 6 poenostavljenih spletnih vmesnikov za razlicne uporabnike (tonski mojster, gledalisce, DJ, osebje lokala, poroke/zabave, ulicni performer) + portal za izbiro, serviranje iz LittleFS, PWA-like obnasanje (Add to Home Screen brez HTTPS)
 - **Celozaslonska konzola** — optimiziran pogled za upravljanje v zivo:
   - Vertikalni sliderji za vse kanale z drag & drop prerazvrscanjem fixture-ov
   - Barvne pike za vizualno stanje fixture-a (long-press = FULL ON na telefonu)
@@ -53,7 +54,7 @@ Platforma se zazna samodejno prek `CONFIG_IDF_TARGET_ESP32S3` — ni rocne konfi
 - **Pametna detekcija telefona** — samodejno prilagodi UI (skrije beat gumbe, prikaze meni) z JS detekcijo touch naprave
 - **Zgodovina stanj** (3 avtomatski snapshot-i ob preklopu)
 - **2D Layout Editor** — interaktivni oder s SVG vizualizacijo fixtur, drag & drop pozicioniranje, zoom (20%-300%), pan, barvne pike z realnim DMX izhodom, prosto risanje odrskih elementov, auto-arrange (linija, lok, krog, mreza)
-- **Carobna palica (Magic Wand)** — telefon giroskop -> Pan/Tilt kontrola prek DeviceOrientation API
+- **Carobna palica (Magic Wand)** — telefon giroskop -> Pan/Tilt kontrola prek DeviceOrientation API, z vodenim nastavitvenim carovnikom za Chrome Android (Secure Context)
 - **Igralni ploscek (Gamepad API)** — podpora za PlayStation/Xbox kontrolerje prek brskalnikovega Gamepad API
 - **Filmstrip gumbi** — kanali z obsegi (Gobo, Prism, Macro, Preset, Shutter) prikazejo mrezo gumbov namesto drsnika
 - **Fan / Pahljaca** — razprsitev fader vrednosti cez vec izbranih fixture-ov (npr. pahljaca Pan kota)
@@ -336,8 +337,20 @@ esp32_artnet_dmx/
 |-- convert.py             — Generira web_ui_gz.h iz index.html (gzip + PROGMEM)
 |-- partitions.csv         — Custom particijska tabela za ESP32-S3 (16MB flash)
 |-- index.html             — Spletni vmesnik (7 zavihkov + celozaslonska konzola + 2D layout)
+|-- build_personas.sh      — Gzip kompresija persona datotek za LittleFS upload
+|-- personas/
+|   |-- persona-core.js    — Skupna JS knjiznica za vse persone (WebSocket, PWA, config)
+|   |-- portal.html        — Portal za izbiro persona vmesnika
+|   |-- staff.html         — Osebje lokala (veliki gumbi za presets)
+|   |-- sound-eng.html     — Tonski mojster (scene, STL, FFT, skupinski dimmerji)
+|   |-- theater.html       — Gledalisce (GO/BACK/STOP, cue list)
+|   |-- dj.html            — DJ (BPM, tap, mood preseti, beat programi)
+|   |-- event.html         — Poroke/zabave (timeline s fazami, auto-advance)
+|   |-- busker.html        — Ulicni performer (STL, 4 look preseti)
+|   '-- manifest-*.json    — PWA manifesti za vsako persono (7x)
 '-- data/
-    '-- profiles/          — Fixture profili (JSON)
+    |-- profiles/          — Fixture profili (JSON)
+    '-- p/                 — Gzipane persona datoteke za LittleFS (generirano z build_personas.sh)
 ```
 
 ## Scene
@@ -727,6 +740,52 @@ Interaktivni vizualni oder za pozicioniranje luci v prostoru.
 - **Carobna palica** — gumb v XY Pad popupu za vklop telefon-giroskop Pan/Tilt kontrole
 - **Shranjevanje layoutov** na LittleFS z moznostjo vec poimenovanih layoutov
 
+## Persona vmesniki
+
+Poleg polnega spletnega vmesnika (`/`) so na voljo poenostavljeni vmesniki za razlicne uporabnike. Vsaka persona je locen HTML, serviran iz LittleFS, z istim WebSocket protokolom.
+
+### URL-ji
+
+| URL | Persona | Opis |
+|-----|---------|------|
+| `/` | Polni vmesnik | Obstojeci index.html (firmware PROGMEM) |
+| `/portal` | Portal | Izbira med personami |
+| `/sound-eng` | Tonski mojster | Scene + STL + FFT + skupinski dimmerji |
+| `/theater` | Gledalisce | GO/BACK/STOP + cue list |
+| `/dj` | DJ | BPM sync + mood preseti + beat programi |
+| `/staff` | Osebje lokala | 5-6 velikih gumbov + svetlost |
+| `/event` | Poroke/zabave | Timeline s fazami + auto-advance |
+| `/busker` | Ulicni performer | STL auto + 4 look preseti |
+
+### Serviranje
+
+Persona datoteke se servirajo iz LittleFS mape `/p/` kot gzip komprimirane datoteke. Glavni `index.html` ostane v firmware-u (PROGMEM) — vedno dostopen tudi ob praznem LittleFS.
+
+### Priprava za upload
+
+```bash
+# Gzipaj persona HTML/JS datoteke
+./build_personas.sh
+
+# Nalozi na ESP32 LittleFS
+pio run -t uploadfs -e esp32s3
+```
+
+### PWA (Add to Home Screen)
+
+Vsaka persona vkljucuje PWA manifest (`manifest-*.json`) z `display: standalone`. To omogoca:
+- **Android Chrome**: "Dodaj na zacetni zaslon" odpre vmesnik brez brskalniskih okvirjev
+- **iOS Safari**: "Dodaj na zacetni zaslon" vedno deluje, neodvisno od HTTPS
+- Service Worker NI potreben — brez ESP32 ni cesa kontrolirati
+
+### Konfiguracija person
+
+Persone berejo konfiguracijo iz `/persona.json` na LittleFS (API: `GET/POST /api/persona-cfg`). Konfiguracija doloca katere scene/presets uporablja vsak vmesnik. Urejanje je mozno v polnem vmesniku (zavihek Konfig > Persona vmesniki).
+
+### Secure Context Wizard (Magic Wand)
+
+Chrome Android od verzije 94+ blokira `DeviceOrientationEvent` brez HTTPS. Gamepad API deluje brez omejitev. Ko uporabnik aktivira Magic Wand na Chrome Android, se prikaze vodic za nastavitev `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.
+
 ## Posodabljanje spletnega vmesnika
 
 Po urejanju `index.html` je potrebno regenerirati `web_ui_gz.h`:
@@ -804,6 +863,11 @@ Na ESP32-S3 se FFT bufferji in vecji podatkovni bloki alocirajo v PSRAM (prek `p
 | `/pixmap.bin` | Pixel Mapper konfiguracija | ~0.02 KB |
 | `/espnow.bin` | ESP-NOW peer konfiguracija | ~0.1 KB |
 | `/configs/` | Shranjene konfiguracije (do 8) | ~4 KB |
+| `/persona.json` | Konfiguracija persona vmesnikov | ~1 KB |
+| `/p/*.html.gz` | Gzipane persona HTML datoteke (7x) | ~25 KB |
+| `/p/persona-core.js.gz` | Gzipana skupna JS knjiznica | ~1 KB |
+| `/p/manifest-*.json` | PWA manifesti (7x) | ~2 KB |
+| `/p/icon-*.png` | PWA ikone (192px, 512px) | ~5 KB |
 
 ## Licenca
 
