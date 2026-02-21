@@ -1098,6 +1098,13 @@ static bool checkAuth(AsyncWebServerRequest* req) {
 // ============================================================================
 
 // ============================================================================
+//  SHARED BUFFER for large POST bodies (layout + persona config)
+// ============================================================================
+#define LAYOUT_BUF_SIZE 5120
+static char _layoutBuf[LAYOUT_BUF_SIZE];
+static size_t _layoutBufLen = 0;
+
+// ============================================================================
 //  PERSONA HELPERS
 // ============================================================================
 
@@ -1144,10 +1151,6 @@ static void apiPostPersonaCfg(AsyncWebServerRequest* req, uint8_t* data, size_t 
 // ============================================================================
 //  LAYOUT API — 2D oder urejevalnik
 // ============================================================================
-
-#define LAYOUT_BUF_SIZE 5120
-static char _layoutBuf[LAYOUT_BUF_SIZE];
-static size_t _layoutBufLen = 0;
 
 static void apiGetLayouts(AsyncWebServerRequest* req) {
   if (!checkAuth(req)) return;
