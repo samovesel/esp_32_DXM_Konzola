@@ -112,6 +112,12 @@ inline bool patchLoad(PatchEntry* entries, int maxEntries) {
     entries[i].dmxAddress    = obj["dmxAddress"]    | 1;
     entries[i].groupMask     = obj["groupMask"]     | 0;
     entries[i].soundReactive = obj["soundReactive"] | false;
+    entries[i].invertPan     = obj["invertPan"]     | false;
+    entries[i].invertTilt    = obj["invertTilt"]     | false;
+    entries[i].panMin        = obj["panMin"]         | 0;
+    entries[i].panMax        = obj["panMax"]         | 255;
+    entries[i].tiltMin       = obj["tiltMin"]        | 0;
+    entries[i].tiltMax       = obj["tiltMax"]        | 255;
     entries[i].active        = true;
     entries[i].profileIndex  = -1;  // Reši se ob nalaganju profilov
     i++;
@@ -130,6 +136,12 @@ inline bool patchSave(const PatchEntry* entries, int maxEntries) {
     obj["dmxAddress"]    = entries[i].dmxAddress;
     obj["groupMask"]     = entries[i].groupMask;
     obj["soundReactive"] = entries[i].soundReactive;
+    if (entries[i].invertPan)    obj["invertPan"]  = true;
+    if (entries[i].invertTilt)   obj["invertTilt"] = true;
+    if (entries[i].panMin > 0)   obj["panMin"]     = entries[i].panMin;
+    if (entries[i].panMax < 255) obj["panMax"]     = entries[i].panMax;
+    if (entries[i].tiltMin > 0)  obj["tiltMin"]    = entries[i].tiltMin;
+    if (entries[i].tiltMax < 255)obj["tiltMax"]     = entries[i].tiltMax;
   }
   File f = LittleFS.open(PATH_PATCH, "w");
   if (!f) return false;

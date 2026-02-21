@@ -220,6 +220,57 @@ void MixerEngine::unBlackout() {
 }
 
 // ============================================================================
+//  PAN/TILT OMEJITVE IN INVERT
+//  Aplicira bounding box in obračanje osi za vsak fixture
+// ============================================================================
+
+void MixerEngine::applyPanTiltLimits() {
+  if (!_fixtures) return;
+
+  for (int i = 0; i < MAX_FIXTURES; i++) {
+    const PatchEntry* fx = _fixtures->getFixture(i);
+    if (!fx || !fx->active || fx->profileIndex < 0) continue;
+
+    // Hitri izhod: brez omejitev in brez invertiranja
+    bool hasLimits = (fx->panMin > 0 || fx->panMax < 255 ||
+                      fx->tiltMin > 0 || fx->tiltMax < 255);
+    if (!fx->invertPan && !fx->invertTilt && !hasLimits) continue;
+
+    uint8_t chCount = _fixtures->fixtureChannelCount(i);
+    for (int ch = 0; ch < chCount; ch++) {
+      const ChannelDef* def = _fixtures->fixtureChannel(i, ch);
+      if (!def) continue;
+
+      uint16_t addr = fx->dmxAddress + ch - 1;
+      if (addr >= DMX_MAX_CHANNELS) continue;
+      uint8_t val = _dmxOut[addr];
+
+      if (def->type == CH_PAN) {
+        if (fx->invertPan) val = 255 - val;
+        if (fx->panMin > 0 || fx->panMax < 255) {
+          // Mapiraj 0-255 v panMin-panMax
+          val = fx->panMin + ((uint16_t)val * (fx->panMax - fx->panMin)) / 255;
+        }
+        _dmxOut[addr] = val;
+      }
+      else if (def->type == CH_PAN_FINE) {
+        if (fx->invertPan) _dmxOut[addr] = 255 - val;
+      }
+      else if (def->type == CH_TILT) {
+        if (fx->invertTilt) val = 255 - val;
+        if (fx->tiltMin > 0 || fx->tiltMax < 255) {
+          val = fx->tiltMin + ((uint16_t)val * (fx->tiltMax - fx->tiltMin)) / 255;
+        }
+        _dmxOut[addr] = val;
+      }
+      else if (def->type == CH_TILT_FINE) {
+        if (fx->invertTilt) _dmxOut[addr] = 255 - val;
+      }
+    }
+  }
+}
+
+// ============================================================================
 //  MASTER DIMMER
 //  Aplicira master dimmer samo na kanale tipa INTENSITY
 // ============================================================================
@@ -520,13 +571,11 @@ void MixerEngine::update() {
   }
 
   // --- Sestavi izhodni buffer ---
-  if (_blackout) {
-    memset(_dmxOut, 0, DMX_MAX_CHANNELS);
-  }
-  else if (_mode == CTRL_ARTNET) {
+  if (_mode == CTRL_ARTNET) {
     // FIX: Vedno kopiraj iz shadow → dmxOut pred apliciranjem masterja.
     // Brez tega se master aplicira dvakrat+ (enkrat za vsak loop brez novega ArtNet paketa).
     memcpy(_dmxOut, _artnetShadow, DMX_MAX_CHANNELS);
+    applyPanTiltLimits();
     applyMasterDimmer();
   }
   else {
@@ -555,7 +604,29 @@ void MixerEngine::update() {
       _shapes->applyToOutput(_manualValues, _dmxOut);
     }
 
+    applyPanTiltLimits();
     applyMasterDimmer();
+  }
+
+  // --- Pametni Blackout: nulira samo Intensity + RGBW, Pan/Tilt/Gobo teče naprej ---
+  if (_blackout && _fixtures) {
+    for (int i = 0; i < MAX_FIXTURES; i++) {
+      const PatchEntry* fx = _fixtures->getFixture(i);
+      if (!fx || !fx->active || fx->profileIndex < 0) continue;
+      uint8_t chCount = _fixtures->fixtureChannelCount(i);
+      for (int ch = 0; ch < chCount; ch++) {
+        const ChannelDef* def = _fixtures->fixtureChannel(i, ch);
+        if (!def) continue;
+        uint8_t t = def->type;
+        if (t == CH_INTENSITY || t == CH_COLOR_R || t == CH_COLOR_G ||
+            t == CH_COLOR_B || t == CH_COLOR_W || t == CH_COLOR_A ||
+            t == CH_COLOR_UV || t == CH_STROBE || t == CH_COLOR_L ||
+            t == CH_COLOR_C || t == CH_COLOR_WW) {
+          uint16_t addr = fx->dmxAddress + ch - 1;
+          if (addr < DMX_MAX_CHANNELS) _dmxOut[addr] = 0;
+        }
+      }
+    }
   }
 
   // --- Mode crossfade: mehak prehod med načini ---

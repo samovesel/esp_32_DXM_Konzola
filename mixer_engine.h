@@ -137,6 +137,7 @@ private:
   void markDirty();
   void checkAutoSave();
   void applyMasterDimmer();
+  void applyPanTiltLimits();
 
   // Undo (1 korak)
   uint8_t _undoBuffer[DMX_MAX_CHANNELS];
