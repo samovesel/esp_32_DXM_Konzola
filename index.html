@@ -86,6 +86,11 @@ td{padding:4px 6px;border-bottom:1px solid #222}
 .eq-col input[type=range]{writing-mode:vertical-lr;direction:rtl;height:80px;width:28px;accent-color:#0af;margin:0}
 .eq-col .eq-val{font-size:0.65em;color:#0af;white-space:nowrap}
 .eq-col .eq-lbl{font-size:0.6em;color:#888;white-space:nowrap}
+.eq-freq{width:44px;background:#1a1a2e;color:#0af;border:1px solid #333;border-radius:3px;font-size:0.58em;text-align:center;padding:1px;margin-top:1px}
+.eq-freq::-webkit-inner-spin-button{-webkit-appearance:none}
+.eq-q-row{display:flex;align-items:center;gap:1px;margin-top:1px}
+.eq-q-row input[type=range]{writing-mode:horizontal-tb;width:32px;height:10px;accent-color:#f90;margin:0}
+.eq-q-val{font-size:0.5em;color:#f90;white-space:nowrap}
 .env-presets{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
 .env-presets button{padding:4px 10px;font-size:0.8em;background:#222;border:1px solid #444;border-radius:4px}
 .env-presets button.ep-sel{background:#27ae60;color:#fff;border-color:#27ae60}
@@ -650,16 +655,16 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
       <button onclick="setEnvPreset('custom')">Po meri</button>
     </div>
     <div class="env-hint" id="envHint">Club / bar (~80 dB): srednje ojačanje, zmeren noise gate. Primerno za manjše prostore z glasbo iz zvočnikov.</div>
-    <p style="font-size:0.7em;color:#aaa;margin:8px 0 2px">Frekvenčni pasovi (gain):</p>
+    <p style="font-size:0.7em;color:#aaa;margin:8px 0 2px">Parametric EQ (gain / center freq / Q):</p>
     <div class="eq-row" id="eqRow">
-      <div class="eq-col"><span class="eq-val" id="eqV0">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq0" oninput="onEqChange(0)"><span class="eq-lbl">Sub</span></div>
-      <div class="eq-col"><span class="eq-val" id="eqV1">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq1" oninput="onEqChange(1)"><span class="eq-lbl">Bass</span></div>
-      <div class="eq-col"><span class="eq-val" id="eqV2">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq2" oninput="onEqChange(2)"><span class="eq-lbl">Low</span></div>
-      <div class="eq-col"><span class="eq-val" id="eqV3">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq3" oninput="onEqChange(3)"><span class="eq-lbl">Mid</span></div>
-      <div class="eq-col"><span class="eq-val" id="eqV4">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq4" oninput="onEqChange(4)"><span class="eq-lbl">Hi-M</span></div>
-      <div class="eq-col"><span class="eq-val" id="eqV5">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq5" oninput="onEqChange(5)"><span class="eq-lbl">Pres</span></div>
-      <div class="eq-col"><span class="eq-val" id="eqV6">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq6" oninput="onEqChange(6)"><span class="eq-lbl">Bril</span></div>
-      <div class="eq-col"><span class="eq-val" id="eqV7">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq7" oninput="onEqChange(7)"><span class="eq-lbl">Air</span></div>
+      <div class="eq-col"><span class="eq-val" id="eqV0">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq0" oninput="onEqChange(0)"><span class="eq-lbl" id="eqL0">42Hz</span><input type="number" min="20" max="11000" value="42" id="eqF0" onchange="onEqParamChange(0)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ0" oninput="onEqParamChange(0)"><span class="eq-q-val" id="eqQV0">0.7</span></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV1">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq1" oninput="onEqChange(1)"><span class="eq-lbl" id="eqL1">85Hz</span><input type="number" min="20" max="11000" value="85" id="eqF1" onchange="onEqParamChange(1)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ1" oninput="onEqParamChange(1)"><span class="eq-q-val" id="eqQV1">0.7</span></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV2">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq2" oninput="onEqChange(2)"><span class="eq-lbl" id="eqL2">173Hz</span><input type="number" min="20" max="11000" value="173" id="eqF2" onchange="onEqParamChange(2)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ2" oninput="onEqParamChange(2)"><span class="eq-q-val" id="eqQV2">0.7</span></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV3">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq3" oninput="onEqChange(3)"><span class="eq-lbl" id="eqL3">354Hz</span><input type="number" min="20" max="11000" value="354" id="eqF3" onchange="onEqParamChange(3)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ3" oninput="onEqParamChange(3)"><span class="eq-q-val" id="eqQV3">0.7</span></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV4">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq4" oninput="onEqChange(4)"><span class="eq-lbl" id="eqL4">707Hz</span><input type="number" min="20" max="11000" value="707" id="eqF4" onchange="onEqParamChange(4)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ4" oninput="onEqParamChange(4)"><span class="eq-q-val" id="eqQV4">0.7</span></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV5">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq5" oninput="onEqChange(5)"><span class="eq-lbl" id="eqL5">1.4kHz</span><input type="number" min="20" max="11000" value="1414" id="eqF5" onchange="onEqParamChange(5)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ5" oninput="onEqParamChange(5)"><span class="eq-q-val" id="eqQV5">0.7</span></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV6">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq6" oninput="onEqChange(6)"><span class="eq-lbl" id="eqL6">2.8kHz</span><input type="number" min="20" max="11000" value="2828" id="eqF6" onchange="onEqParamChange(6)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ6" oninput="onEqParamChange(6)"><span class="eq-q-val" id="eqQV6">0.7</span></div></div>
+      <div class="eq-col"><span class="eq-val" id="eqV7">1.0</span><input type="range" min="0" max="300" step="5" value="100" id="eq7" oninput="onEqChange(7)"><span class="eq-lbl" id="eqL7">6.6kHz</span><input type="number" min="20" max="11000" value="6633" id="eqF7" onchange="onEqParamChange(7)" class="eq-freq" title="Center freq (Hz)"><div class="eq-q-row"><input type="range" min="1" max="100" step="1" value="7" id="eqQ7" oninput="onEqParamChange(7)"><span class="eq-q-val" id="eqQV7">0.7</span></div></div>
     </div>
     <div class="fade-row"><label>AGC hitrost:</label><input type="range" min="0" max="100" step="5" value="50" id="agcSpd" oninput="onAgcChange()"><span class="val" id="agcSpdV">0.5</span></div>
     <p class="env-hint">Počasi = stabilno za koncerte (AGC se prilagaja v ~10s). Hitro = odzivno za testiranje (~0.7s).</p>
@@ -679,6 +684,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <p style="font-size:0.7em;color:#888;margin:6px 0">Vir beata:</p>
     <div class="preset-btns" id="mbSrcBtns">
       <button onclick="setMbSrc(1)" class="ps-sel">Manual</button>
+      <button onclick="setMbSrc(4)">Avdio BPM</button>
       <button onclick="setMbSrc(2)">Auto (fallback)</button>
       <button onclick="setMbSrc(0)">Samo avdio</button>
       <button onclick="setMbSrc(3)">Ableton Link</button>
@@ -2778,14 +2784,15 @@ function saveSoundCfg(){wsSend({cmd:'save_sound'});showMsg('Sound nastavitve shr
 
 // ============ AGC / EQ ============
 var agcSynced=false,curEnvPreset='club';
+var eqDefaultBp=[{f:42,q:7},{f:85,q:7},{f:173,q:7},{f:354,q:7},{f:707,q:7},{f:1414,q:7},{f:2828,q:7},{f:6633,q:7}];
 var envPresets={
-  quiet:{bg:[2.0,2.0,1.8,1.5,1.5,1.2,1.0,1.0],spd:0.8,ng:0.1,
+  quiet:{bg:[2.0,2.0,1.8,1.5,1.5,1.2,1.0,1.0],spd:0.8,ng:0.1,bp:eqDefaultBp,
     hint:'Tiha soba (~50 dB): visoko ojačanje, hiter AGC, nizek noise gate. Za testiranje doma ali v studiu.'},
-  club:{bg:[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],spd:0.5,ng:0.3,
+  club:{bg:[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],spd:0.5,ng:0.3,bp:eqDefaultBp,
     hint:'Club / bar (~80 dB): srednje ojačanje, zmeren noise gate. Primerno za manjše prostore z glasbo iz zvočnikov.'},
-  concert:{bg:[0.6,0.7,0.8,1.0,1.0,0.9,0.7,0.5],spd:0.2,ng:0.6,
+  concert:{bg:[0.6,0.7,0.8,1.0,1.0,0.9,0.7,0.5],spd:0.2,ng:0.6,bp:eqDefaultBp,
     hint:'Koncert / festival (~100 dB): nižje ojačanje, počasen AGC, visok noise gate. Za velike odre z močnim PA.'},
-  custom:{bg:null,spd:null,ng:null,
+  custom:{bg:null,spd:null,ng:null,bp:null,
     hint:'Po meri: ročno nastavi vse parametre. Prilagodi za tvoj specifični prostor in opremo.'}
 };
 function setEnvPreset(key){
@@ -2801,6 +2808,12 @@ function setEnvPreset(key){
   for(var i=0;i<8;i++){
     document.getElementById('eq'+i).value=Math.round(p.bg[i]*100);
     document.getElementById('eqV'+i).textContent=p.bg[i].toFixed(1);
+    if(p.bp&&p.bp[i]){
+      document.getElementById('eqF'+i).value=p.bp[i].f;
+      document.getElementById('eqQ'+i).value=p.bp[i].q;
+      document.getElementById('eqQV'+i).textContent=(p.bp[i].q/10).toFixed(1);
+      document.getElementById('eqL'+i).textContent=eqFreqLabel(p.bp[i].f);
+    }
   }
   document.getElementById('agcSpd').value=Math.round(p.spd*100);
   document.getElementById('agcSpdV').textContent=p.spd.toFixed(1);
@@ -2808,9 +2821,18 @@ function setEnvPreset(key){
   document.getElementById('agcNgV').textContent=p.ng.toFixed(1);
   sendAgc();
 }
+function eqFreqLabel(f){return f<1000?f+'Hz':(f/1000).toFixed(1)+'kHz'}
 function onEqChange(b){
   var v=+document.getElementById('eq'+b).value;
   document.getElementById('eqV'+b).textContent=(v/100).toFixed(1);
+  selectCustomEnv();
+  sendAgc();
+}
+function onEqParamChange(b){
+  var f=+document.getElementById('eqF'+b).value;
+  var q=+document.getElementById('eqQ'+b).value;
+  document.getElementById('eqQV'+b).textContent=(q/10).toFixed(1);
+  document.getElementById('eqL'+b).textContent=eqFreqLabel(f);
   selectCustomEnv();
   sendAgc();
 }
@@ -2827,10 +2849,13 @@ function selectCustomEnv(){
   document.getElementById('envHint').textContent=envPresets.custom.hint;
 }
 function sendAgc(){
-  var bg=[];
-  for(var i=0;i<8;i++) bg.push(+document.getElementById('eq'+i).value/100);
+  var bg=[],bp=[];
+  for(var i=0;i<8;i++){
+    bg.push(+document.getElementById('eq'+i).value/100);
+    bp.push({f:+document.getElementById('eqF'+i).value,q:+document.getElementById('eqQ'+i).value});
+  }
   wsSend({cmd:'agc',spd:+document.getElementById('agcSpd').value/100,
-    ng:+document.getElementById('agcNg').value/100,bg:bg});
+    ng:+document.getElementById('agcNg').value/100,bg:bg,bp:bp});
 }
 function syncAgcFromStatus(fft){
   if(!fft.abg||agcSynced)return;
@@ -2838,6 +2863,17 @@ function syncAgcFromStatus(fft){
   for(var i=0;i<8&&i<fft.abg.length;i++){
     document.getElementById('eq'+i).value=Math.round(fft.abg[i]*100);
     document.getElementById('eqV'+i).textContent=fft.abg[i].toFixed(1);
+  }
+  // Sync parametric EQ band params (center freq + Q)
+  if(fft.abp){
+    for(var i=0;i<8&&i<fft.abp.length;i++){
+      var fe=document.getElementById('eqF'+i);
+      var qe=document.getElementById('eqQ'+i);
+      if(fe)fe.value=fft.abp[i].f;
+      if(qe)qe.value=fft.abp[i].q;
+      document.getElementById('eqQV'+i).textContent=(fft.abp[i].q/10).toFixed(1);
+      document.getElementById('eqL'+i).textContent=eqFreqLabel(fft.abp[i].f);
+    }
   }
   if(fft.aspd!==undefined){
     document.getElementById('agcSpd').value=Math.round(fft.aspd*100);
@@ -2967,9 +3003,12 @@ function setMbSub(s){
 function setMbSrc(s){
   mbSrc=s;
   var btns=document.querySelectorAll('#mbSrcBtns button');
-  // src mapping: button 0=Manual(1), button 1=Auto(2), button 2=Audio(0)
-  var map=[1,2,0];
+  // src mapping: Manual(1), AudioSync(4), Auto(2), Audio(0), Link(3)
+  var map=[1,4,2,0,3];
   btns.forEach((b,i)=>b.className=map[i]===s?'ps-sel':'');
+  // Disable BPM slider ko je BPM iz zunanjega vira
+  var bpmSlider=document.getElementById('mbBpmSlider');
+  if(bpmSlider)bpmSlider.disabled=(s===4||s===3);
   sendMbCfg();
 }
 function updateMbStatus(mb){
@@ -2983,7 +3022,7 @@ function updateMbStatus(mb){
   if(tapEl)tapEl.textContent=Math.min(mb.taps||0,4)+'/4';
   var actEl=document.getElementById('mbActiveDisp');
   if(actEl){actEl.textContent=mb.active?'AKTIVEN':'neaktiven';actEl.style.color=mb.active?'#0f0':'#666'}
-  // Ableton Link status
+  // Ableton Link / Audio BPM sync status
   var linkEl=document.getElementById('linkStatus');
   if(linkEl){
     if(mb.link_on){
@@ -2992,6 +3031,12 @@ function updateMbStatus(mb){
         'Link: '+mb.link_peers+' peer(s), '+mb.link_bpm.toFixed(1)+' BPM':
         'Link: iscem vrstnike...';
       linkEl.style.color=mb.link_conn?'#0f0':'#f90';
+    }else if(mbSrc===4){
+      linkEl.style.display='block';
+      linkEl.textContent=mb.active?
+        'Avdio BPM: sinhroniziram ('+(mb.bpm?mb.bpm.toFixed(0):'--')+' BPM)':
+        'Avdio BPM: ni signala, držim zadnji BPM';
+      linkEl.style.color=mb.active?'#0f0':'#f90';
     }else{linkEl.style.display='none';}
   }
   // Phase bar

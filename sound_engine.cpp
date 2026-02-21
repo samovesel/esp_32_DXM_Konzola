@@ -6,10 +6,10 @@
 #include "dsps_fft2r.h"
 #include "dsps_wind.h"
 
-// Frekvenčne meje za 8 vizualizacijskih pasov
-static const uint16_t BAND_EDGES[STL_BAND_COUNT + 1] = {
-  30, 60, 120, 250, 500, 1000, 2000, 4000, 11000
-};
+// Privzete frekvenčne meje (referenca — zdaj nastavljivo preko parametric EQ v STLAgcConfig)
+// static const uint16_t BAND_EDGES[STL_BAND_COUNT + 1] = {
+//   30, 60, 120, 250, 500, 1000, 2000, 4000, 11000
+// };
 
 // Barvne palete — 4 hue vrednosti za vsako paleto (Faza 4)
 static const uint16_t PALETTE_HUES[][4] = {
@@ -165,15 +165,30 @@ void SoundEngine::extractBands(float dt) {
                   (_bands.bass > 0.01f && peak > gateThresh);
 
   for (int b = 0; b < STL_BAND_COUNT; b++) {
-    int binLow  = (int)(BAND_EDGES[b] / freqPerBin);
-    int binHigh = (int)(BAND_EDGES[b + 1] / freqPerBin);
+    float fc = (float)_agc.bandParams[b].centerFreq;
+    float Q  = (float)_agc.bandParams[b].qFactor / 10.0f;
+    if (Q < 0.1f) Q = 0.1f;
+    if (fc < 20.0f) fc = 20.0f;
+
+    // Parametric bell curve: učinkovit bin razpon (le kjer weight > ~0.01)
+    float bwFactor = 3.0f / Q;
+    float fLow  = fc / (1.0f + bwFactor);
+    float fHigh = fc * (1.0f + bwFactor);
+    int binLow  = (int)(fLow / freqPerBin);
+    int binHigh = (int)(fHigh / freqPerBin);
     if (binLow < 1) binLow = 1;
     if (binHigh >= FFT_BINS) binHigh = FFT_BINS - 1;
 
-    float sum = 0;
-    int count = 0;
-    for (int i = binLow; i <= binHigh; i++) { sum += _vReal[i]; count++; }
-    float avg = count > 0 ? sum / count : 0;
+    float sum = 0, wSum = 0;
+    float Q2 = Q * Q;
+    for (int i = binLow; i <= binHigh; i++) {
+      float freq = i * freqPerBin;
+      float ratio = freq / fc - fc / freq;
+      float w = 1.0f / (1.0f + Q2 * ratio * ratio);
+      sum += _vReal[i] * w;
+      wSum += w;
+    }
+    float avg = wSum > 0 ? sum / wSum : 0;
 
     // AGC: posodobi tekoči maksimum za ta pas
     if (avg > _bandPeaks[b]) _bandPeaks[b] = avg;      // Hiter attack
@@ -493,6 +508,7 @@ bool SoundEngine::isManualBeatActive() const {
   if (!_mbCfg.enabled) return false;
   BeatSource src = (BeatSource)_mbCfg.source;
   if (src == BSRC_MANUAL) return true;
+  if (src == BSRC_AUDIO_SYNC) return true;  // Programi tečejo, BPM iz avdia
   if (src == BSRC_AUTO && !_mbAudioPresent) return true;
   return false;
 }
@@ -610,7 +626,29 @@ void SoundEngine::updateManualBeat(float dt) {
     _mbPhase = _link.getBeatPhase();
     _mbCfg.bpm = _link.getBpm();  // Sync BPM from Link
     newBeat = _link.beatTriggered();
-  } else {
+  }
+  // ── Audio BPM sync: manualni programi, BPM iz avdio detekcije ──
+  else if (_mbCfg.source == BSRC_AUDIO_SYNC) {
+    // Sinhroniziraj BPM iz avdio detekcije (eksponentno glajenje, tau ~2s)
+    if (_mbAudioPresent && _bands.bpm > 0) {
+      float audioBpm = _bands.bpm;
+      if (audioBpm >= 30.0f && audioBpm <= 300.0f) {
+        float alpha = fminf(dt * 0.5f, 0.1f);
+        _mbCfg.bpm += (audioBpm - _mbCfg.bpm) * alpha;
+      }
+    }
+    // Fazna sinhronizacija: ob zaznavi beata resetiraj fazo za tesen lock
+    if (_bands.beatDetected && _mbPhase > 0.1f) {
+      _mbPhase = 0;
+      _mbLastBeatMs = now;
+      newBeat = true;
+    } else {
+      float elapsed = (float)(now - _mbLastBeatMs);
+      _mbPhase = fminf(elapsed / intervalMs, 1.0f);
+      newBeat = (_mbPhase >= 1.0f);
+    }
+  }
+  else {
     // ── Standard source: izračunaj fazo iz timer-ja ──
     float elapsed = (float)(now - _mbLastBeatMs);
     _mbPhase = fminf(elapsed / intervalMs, 1.0f);
@@ -665,7 +703,10 @@ void SoundEngine::updateManualBeat(float dt) {
   if (isManualBeatActive()) {
     _beatPhase = _mbPhase;
     _beatIntervalMs = intervalMs;
-    _bands.bpm = _mbCfg.bpm;
+    // Audio sync: ne prepiši _bands.bpm ker je to vir BPM
+    if (_mbCfg.source != BSRC_AUDIO_SYNC) {
+      _bands.bpm = _mbCfg.bpm;
+    }
   }
 }
 
@@ -991,12 +1032,14 @@ int SoundEngine::getRuleCount() const {
 #define SND_MAGIC_V2 0xAF  // V2: vključuje ManualBeatConfig (stara velikost)
 #define SND_MAGIC_V3 0xB0  // V3: razširjen ManualBeatConfig + ProgramChain
 #define SND_MAGIC_V4 0xB1  // V4: + STLAgcConfig (per-band gain, AGC hitrost, noise gate)
+#define SND_MAGIC_V5 0xB2  // V5: + BandParam per band (parametric EQ v STLAgcConfig)
 #define SND_V2_MBCFG_SIZE 20  // Velikost starega ManualBeatConfig (brez novih polj)
+#define SND_V4_AGC_SIZE   (sizeof(float) * STL_BAND_COUNT + sizeof(float) * 2)  // 40 bytes (brez BandParam)
 
 void SoundEngine::saveConfig() {
   File f = LittleFS.open(PATH_SOUND_CFG, "w");
   if (!f) { Serial.println("[SND] Napaka pri pisanju"); return; }
-  uint8_t magic = SND_MAGIC_V4;
+  uint8_t magic = SND_MAGIC_V5;
   f.write(&magic, 1);
   f.write((uint8_t*)&_easy, sizeof(STLEasyConfig));
   f.write((uint8_t*)_rules, sizeof(_rules));
@@ -1004,7 +1047,7 @@ void SoundEngine::saveConfig() {
   f.write((uint8_t*)&_chain, sizeof(ProgramChain));
   f.write((uint8_t*)&_agc, sizeof(STLAgcConfig));
   f.close();
-  Serial.printf("[SND] Konfiguracija shranjena (V4, agc=%d)\n", sizeof(STLAgcConfig));
+  Serial.printf("[SND] Konfiguracija shranjena (V5, agc=%d)\n", sizeof(STLAgcConfig));
 }
 
 void SoundEngine::loadConfig() {
@@ -1012,23 +1055,34 @@ void SoundEngine::loadConfig() {
   if (!f) return;
   uint8_t magic = 0;
   f.read(&magic, 1);
-  if (magic != SND_MAGIC && magic != SND_MAGIC_V2 && magic != SND_MAGIC_V3 && magic != SND_MAGIC_V4) { f.close(); return; }
+  if (magic != SND_MAGIC && magic != SND_MAGIC_V2 && magic != SND_MAGIC_V3
+      && magic != SND_MAGIC_V4 && magic != SND_MAGIC_V5) { f.close(); return; }
   if (f.read((uint8_t*)&_easy, sizeof(STLEasyConfig)) != sizeof(STLEasyConfig)) {
     _easy = STL_EASY_DEFAULTS;
   }
   f.read((uint8_t*)_rules, sizeof(_rules));
-  if (magic == SND_MAGIC_V4 || magic == SND_MAGIC_V3) {
-    // V3/V4: polna nova struktura
+  if (magic == SND_MAGIC_V5 || magic == SND_MAGIC_V4 || magic == SND_MAGIC_V3) {
+    // V3/V4/V5: polna nova struktura
     if (f.read((uint8_t*)&_mbCfg, sizeof(ManualBeatConfig)) != sizeof(ManualBeatConfig)) {
       _mbCfg = MANUAL_BEAT_DEFAULTS;
     }
     if (f.read((uint8_t*)&_chain, sizeof(ProgramChain)) != sizeof(ProgramChain)) {
       memset(&_chain, 0, sizeof(_chain));
     }
-    // V4: AGC config
-    if (magic == SND_MAGIC_V4) {
+    // V5: polna STLAgcConfig z BandParam
+    if (magic == SND_MAGIC_V5) {
       if (f.read((uint8_t*)&_agc, sizeof(STLAgcConfig)) != sizeof(STLAgcConfig)) {
         _agc = STL_AGC_DEFAULTS;
+      }
+    }
+    // V4: stara STLAgcConfig brez BandParam
+    else if (magic == SND_MAGIC_V4) {
+      _agc = STL_AGC_DEFAULTS;  // Začni z defaulti (vključno z bandParams)
+      uint8_t oldAgcBuf[SND_V4_AGC_SIZE];
+      if (f.read(oldAgcBuf, SND_V4_AGC_SIZE) == SND_V4_AGC_SIZE) {
+        memcpy(_agc.bandGains, oldAgcBuf, sizeof(float) * STL_BAND_COUNT);
+        memcpy(&_agc.agcSpeed, oldAgcBuf + sizeof(float) * STL_BAND_COUNT, sizeof(float));
+        memcpy(&_agc.noiseGate, oldAgcBuf + sizeof(float) * STL_BAND_COUNT + sizeof(float), sizeof(float));
       }
     } else {
       _agc = STL_AGC_DEFAULTS;

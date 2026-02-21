@@ -283,10 +283,11 @@ enum SoundZone : uint8_t {
 
 // Vir beata
 enum BeatSource : uint8_t {
-  BSRC_AUDIO   = 0,  // Iz FFT avdio analize
-  BSRC_MANUAL  = 1,  // Ročni tap tempo / BPM vpis
-  BSRC_AUTO    = 2,  // Avdio ko je signal, sicer manual fallback
-  BSRC_LINK    = 3   // Ableton Link (Wi-Fi sinhronizacija z DJ software)
+  BSRC_AUDIO      = 0,  // Iz FFT avdio analize
+  BSRC_MANUAL     = 1,  // Ročni tap tempo / BPM vpis
+  BSRC_AUTO       = 2,  // Avdio ko je signal, sicer manual fallback
+  BSRC_LINK       = 3,  // Ableton Link (Wi-Fi sinhronizacija z DJ software)
+  BSRC_AUDIO_SYNC = 4   // Manualni programi, BPM iz avdio detekcije
 };
 
 // Programi za manual beat mode
@@ -441,17 +442,26 @@ static const STLEasyConfig STL_EASY_DEFAULTS = {
   false    // beatSync
 };
 
+// Per-band parametric EQ parameter
+struct BandParam {
+  uint16_t centerFreq;  // Center frekvenca v Hz (20-11000)
+  uint8_t  qFactor;     // Q * 10 (1-100 → 0.1-10.0)
+};
+
 // AGC nastavitve (ločena struktura za binarno kompatibilnost z V3)
 struct STLAgcConfig {
-  float    bandGains[STL_BAND_COUNT]; // Per-band gain množilnik (0.0 - 3.0)
-  float    agcSpeed;                   // AGC hitrost prilagajanja (0.0=počasi, 1.0=hitro)
-  float    noiseGate;                  // Noise gate prag (0.0=izključen, 1.0=agresiven)
+  float     bandGains[STL_BAND_COUNT]; // Per-band gain množilnik (0.0 - 3.0)
+  float     agcSpeed;                   // AGC hitrost prilagajanja (0.0=počasi, 1.0=hitro)
+  float     noiseGate;                  // Noise gate prag (0.0=izključen, 1.0=agresiven)
+  BandParam bandParams[STL_BAND_COUNT]; // Per-band center freq + Q (parametric EQ)
 };
 
 static const STLAgcConfig STL_AGC_DEFAULTS = {
   {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f},  // bandGains — enakomerno
   0.5f,  // agcSpeed — srednji
-  0.3f   // noiseGate — zmeren
+  0.3f,  // noiseGate — zmeren
+  // bandParams: centerFreq (Hz), qFactor (Q*10) — default = geometrijska sredina BAND_EDGES, Q=0.7
+  {{42,7},{85,7},{173,7},{354,7},{707,7},{1414,7},{2828,7},{6633,7}}
 };
 
 // Pro mode pravilo
