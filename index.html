@@ -1197,7 +1197,7 @@ function toggleBlackout(){wsSend({cmd:'blackout',v:boState?0:1})}
 var flashState=false;
 function flashOn(){if(!flashState){flashState=true;wsSend({cmd:'flash',v:1});syncFlashBtns()}}
 function flashOff(){if(flashState){flashState=false;wsSend({cmd:'flash',v:0});syncFlashBtns()}}
-function syncFlashBtns(){var c=flashState?'#fff':'#f90',bg=flashState?'#f33':'#f90';['flashBtn','fsFlashBtn','layFlashBtn'].forEach(function(id){var b=document.getElementById(id);if(b){b.style.background=bg;b.style.color=c}})}
+function syncFlashBtns(){var c=flashState?'#fff':'#000',bg=flashState?'#f33':'#f90';['flashBtn','fsFlashBtn','layFlashBtn'].forEach(function(id){var b=document.getElementById(id);if(b){b.style.background=bg;b.style.color=c}})}
 function sendMaster(v){
   document.getElementById('masterVal').textContent=v;
   var fs=document.getElementById('fsMasterSlider');if(fs&&document.activeElement!==fs)fs.value=v;
