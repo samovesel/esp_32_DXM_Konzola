@@ -219,6 +219,11 @@ void MixerEngine::unBlackout() {
   _blackout = false;
 }
 
+void MixerEngine::setFlash(bool active, uint8_t level) {
+  _flashActive = active;
+  _flashLevel = level;
+}
+
 // ============================================================================
 //  PAN/TILT OMEJITVE IN INVERT
 //  Aplicira bounding box in obračanje osi za vsak fixture
@@ -624,6 +629,24 @@ void MixerEngine::update() {
             t == CH_COLOR_C || t == CH_COLOR_WW) {
           uint16_t addr = fx->dmxAddress + ch - 1;
           if (addr < DMX_MAX_CHANNELS) _dmxOut[addr] = 0;
+        }
+      }
+    }
+  }
+
+  // --- Flash/Blinder: prisilni override intensity kanalov (preglasi blackout) ---
+  if (_flashActive && _fixtures) {
+    for (int i = 0; i < MAX_FIXTURES; i++) {
+      const PatchEntry* fx = _fixtures->getFixture(i);
+      if (!fx || !fx->active || fx->profileIndex < 0) continue;
+      uint8_t chCount = _fixtures->fixtureChannelCount(i);
+      for (int ch = 0; ch < chCount; ch++) {
+        const ChannelDef* def = _fixtures->fixtureChannel(i, ch);
+        if (!def) continue;
+        uint8_t t = def->type;
+        if (t == CH_INTENSITY) {
+          uint16_t addr = fx->dmxAddress + ch - 1;
+          if (addr < DMX_MAX_CHANNELS) _dmxOut[addr] = _flashLevel;
         }
       }
     }

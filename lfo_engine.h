@@ -17,6 +17,7 @@ struct LfoInstance {
   float    depth;         // 0.0 - 1.0
   float    phase;         // Phase spread (0.0 - 1.0)
   uint32_t fixtureMask;   // Bitmask za 24 fixtur
+  uint8_t  symmetry;     // FxSymmetry (0=forward, 1=reverse, 2=center-out, 3=ends-in)
   float    currentPhase;  // Runtime accumulator (0.0 - 1.0)
 };
 
