@@ -42,6 +42,10 @@
 #define NEOPIXEL_PIN       48    // Vgrajena WS2812 NeoPixel
 #define NEOPIXEL_COUNT      1
 
+// Pixel Mapper — WS2812 LED trak (zunanji)
+#define PIXEL_STRIP_PIN    16    // GPIO za zunanji LED trak (RMT)
+#define PIXEL_MAX_LEDS    144    // Maksimalno število LED-ic
+
 #define RESET_BTN_PIN      14    // Drži LOW ob zagonu = factory reset
 
 // Audio — WM8782S I2S ADC (line-in, ESP32 slave)
@@ -281,7 +285,8 @@ enum SoundZone : uint8_t {
 enum BeatSource : uint8_t {
   BSRC_AUDIO   = 0,  // Iz FFT avdio analize
   BSRC_MANUAL  = 1,  // Ročni tap tempo / BPM vpis
-  BSRC_AUTO    = 2   // Avdio ko je signal, sicer manual fallback
+  BSRC_AUTO    = 2,  // Avdio ko je signal, sicer manual fallback
+  BSRC_LINK    = 3   // Ableton Link (Wi-Fi sinhronizacija z DJ software)
 };
 
 // Programi za manual beat mode
@@ -471,6 +476,27 @@ struct FFTBands {
   float high;
   bool  beatDetected;
   float bpm;
+};
+
+// ============================================================================
+//  Pixel Mapper — WS2812 LED trak
+// ============================================================================
+
+enum PixelMapMode : uint8_t {
+  PXMAP_OFF      = 0,  // Izklopljen
+  PXMAP_FIXTURE  = 1,  // Preslikaj barve iz izbrane fixture/skupine
+  PXMAP_VU_METER = 2,  // Audio VU meter (bass→zelena, mid→rumena, high→rdeca)
+  PXMAP_SPECTRUM = 3,  // FFT spektrum — vsak LED = 1 frekvenčni bin
+  PXMAP_PULSE    = 4,  // Beat pulse — vsi LEDi utripajo na beat
+};
+
+struct PixelMapConfig {
+  bool     enabled = false;
+  uint16_t ledCount = 30;              // Število LED-ic na traku
+  uint8_t  brightness = 128;           // 0-255
+  PixelMapMode mode = PXMAP_FIXTURE;
+  uint8_t  fixtureIdx = 0;            // Za PXMAP_FIXTURE: katera fixture
+  uint8_t  groupMask = 0;             // Za PXMAP_FIXTURE: ali celotna skupina
 };
 
 // ============================================================================

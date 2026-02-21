@@ -138,7 +138,7 @@ Prehod med načini vsebuje 1-sekundno mehko prehajanje (fade).
 - **ESPAsyncWebServer** (mathieucarbou fork) – Asinhroni web strežnik
 - **AsyncTCP** – Asinhroni TCP
 - **ArduinoJson 7.x** – JSON razčlenjevanje
-- **arduinoFFT** – Hitra Fourierova transformacija
+- **ESP-DSP** – Hardware-accelerated FFT (Vector ISA na ESP32-S3)
 - **LittleFS** – Flash datotečni sistem
 
 ---

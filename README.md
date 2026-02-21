@@ -188,7 +188,7 @@ MAX485            XLR-5 (pogled od spredaj)
 - `ESPAsyncWebServer` (mathieucarbou fork za ESP32 core 3.x)
 - `AsyncTCP` (GitHub: me-no-dev/AsyncTCP)
 - `ArduinoJson` 7.x by Benoît Blanchon
-- `arduinoFFT` by Enrique Condes (za sound-to-light)
+- `ESP-DSP` (vgrajen v ESP32 Arduino core — hardware-accelerated FFT)
 - `Adafruit_NeoPixel` (samo ESP32-S3 — za WS2812 status LED)
 
 ### LittleFS upload

@@ -17,8 +17,13 @@ static AudioInput*     _aud = nullptr;
 static AsyncWebSocket* _ws  = nullptr;
 static LfoEngine*      _lfo = nullptr;
 static ShapeGenerator* _shapeGen = nullptr;
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+static PixelMapper*    _pxMap = nullptr;
+#endif
+static EspNowDmx*      _espNow = nullptr;
 static unsigned long   _lastWsSend = 0;
 static bool            _dmxMonActive = false;
+static bool            _forceSendState = false;  // Trigger immediate full state broadcast
 
 // HTML_PAGE_GZ in HTML_PAGE_GZ_LEN sta definirani v web_ui_gz.h
 
@@ -37,6 +42,7 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     hDoc["flashUsed"]  = LittleFS.usedBytes();
     String hJson; serializeJson(hDoc, hJson);
     client->text(hJson);
+    _forceSendState = true;  // Trigger immediate full state broadcast for new client
     return;
   }
   if (type != WS_EVT_DATA) return;
@@ -54,6 +60,51 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   if (strcmp(cmd, "ch") == 0) _mix->setChannel(doc["a"]|0, doc["v"]|0);
   else if (strcmp(cmd, "fxch") == 0) _mix->setFixtureChannel(doc["f"]|0, doc["c"]|0, doc["v"]|0);
   else if (strcmp(cmd, "grch") == 0) _mix->setGroupChannel(doc["g"]|0, doc["c"]|0, doc["v"]|0);
+  else if (strcmp(cmd, "hue") == 0 && _fix) {
+    // HSV→RGBW+A+UV conversion on ESP32 — one message instead of 6-8
+    int fi = doc["f"] | -1;
+    float h = doc["h"] | 0.0f;  // Hue 0-360
+    float s = doc["s"] | 1.0f;  // Saturation 0-1
+    float v = doc["v"] | 1.0f;  // Value 0-1
+    const PatchEntry* fx = _fix->getFixture(fi);
+    if (fx && fx->active) {
+      // HSV → RGB
+      int hi = (int)(h / 60.0f) % 6;
+      float f = h / 60.0f - (int)(h / 60.0f);
+      float p = v * (1.0f - s), q = v * (1.0f - f * s), t = v * (1.0f - (1.0f - f) * s);
+      float rf, gf, bf;
+      switch (hi) {
+        case 0: rf=v; gf=t; bf=p; break; case 1: rf=q; gf=v; bf=p; break;
+        case 2: rf=p; gf=v; bf=t; break; case 3: rf=p; gf=q; bf=v; break;
+        case 4: rf=t; gf=p; bf=v; break; default: rf=v; gf=p; bf=q; break;
+      }
+      uint8_t r=(uint8_t)(rf*255), g=(uint8_t)(gf*255), b=(uint8_t)(bf*255);
+      // Scan fixture channels and set color values
+      uint8_t chCount = _fix->fixtureChannelCount(fi);
+      bool hasW=false, hasA=false, hasUV=false;
+      for (int c=0; c<chCount; c++) {
+        const ChannelDef* cd = _fix->fixtureChannel(fi, c);
+        if (cd) {
+          if (cd->type==CH_COLOR_W) hasW=true;
+          if (cd->type==CH_COLOR_A) hasA=true;
+          if (cd->type==CH_COLOR_UV) hasUV=true;
+        }
+      }
+      uint8_t wOut = hasW ? (uint8_t)fminf(r, fminf(g, b)) : 0;
+      uint8_t aOut = (hasA && r>100 && g>50 && b<100) ? (uint8_t)fminf(r, g) : 0;
+      uint8_t uvOut = (hasUV && r>80 && b>150 && g<50) ? (uint8_t)fminf(r, b) : 0;
+      for (int c=0; c<chCount; c++) {
+        const ChannelDef* cd = _fix->fixtureChannel(fi, c);
+        if (!cd) continue;
+        int8_t val = -1;
+        switch (cd->type) {
+          case CH_COLOR_R: val=r; break; case CH_COLOR_G: val=g; break; case CH_COLOR_B: val=b; break;
+          case CH_COLOR_W: val=wOut; break; case CH_COLOR_A: val=aOut; break; case CH_COLOR_UV: val=uvOut; break;
+        }
+        if (val >= 0) _mix->setFixtureChannel(fi, c, (uint8_t)val);
+      }
+    }
+  }
   else if (strcmp(cmd, "master") == 0) _mix->setMasterDimmer(doc["v"]|255);
   else if (strcmp(cmd, "grpdim") == 0) _mix->setGroupDimmer(doc["g"]|0, doc["v"]|255);
   else if (strcmp(cmd, "blackout") == 0) { if(doc["v"]|0) _mix->blackout(); else _mix->unBlackout(); }
@@ -218,6 +269,8 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     }
     if (mb.bpm < 30) mb.bpm = 30;
     if (mb.bpm > 300) mb.bpm = 300;
+    // Ableton Link: enable/disable based on source selection
+    _snd->getLinkBeat().enable(mb.source == BSRC_LINK);
   }
   // Faza 5: program chain
   else if (strcmp(cmd, "mb_chain") == 0 && _snd) {
@@ -234,6 +287,38 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
       }
     }
   }
+  // Pixel Mapper commands
+  #if defined(CONFIG_IDF_TARGET_ESP32S3)
+  else if (strcmp(cmd, "px_cfg") == 0 && _pxMap) {
+    PixelMapConfig pc = _pxMap->getConfig();
+    if (doc.containsKey("en"))   pc.enabled    = (doc["en"]|0) != 0;
+    if (doc.containsKey("cnt"))  pc.ledCount   = doc["cnt"] | 30;
+    if (doc.containsKey("brt"))  pc.brightness = doc["brt"] | 128;
+    if (doc.containsKey("mode")) pc.mode       = (PixelMapMode)(doc["mode"]|0);
+    if (doc.containsKey("fx"))   pc.fixtureIdx = doc["fx"] | 0;
+    if (doc.containsKey("gmask")) pc.groupMask = doc["gmask"] | 0;
+    _pxMap->setConfig(pc);
+  }
+  else if (strcmp(cmd, "px_save") == 0 && _pxMap) { _pxMap->saveConfig(); }
+  #endif
+  // ESP-NOW commands
+  else if (strcmp(cmd, "now_en") == 0 && _espNow) {
+    _espNow->setEnabled((doc["v"]|0) != 0);
+  }
+  else if (strcmp(cmd, "now_add") == 0 && _espNow) {
+    // MAC as string "AA:BB:CC:DD:EE:FF"
+    const char* macStr = doc["mac"];
+    if (macStr) {
+      uint8_t mac[6];
+      sscanf(macStr, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+             &mac[0],&mac[1],&mac[2],&mac[3],&mac[4],&mac[5]);
+      _espNow->addPeer(mac, doc["name"] | "Slave");
+    }
+  }
+  else if (strcmp(cmd, "now_rm") == 0 && _espNow) {
+    _espNow->removePeer(doc["i"]|0);
+  }
+  else if (strcmp(cmd, "now_save") == 0 && _espNow) { _espNow->saveConfig(); }
 
   _mix->unlock();
 }
@@ -1045,6 +1130,10 @@ static void apiLayoutDelete(AsyncWebServerRequest* req) {
 
 void webSetLfoEngine(LfoEngine* lfo) { _lfo = lfo; }
 void webSetShapeGenerator(ShapeGenerator* shapes) { _shapeGen = shapes; }
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+void webSetPixelMapper(PixelMapper* px) { _pxMap = px; }
+#endif
+void webSetEspNow(EspNowDmx* espNow) { _espNow = espNow; }
 
 void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
               NodeConfig* cfg, FixtureEngine* fixtures, MixerEngine* mixer,
@@ -1139,7 +1228,9 @@ void webLoop() {
     }
   }
 
-  unsigned long now=millis(); if(now-_lastWsSend<WS_UPDATE_INTERVAL)return; _lastWsSend=now;
+  unsigned long now=millis();
+  if(!_forceSendState && now-_lastWsSend<WS_UPDATE_INTERVAL)return;
+  _lastWsSend=now; _forceSendState=false;
   if(_ws->count()==0)return;
 
   JsonDocument doc;
@@ -1229,6 +1320,12 @@ void webLoop() {
     mb["phase"]=_snd->getBeatPhase();
     mb["active"]=_snd->isManualBeatActive();
     mb["taps"]=_snd->getTapCount();
+    // Ableton Link status
+    const LinkBeat& lnk = _snd->getLinkBeat();
+    if (lnk.isEnabled()) {
+      mb["link_on"]=true; mb["link_peers"]=lnk.getPeerCount();
+      mb["link_bpm"]=lnk.getBpm(); mb["link_conn"]=lnk.isConnected();
+    }
     // Faza 3: krivulje + envelope
     mb["dc"]=mbc.dimCurve;
     mb["atk"]=mbc.attackMs;

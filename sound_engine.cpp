@@ -1,7 +1,10 @@
 #include "sound_engine.h"
-#include <arduinoFFT.h>
 #include <math.h>
 #include <LittleFS.h>
+
+// ESP-DSP — hardware-accelerated FFT (Vector ISA on ESP32-S3)
+#include "dsps_fft2r.h"
+#include "dsps_wind.h"
 
 // Frekvenčne meje za 8 vizualizacijskih pasov
 static const uint16_t BAND_EDGES[STL_BAND_COUNT + 1] = {
@@ -46,6 +49,29 @@ void SoundEngine::begin(AudioInput* audio, FixtureEngine* fixtures) {
   _mbChaseIdx = 0; _mbStackCount = 0; _mbScanDir = 1; _mbScanIdx = 0;
   _mbTransition = 0; _mbAudioPresent = false;
   _lastUpdateTime = millis();
+
+  // ESP-DSP FFT inicializacija
+  _fftBuf = (float*)psramPreferMalloc(FFT_SAMPLES * 2 * sizeof(float));
+  if (_fftBuf) {
+    esp_err_t ret = dsps_fft2r_init_fc32(NULL, FFT_SAMPLES);
+    if (ret == ESP_OK) {
+      _fftReady = true;
+      // Pre-compute Hamming window: w(n) = 0.54 - 0.46*cos(2*pi*n/(N-1))
+      for (int i = 0; i < FFT_SAMPLES; i++) {
+        _window[i] = 0.54f - 0.46f * cosf(2.0f * M_PI * i / (FFT_SAMPLES - 1));
+      }
+      Serial.printf("[SND] ESP-DSP FFT inicializiran (N=%d, PSRAM=%d)\n",
+                     FFT_SAMPLES, psramFound() ? 1 : 0);
+    } else {
+      Serial.println("[SND] ESP-DSP init NAPAKA — fallback ni mozen");
+    }
+  } else {
+    Serial.println("[SND] FFT buffer alokacija NAPAKA");
+  }
+
+  // Ableton Link
+  _link.begin();
+
   loadConfig();
   Serial.println("[SND] Sound engine inicializiran");
 }
@@ -64,7 +90,6 @@ void SoundEngine::update() {
   if (_audio && _audio->isRunning() && _audio->samplesReady()) {
     float* raw = _audio->getSamples();
     memcpy(_vReal, raw, sizeof(float) * FFT_SAMPLES);
-    memset(_vImag, 0, sizeof(float) * FFT_SAMPLES);
     _audio->consumeSamples();
 
     _lastUpdateTime = now;
@@ -84,6 +109,9 @@ void SoundEngine::update() {
     _mbAudioPresent = false; // Ni bilo avdio podatkov > 2s
   }
 
+  // Ableton Link update (vedno, za peer discovery)
+  if (_link.isEnabled()) _link.update();
+
   // Manual beat se posodablja vedno (neodvisno od avdia)
   if (_mbCfg.enabled) {
     _lastUpdateTime = now;
@@ -96,10 +124,26 @@ void SoundEngine::update() {
 // ============================================================================
 
 void SoundEngine::processFFT() {
-  ArduinoFFT<float> fft(_vReal, _vImag, FFT_SAMPLES, FFT_SAMPLE_RATE);
-  fft.windowing(FFTWindow::Hamming, FFTDirection::Forward);
-  fft.compute(FFTDirection::Forward);
-  fft.complexToMagnitude();
+  if (!_fftReady || !_fftBuf) return;
+
+  // 1. Interleave samples into complex buffer + apply pre-computed Hamming window
+  for (int i = 0; i < FFT_SAMPLES; i++) {
+    _fftBuf[i * 2]     = _vReal[i] * _window[i];  // Real part (windowed)
+    _fftBuf[i * 2 + 1] = 0;                        // Imaginary part
+  }
+
+  // 2. In-place FFT (hardware-accelerated on ESP32-S3 via Vector ISA)
+  dsps_fft2r_fc32(_fftBuf, FFT_SAMPLES);
+
+  // 3. Bit reversal (required after radix-2 FFT)
+  dsps_bit_rev_fc32(_fftBuf, FFT_SAMPLES);
+
+  // 4. Compute magnitudes → store back in _vReal[0..FFT_BINS-1]
+  for (int i = 0; i < FFT_BINS; i++) {
+    float re = _fftBuf[i * 2];
+    float im = _fftBuf[i * 2 + 1];
+    _vReal[i] = sqrtf(re * re + im * im);
+  }
 }
 
 // ============================================================================
@@ -559,13 +603,22 @@ void SoundEngine::updateManualBeat(float dt) {
   if (intervalMs < 100) intervalMs = 100;
 
   unsigned long now = millis();
-  float elapsed = (float)(now - _mbLastBeatMs);
+  bool newBeat = false;
 
-  // Izračunaj fazo
-  _mbPhase = fminf(elapsed / intervalMs, 1.0f);
+  // ── Ableton Link source: uporabi Link fazo in BPM ──
+  if (_mbCfg.source == BSRC_LINK && _link.isEnabled()) {
+    _mbPhase = _link.getBeatPhase();
+    _mbCfg.bpm = _link.getBpm();  // Sync BPM from Link
+    newBeat = _link.beatTriggered();
+  } else {
+    // ── Standard source: izračunaj fazo iz timer-ja ──
+    float elapsed = (float)(now - _mbLastBeatMs);
+    _mbPhase = fminf(elapsed / intervalMs, 1.0f);
+    newBeat = (_mbPhase >= 1.0f);
+  }
 
   // Ob novem beatu
-  if (_mbPhase >= 1.0f) {
+  if (newBeat) {
     _mbPhase = 0;
     _mbLastBeatMs = now;
     _mbSmoothBeat = 1.0f;

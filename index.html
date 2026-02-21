@@ -681,7 +681,9 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
       <button onclick="setMbSrc(1)" class="ps-sel">Manual</button>
       <button onclick="setMbSrc(2)">Auto (fallback)</button>
       <button onclick="setMbSrc(0)">Samo avdio</button>
+      <button onclick="setMbSrc(3)">Ableton Link</button>
     </div>
+    <div id="linkStatus" style="display:none;font-size:0.75em;color:#0af;margin-top:4px"></div>
     <p style="font-size:0.7em;color:#888;margin:8px 0 4px">Program:</p>
     <div class="mb-prog-grid" id="mbProgBtns">
       <button onclick="setMbProg(0)" class="ps-sel">Pulse</button>
@@ -890,6 +892,35 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
       <b>L-stick</b>: Pan/Tilt (skupina 1) &nbsp; <b>R-stick</b>: Pan/Tilt (skupina 2)<br>
       <b>R2/L2</b>: Master dimmer &nbsp; <b>X/A</b>: Flash &nbsp; <b>B</b>: Blackout
     </div>
+  </div>
+  <div class="card"><h3>Pixel Mapper (LED trak)</h3>
+    <div class="toggle"><input type="checkbox" id="pxEnabled" onchange="pxSendCfg()"><label>Omogoci LED trak</label></div>
+    <div style="margin-top:6px;font-size:0.82em">
+      <label style="color:#aaa">LED-ic: </label>
+      <input type="number" id="pxCount" value="30" min="1" max="144" style="width:50px" onchange="pxSendCfg()">
+      <label style="color:#aaa;margin-left:8px">Svetlost: </label>
+      <input type="range" id="pxBright" value="128" min="0" max="255" style="width:80px" onchange="pxSendCfg()">
+    </div>
+    <div style="margin-top:6px;font-size:0.82em">
+      <label style="color:#aaa">Nacin: </label>
+      <select id="pxMode" onchange="pxSendCfg()" style="font-size:0.9em">
+        <option value="1">Fixture Mirror</option>
+        <option value="2">VU Meter</option>
+        <option value="3">Spektrum</option>
+        <option value="4">Beat Pulse</option>
+      </select>
+    </div>
+    <div style="font-size:0.72em;color:#555;margin-top:4px">GPIO 16, WS2812B format. RMT periferija (0% CPU).</div>
+  </div>
+  <div class="card"><h3>ESP-NOW Wireless DMX</h3>
+    <div class="toggle"><input type="checkbox" id="nowEnabled" onchange="wsSend({cmd:'now_en',v:this.checked?1:0})"><label>Omogoci ESP-NOW oddajanje</label></div>
+    <div style="margin-top:6px;font-size:0.82em">
+      <label style="color:#aaa">Dodaj slave (MAC): </label>
+      <input type="text" id="nowMac" placeholder="AA:BB:CC:DD:EE:FF" style="width:130px;font-size:0.9em">
+      <button onclick="nowAddPeer()" style="font-size:0.8em">Dodaj</button>
+    </div>
+    <div id="nowPeers" style="font-size:0.78em;color:#aaa;margin-top:4px"></div>
+    <div style="font-size:0.72em;color:#555;margin-top:4px">Peer-to-peer, &lt;1ms latenca, brez ruterja. Slave: ESP32 + MAX485 (3 EUR).</div>
   </div>
   <div class="card"><h3>OSC Server</h3>
     <p style="font-size:0.8em;color:#aaa">UDP port <strong style="color:#0af">8000</strong></p>
@@ -2952,6 +2983,17 @@ function updateMbStatus(mb){
   if(tapEl)tapEl.textContent=Math.min(mb.taps||0,4)+'/4';
   var actEl=document.getElementById('mbActiveDisp');
   if(actEl){actEl.textContent=mb.active?'AKTIVEN':'neaktiven';actEl.style.color=mb.active?'#0f0':'#666'}
+  // Ableton Link status
+  var linkEl=document.getElementById('linkStatus');
+  if(linkEl){
+    if(mb.link_on){
+      linkEl.style.display='block';
+      linkEl.textContent=mb.link_conn?
+        'Link: '+mb.link_peers+' peer(s), '+mb.link_bpm.toFixed(1)+' BPM':
+        'Link: iscem vrstnike...';
+      linkEl.style.color=mb.link_conn?'#0f0':'#f90';
+    }else{linkEl.style.display='none';}
+  }
   // Phase bar
   var ph=mb.phase||0;
   var pBar=document.getElementById('mbPhaseBar');
@@ -5222,6 +5264,24 @@ function renderDmxGrid(){
     if(idx>=0&&idx<512){var v=dmxMonData[idx]||0;document.getElementById('dmxMonHover').textContent='Ch '+(idx+1)+': '+v}
   });
 })();
+
+// ============ ESP-NOW ============
+function nowAddPeer(){
+  var mac=document.getElementById('nowMac').value.trim();
+  if(!/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(mac)){alert('Napacen MAC format');return;}
+  wsSend({cmd:'now_add',mac:mac,name:'Slave'});
+  document.getElementById('nowMac').value='';
+}
+
+// ============ PIXEL MAPPER ============
+function pxSendCfg(){
+  wsSend({cmd:'px_cfg',
+    en:document.getElementById('pxEnabled').checked?1:0,
+    cnt:+document.getElementById('pxCount').value||30,
+    brt:+document.getElementById('pxBright').value||128,
+    mode:+document.getElementById('pxMode').value||1
+  });
+}
 
 // ============ GAMEPAD API ============
 var gpEnabled=false,gpRafId=null,gpPrevButtons=[];
