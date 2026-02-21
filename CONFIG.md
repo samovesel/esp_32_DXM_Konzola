@@ -234,6 +234,138 @@ Kompatibilen z: TouchOSC, QLab, Resolume, ipd.
 
 ---
 
+## SOUND (zavihek Sound)
+
+Zavihek Sound vsebuje vse nastavitve za zvočno reaktivno razsvetljavo (Sound-to-Light).
+
+### 1. Easy Mode
+
+Hitra nastavitev zvočne reaktivnosti s preseti:
+
+- **Vklopljeno** — omogoči Easy Mode
+- **Preseti**: Custom, Pulse, Rainbow, Storm, Ambient, Club
+- **Občutljivost** (0.1–5.0) — kako močno reagirajo luči na zvok
+- **Jakost** (0–100%) — maksimalna svetilnost efekta
+- **Bass → Dimmer** — bas frekvence krmilijo intenziteto
+- **Mid → Barve (Rainbow)** — srednje frekvence spreminjajo barve
+- **High → Strobe** — visoke frekvence sprožijo stroboskop
+- **Beat → Bump** — beat detekcija sproži blisk
+- **Beat Sync** — efekti se sinhronizirajo z BPM
+
+### 2. Audio EQ & AGC
+
+Parametrični izenačevalnik in avtomatsko prilagajanje ojačanja.
+
+#### Okolje (preseti)
+
+| Preset | Opis |
+|--------|------|
+| Tiha soba | Visoko ojačanje, nizek noise gate. Za šibke signale (telefon, tiha glasba). |
+| Club / bar | Srednje ojačanje, zmeren noise gate. Privzeto za manjše prostore. |
+| Koncert | Nizko ojačanje, visok noise gate. Za glasna okolja z močnim basom. |
+| Po meri | Ročno nastavljanje vseh parametrov. |
+
+#### Parametric EQ
+
+8 pasov z nastavljivimi parametri:
+
+| Parameter | Obseg | Opis |
+|-----------|-------|------|
+| **Gain** | 0.0–3.0 | Ojačanje pasu (navpični drsnik) |
+| **Center freq** | 20–11000 Hz | Središčna frekvenca pasu (vnosno polje) |
+| **Q faktor** | Dropdown (0.3–5.0) | Širina pasu — nižje = širše, višje = ožje |
+
+Q faktor prednastavljene vrednosti:
+
+| Q | Opis |
+|-----|------|
+| 0.3 | Zelo širok (~3 oktave) |
+| 0.5 | Širok (~2 oktavi) |
+| 0.7 | Privzeto (~1.5 oktave) |
+| 1.0 | Srednji (~1 oktava) |
+| 1.4 | Ozek (~0.7 oktave) |
+| 2.0 | Tesen (~0.5 oktave) |
+| 3.0 | Oster (~0.33 oktave) |
+| 5.0 | Kirurški (~0.2 oktave) |
+
+#### AGC
+
+- **AGC hitrost** (0.0–1.0) — počasi = stabilno za koncerte (~10s prilagajanje), hitro = odzivno za testiranje (~0.7s)
+- **Noise gate** (0.0–1.0) — 0 = izključen, višje = agresivnejše filtriranje šuma v tišini
+
+#### Beat detekcija
+
+Neodvisna od parametričnega EQ — bere surove FFT bine za zanesljivejšo zaznavo.
+
+| Parameter | Obseg | Privzeto | Opis |
+|-----------|-------|----------|------|
+| **Občutljivost** | 0.8x–2.5x | 1.4x | Prag glede na drseče povprečje. Nižje = bolj občutljivo. |
+| **Frekv. pas** | Dropdown | Bass (30–150 Hz) | Frekvenčno območje za zaznavo beata |
+| **Lockout** | 100–500 ms | 200 ms | Min razmik med zaznavo dveh beatov |
+
+Frekvenčni preseti:
+
+| Preset | Obseg | Uporaba |
+|--------|-------|---------|
+| Sub | 30–80 Hz | Samo globok bas (sub-woofer) |
+| Bass | 30–150 Hz | Privzeto — kick drum + bas |
+| Wide | 30–300 Hz | Širši spekter za raznoliko glasbo |
+| Kick | 60–200 Hz | Optimirano za kick drum |
+
+BPM se izračuna z **median filtrom** iz zadnjih 16 inter-beat intervalov za stabilnost.
+
+### 3. Manual Beat
+
+Ritmični efekti z nastavljivi virom beata.
+
+#### Viri beata
+
+| Vir | Opis |
+|-----|------|
+| **Manual** | Tempo določiš s TAP gumbom ali BPM drsnikom (30–300). Vedno aktiven. |
+| **Avdio BPM** | Programi tečejo, BPM se samodejno sinhronizira iz avdio FFT analize. |
+| **Auto (fallback)** | Zvok prisoten → avdio beat. Tišina → manual tempo. Priporočeno za žive nastope. |
+| **Samo avdio** | Samo avdio beat detekcija. Ko ni signala, efekti utihnejo. |
+| **Ableton Link** | BPM in faza se sinhronizirata prek Ableton Link protokola z DJ programsko opremo. |
+
+#### Programi
+
+12 programov: Pulse, Chase, Sine, Strobe, Rainbow, Build, Random, Alternate, Wave, Stack, Sparkle, Scanner.
+
+#### Parametri
+
+- **BPM** (30–300) — ročno ali samodejno (odvisno od vira)
+- **Subdivizija** — 1/4x, 1/2x, 1x, 2x, 4x
+- **Jakost** (0–100%)
+- **Barvni efekti** — vklop/izklop barvnega spreminjanja
+- **Build beatov** (4–32) — trajanje Build cikla
+- **Krivulja** — Linear, Exponential, Logarithmic
+- **Attack** (0–500 ms) — čas od teme do polne svetilnosti
+- **Decay** (0–2000 ms) — čas od polne svetilnosti do ugasnitve
+- **Paleta** — Rainbow, Warm, Cool, Fire, Ocean, Party, Custom (4 barve)
+- **Simetrija** — Forward, Reverse, Center-Out, Ends-In
+
+#### Program Chain (Playlist)
+
+Avtomatsko zaporedje programov. Vsak vnos ima program in trajanje v beatih.
+
+### 4. Cone (per-fixture mapiranje)
+
+Določi, kateri frekvenčni pas poganja posamezen fixture v Easy Mode:
+
+| Cona | Opis |
+|------|------|
+| Bass | Reagira na nizke frekvence |
+| Mid | Reagira na srednje frekvence |
+| High | Reagira na visoke frekvence |
+| All | Reagira na celoten spekter |
+
+### 5. Pro Mode — Pravila
+
+Do 8 pravil za natančno kontrolo posameznih kanalov na osnovi frekvenčnih pasov. Vsako pravilo določa fixture, kanal, frekvenčni pas in krivuljo odziva.
+
+---
+
 ## KONFIGURACIJA (zavihek Konfig)
 
 Shranjevanje in obnova celotne postavitve (vsi fixture-i, scene, skupine, zvočne nastavitve) kot snapshot.

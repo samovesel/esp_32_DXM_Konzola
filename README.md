@@ -35,7 +35,7 @@ Platforma se zazna samodejno prek `CONFIG_IDF_TARGET_ESP32S3` — ni rocne konfi
 - **Sound-to-light** — ESP-DSP hardware FFT analiza s parametricnim EQ (nastavljiva center frekvenca + Q za vsak pas), easy mode (bass->dimmer, mid->barve, high->strobe, beat->bump) in pro mode (uporabniska pravila za mapiranje frekvencnih pasov na kanale)
 - **ESP-DSP Hardware FFT** — hardware-pospesan FFT z ESP-DSP knjiznico (Vector ISA / SIMD na ESP32-S3), ~3x hitrejse od programske implementacije
 - **Audio vhod** — I2S line-in (WM8782S ADC) ali I2S MEMS mikrofon (INMP441)
-- **Beat detection** z BPM izracunom
+- **Beat detection** z BPM izracunom (nastavljiva obcutljivost, frekvencni razpon, lockout, median filter za stabilnost)
 - **Ableton Link** — Wi-Fi BPM/beat sinhronizacija z DJ programi (Ableton Live, Traktor, Rekordbox, Serato, VirtualDJ)
 - **Zivi FFT spekter** v spletnem vmesniku
 - **Pametni Blackout** — izklopi samo svetlobne kanale (Intensity, barve, strobe). Pan/Tilt/Gobo/Focus/Zoom ostanejo nespremenjeni
@@ -48,7 +48,7 @@ Platforma se zazna samodejno prek `CONFIG_IDF_TARGET_ESP32S3` — ni rocne konfi
   - Undo/redo, shranjevanje scen z nastavljivo crossfade hitrostjo
   - Skrivanje/razsirjanje posameznih kanalov ali celih fixture-ov
 - **Skupinski master dimmerji** — neodvisen intensity slider za vsako skupino + gang, BO, FO, solo na ravni skupine
-- **Beat sistem** — 12 programov (Pulse, Chase, Sine, Strobe, Rainbow, Build, Random, Alternate, Wave, Stack, Sparkle, Scanner), subdivizije (1/4x-4x), per-group programi, dimmer krivulje, barvne palete, chaining
+- **Beat sistem** — 12 programov (Pulse, Chase, Sine, Strobe, Rainbow, Build, Random, Alternate, Wave, Stack, Sparkle, Scanner), subdivizije (1/4x-4x), per-group programi, dimmer krivulje, barvne palete, chaining, FX simetrija (forward, reverse, center-out, ends-in)
 - **Manual beat** — tap tempo, rocni BPM, avdio BPM sinhronizacija (samodejno sledenje tempu iz glasbe) ali Ableton Link
 - **Pametna detekcija telefona** — samodejno prilagodi UI (skrije beat gumbe, prikaze meni) z JS detekcijo touch naprave
 - **Zgodovina stanj** (3 avtomatski snapshot-i ob preklopu)
@@ -415,9 +415,9 @@ for (int i = 0; i < FFT_SAMPLES; i++)
 Uporabniska pravila: izberi fixture, kanal, frekvencni pas, DMX razpon, krivuljo odziva (linearna/eksponentna/logaritmicna), attack/decay cas.
 
 ### Beat detection
-Primerja trenutno bass energijo s tekocim povprecjem zadnjih 24 vzorcev. Beat = presezek 1.5x povprecja z minimalnim intervalom 200ms. BPM iz povprecja intervalov.
+Locena od parametric EQ — bere neposredno iz raw FFT binov v nastavljenem frekvencnem razponu (privzeto 30–150 Hz). Nastavljiva obcutljivost (0.8x–2.5x, privzeto 1.4x), frekvencni razpon (Sub/Bass/Wide/Kick), lockout (100–500ms, privzeto 200ms). BPM se izracuna z median filtrom zadnjih 16 inter-beat intervalov (robustnejsi od povprecenja).
 
-### Beat izvori (Beat Source)
+### Beat viri (Beat Source)
 
 | Vir | Enum | Opis |
 |---|---|---|
@@ -425,6 +425,7 @@ Primerja trenutno bass energijo s tekocim povprecjem zadnjih 24 vzorcev. Beat = 
 | **Manual** | `BSRC_MANUAL` | Rocni tap tempo / BPM vpis |
 | **Auto** | `BSRC_AUTO` | Avdio ko je signal, sicer manual fallback |
 | **Ableton Link** | `BSRC_LINK` | Wi-Fi sinhronizacija z DJ software |
+| **Avdio BPM** | `BSRC_AUDIO_SYNC` | Manualni programi, BPM iz avdio detekcije |
 
 ## Ableton Link
 
@@ -705,7 +706,7 @@ Optimiziran pogled za zivo upravljanje luci (telefon, tablica ali desktop).
 - **Dimmer krivulje**: linearna, eksponentna, logaritmicna
 - **Barvne palete**: Rainbow, Warm, Cool, Fire, Ocean, Party, Custom
 - **Chaining**: zaporedno predvajanje vec programov
-- **Manual beat**: tap tempo ali rocni BPM brez zvocnega vira
+- **Manual beat**: tap tempo, rocni BPM, avdio BPM sinhronizacija ali Ableton Link
 
 ### Telefon
 - Beat programi se prikazejo v popup meniju (namesto inline gumbov)
