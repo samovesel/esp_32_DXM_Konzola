@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DMX Portal">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href="/manifest-portal.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>DMX Portal</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 16px}
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;
+  text-align:center;padding:8px;font-size:0.85em;z-index:100}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;
+  padding:8px 20px;border-radius:20px;font-size:0.85em;opacity:0;transition:opacity 0.3s;z-index:100}
+h1{font-size:1.4em;margin-bottom:4px;color:#0af}
+.subtitle{font-size:0.8em;color:#888;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%;max-width:400px}
+.card{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#1a1a2e;border-radius:12px;padding:20px 12px;text-decoration:none;color:#eee;
+  border:2px solid transparent;transition:border-color 0.2s,transform 0.1s;min-height:130px}
+.card:active{transform:scale(0.96)}
+.card .icon{font-size:2.2em;margin-bottom:8px}
+.card .name{font-size:1em;font-weight:600;margin-bottom:4px}
+.card .desc{font-size:0.7em;color:#999;text-align:center;line-height:1.3}
+.card:nth-child(1){border-color:#3498db30}.card:nth-child(1):hover{border-color:#3498db}
+.card:nth-child(2){border-color:#e74c3c30}.card:nth-child(2):hover{border-color:#e74c3c}
+.card:nth-child(3){border-color:#9b59b630}.card:nth-child(3):hover{border-color:#9b59b6}
+.card:nth-child(4){border-color:#27ae6030}.card:nth-child(4):hover{border-color:#27ae60}
+.card:nth-child(5){border-color:#f39c1230}.card:nth-child(5):hover{border-color:#f39c12}
+.card:nth-child(6){border-color:#1abc9c30}.card:nth-child(6):hover{border-color:#1abc9c}
+.footer{margin-top:24px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.footer a{color:#888;text-decoration:none;font-size:0.8em}
+.footer a:hover{color:#0af}
+.device-name{font-size:0.75em;color:#555;margin-top:8px}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr);max-width:600px}}
+</style>
+</head>
+<body>
+<div id="offlineBanner"></div>
+<h1>DMX Konzola</h1>
+<p class="subtitle" id="deviceName">Izberi vmesnik</p>
+
+<div class="grid">
+  <a class="card" href="/sound-eng">
+    <span class="icon">&#127911;</span>
+    <span class="name">Tonski mojster</span>
+    <span class="desc">Scene, STL, BPM, skupinski dimmerji</span>
+  </a>
+  <a class="card" href="/theater">
+    <span class="icon">&#127917;</span>
+    <span class="name">Gledali&#353;&#269;e</span>
+    <span class="desc">GO / BACK, cue list, crossfade</span>
+  </a>
+  <a class="card" href="/dj">
+    <span class="icon">&#127926;</span>
+    <span class="name">DJ</span>
+    <span class="desc">BPM sync, mood preseti, strobe</span>
+  </a>
+  <a class="card" href="/staff">
+    <span class="icon">&#127860;</span>
+    <span class="name">Osebje</span>
+    <span class="desc">Enostavni preseti, svetlost</span>
+  </a>
+  <a class="card" href="/event">
+    <span class="icon">&#127882;</span>
+    <span class="name">Zabava / poroka</span>
+    <span class="desc">Timeline, samodejno napredovanje</span>
+  </a>
+  <a class="card" href="/busker">
+    <span class="icon">&#127928;</span>
+    <span class="name">Busker</span>
+    <span class="desc">Zvok-reaktivno, 4 looki</span>
+  </a>
+</div>
+
+<div class="footer">
+  <a href="/">&#9881; Polni vmesnik (Pro)</a>
+  <span class="device-name" id="deviceInfo"></span>
+</div>
+<div id="toast"></div>
+
+<script src="/persona-core.js"></script>
+<script>
+PersonaCore.connect();
+PersonaCore.onHello(function(d) {
+    if (d.fw) document.getElementById('deviceName').textContent = 'Firmware: ' + d.fw;
+    var info = document.getElementById('deviceInfo');
+    if (info) info.textContent = location.host;
+});
+</script>
+</body>
+</html>

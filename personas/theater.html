@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DMX Theater">
+<meta name="theme-color" content="#e74c3c">
+<link rel="manifest" href="/manifest-theater.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>DMX Theater</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:12px 12px 24px;
+  -webkit-user-select:none;user-select:none}
+:root{--accent:#e74c3c}
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;
+  text-align:center;padding:8px;font-size:0.85em;z-index:100}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;
+  padding:8px 20px;border-radius:20px;font-size:0.85em;opacity:0;transition:opacity 0.3s;z-index:100;
+  pointer-events:none;white-space:nowrap}
+.wrap{width:100%;max-width:450px;display:flex;flex-direction:column;gap:10px}
+
+/* Header */
+.header{display:flex;align-items:baseline;justify-content:space-between;padding:4px 0}
+.header h1{font-size:1.4em;color:var(--accent);letter-spacing:0.05em}
+.header a{color:#888;text-decoration:none;font-size:0.8em}
+.header a:hover{color:var(--accent)}
+
+/* Current cue card */
+.cue-card{background:#1a1a1a;border-radius:12px;padding:14px 16px;border-left:4px solid var(--accent)}
+.cue-card .cue-pos{font-size:0.8em;color:#888;margin-bottom:2px}
+.cue-card .cue-label{font-size:1.2em;font-weight:700;margin-bottom:4px;min-height:1.4em}
+.cue-card .cue-fade{font-size:0.75em;color:#999}
+.cf-bar-wrap{width:100%;height:8px;background:#222;border-radius:4px;margin-top:8px;overflow:hidden}
+.cf-bar{height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width 0.25s linear}
+.cf-bar.active{animation:cf-pulse 1s ease-in-out infinite alternate}
+@keyframes cf-pulse{from{opacity:0.8}to{opacity:1}}
+.cf-pct{font-size:0.7em;color:#999;text-align:right;margin-top:2px;min-height:1em}
+
+/* GO button */
+.btn-go{width:100%;min-height:140px;background:#27ae60;color:#fff;border:none;border-radius:16px;
+  font-size:2em;font-weight:800;letter-spacing:0.04em;cursor:pointer;
+  transition:background 0.15s,transform 0.1s;-webkit-tap-highlight-color:transparent}
+.btn-go:active{background:#219150;transform:scale(0.97)}
+
+/* BACK / STOP row */
+.row-bs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-back,.btn-stop{width:100%;padding:16px 0;border:none;border-radius:12px;font-size:1.1em;
+  font-weight:700;color:#fff;cursor:pointer;transition:background 0.15s,transform 0.1s;
+  -webkit-tap-highlight-color:transparent}
+.btn-back{background:#e67e22}
+.btn-back:active{background:#c96d1a;transform:scale(0.96)}
+.btn-stop{background:#c0392b}
+.btn-stop:active{background:#a33025;transform:scale(0.96)}
+
+/* Cue list */
+.cue-list-label{font-size:0.75em;color:#888;text-transform:uppercase;letter-spacing:0.06em}
+.cue-list{max-height:40vh;overflow-y:auto;border-radius:10px;background:#1a1a1a;
+  -webkit-overflow-scrolling:touch}
+.cue-list::-webkit-scrollbar{width:4px}
+.cue-list::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.cue-entry{display:flex;align-items:center;padding:0 14px;height:42px;cursor:pointer;
+  border-left:3px solid transparent;transition:background 0.15s,border-color 0.15s;
+  border-bottom:1px solid #222}
+.cue-entry:last-child{border-bottom:none}
+.cue-entry:active{background:#252525}
+.cue-entry.current{background:#e74c3c18;border-left-color:var(--accent)}
+.cue-entry.current .cue-e-num{color:var(--accent)}
+.cue-entry.past{opacity:0.4}
+.cue-e-num{width:36px;font-size:0.85em;font-weight:700;color:#ccc;flex-shrink:0}
+.cue-e-label{flex:1;font-size:0.85em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  padding:0 8px;color:#ddd}
+.cue-e-fade{font-size:0.7em;color:#777;flex-shrink:0}
+
+/* Bottom controls */
+.bottom-ctrl{display:flex;flex-direction:column;gap:8px}
+.row-bl-hl{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-bo,.btn-hl{width:100%;padding:14px 0;border:none;border-radius:10px;font-size:0.85em;
+  font-weight:700;color:#fff;cursor:pointer;transition:background 0.15s,transform 0.1s;
+  -webkit-tap-highlight-color:transparent}
+.btn-bo{background:#333}
+.btn-bo.on{background:var(--accent)}
+.btn-bo:active,.btn-hl:active{transform:scale(0.96)}
+.btn-hl{background:#2c3e50}
+.bri-row{display:flex;align-items:center;gap:10px;padding:0 2px}
+.bri-row label{font-size:0.7em;color:#888;flex-shrink:0}
+.bri-row input[type=range]{flex:1;height:6px;-webkit-appearance:none;appearance:none;
+  background:#333;border-radius:3px;outline:none}
+.bri-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+  border-radius:50%;background:var(--accent);cursor:pointer}
+</style>
+</head>
+<body>
+<div id="offlineBanner"></div>
+
+<div class="wrap">
+  <!-- Header -->
+  <div class="header">
+    <h1>THEATER</h1>
+    <a href="/portal">Portal</a>
+  </div>
+
+  <!-- Current cue info card -->
+  <div class="cue-card">
+    <div class="cue-pos" id="cuePos">CUE - / -</div>
+    <div class="cue-label" id="cueLabel">--</div>
+    <div class="cue-fade" id="cueFade"></div>
+    <div class="cf-bar-wrap"><div class="cf-bar" id="cfBar"></div></div>
+    <div class="cf-pct" id="cfPct"></div>
+  </div>
+
+  <!-- GO button -->
+  <button class="btn-go" id="btnGo">GO</button>
+
+  <!-- BACK / STOP -->
+  <div class="row-bs">
+    <button class="btn-back" id="btnBack">BACK</button>
+    <button class="btn-stop" id="btnStop">STOP</button>
+  </div>
+
+  <!-- Cue list -->
+  <div class="cue-list-label">Cue List</div>
+  <div class="cue-list" id="cueList"></div>
+
+  <!-- Bottom controls -->
+  <div class="bottom-ctrl">
+    <div class="row-bl-hl">
+      <button class="btn-bo" id="btnBO">BLACKOUT</button>
+      <button class="btn-hl" id="btnHL">HOUSE LIGHTS</button>
+    </div>
+    <div class="bri-row">
+      <label>BRI</label>
+      <input type="range" id="briSlider" min="0" max="255" value="255">
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="/persona-core.js"></script>
+<script>
+(function(){
+'use strict';
+
+var cues = [];
+var curCue = -1;
+var cueCount = 0;
+var blackoutOn = false;
+var houseScene = -1;
+
+// DOM refs
+var elCuePos   = document.getElementById('cuePos');
+var elCueLabel = document.getElementById('cueLabel');
+var elCueFade  = document.getElementById('cueFade');
+var elCfBar    = document.getElementById('cfBar');
+var elCfPct    = document.getElementById('cfPct');
+var elCueList  = document.getElementById('cueList');
+var btnGo      = document.getElementById('btnGo');
+var btnBack    = document.getElementById('btnBack');
+var btnStop    = document.getElementById('btnStop');
+var btnBO      = document.getElementById('btnBO');
+var btnHL      = document.getElementById('btnHL');
+var briSlider  = document.getElementById('briSlider');
+
+// --- Render cue list ---
+function renderCueList() {
+    var html = '';
+    for (var i = 0; i < cues.length; i++) {
+        var c = cues[i];
+        var cls = 'cue-entry';
+        if (i === curCue) cls += ' current';
+        else if (i < curCue) cls += ' past';
+        var fadeStr = c.fade !== undefined ? (c.fade / 1000).toFixed(1) + 's' : '';
+        html += '<div class="' + cls + '" data-idx="' + i + '">' +
+            '<span class="cue-e-num">' + (i + 1) + '</span>' +
+            '<span class="cue-e-label">' + escHtml(c.label || 'Cue ' + (i + 1)) + '</span>' +
+            '<span class="cue-e-fade">' + fadeStr + '</span>' +
+            '</div>';
+    }
+    elCueList.innerHTML = html;
+    scrollToCurrent();
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function scrollToCurrent() {
+    var el = elCueList.querySelector('.cue-entry.current');
+    if (el) {
+        el.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }
+}
+
+// --- Update current cue info card ---
+function updateCueCard() {
+    var total = cueCount || cues.length;
+    if (curCue >= 0 && curCue < cues.length) {
+        var c = cues[curCue];
+        elCuePos.textContent = 'CUE ' + (curCue + 1) + ' / ' + total;
+        elCueLabel.textContent = c.label || 'Cue ' + (curCue + 1);
+        if (c.fade !== undefined) {
+            elCueFade.textContent = 'Fade: ' + (c.fade / 1000).toFixed(1) + 's';
+        } else {
+            elCueFade.textContent = '';
+        }
+    } else {
+        elCuePos.textContent = 'CUE - / ' + total;
+        elCueLabel.textContent = '--';
+        elCueFade.textContent = '';
+    }
+}
+
+// --- Status handler ---
+PersonaCore.onStatus(function(d) {
+    // Cue list status
+    if (d.cl) {
+        var changed = false;
+        if (d.cl.cur !== undefined && d.cl.cur !== curCue) {
+            curCue = d.cl.cur;
+            changed = true;
+        }
+        if (d.cl.cnt !== undefined) cueCount = d.cl.cnt;
+        if (changed) {
+            updateCueCard();
+            renderCueList();
+        }
+        // Running indicator on GO button
+        if (d.cl.run) {
+            btnGo.textContent = 'GO';
+        }
+    }
+
+    // Crossfade
+    if (d.cf) {
+        if (d.cf.active) {
+            var pct = d.cf.progress || 0;
+            elCfBar.style.width = pct + '%';
+            elCfBar.classList.add('active');
+            elCfPct.textContent = pct + '%';
+        } else {
+            elCfBar.style.width = '0%';
+            elCfBar.classList.remove('active');
+            elCfPct.textContent = '';
+        }
+    }
+
+    // Blackout
+    if (d.bo !== undefined) {
+        blackoutOn = !!d.bo;
+        if (blackoutOn) {
+            btnBO.classList.add('on');
+        } else {
+            btnBO.classList.remove('on');
+        }
+    }
+});
+
+// --- Button handlers ---
+btnGo.addEventListener('click', function() {
+    PersonaCore.send({cmd:'cue_go'});
+});
+
+btnBack.addEventListener('click', function() {
+    PersonaCore.send({cmd:'cue_back'});
+});
+
+btnStop.addEventListener('click', function() {
+    PersonaCore.send({cmd:'cue_stop'});
+});
+
+btnBO.addEventListener('click', function() {
+    blackoutOn = !blackoutOn;
+    PersonaCore.send({cmd:'blackout', v:blackoutOn});
+});
+
+btnHL.addEventListener('click', function() {
+    if (houseScene < 0) {
+        PersonaCore.showMsg('House scene not configured');
+        return;
+    }
+    PersonaCore.send({cmd:'scene_recall', slot:houseScene, fade:2000});
+});
+
+// Tap cue in list
+elCueList.addEventListener('click', function(e) {
+    var entry = e.target.closest('.cue-entry');
+    if (!entry) return;
+    var idx = parseInt(entry.getAttribute('data-idx'), 10);
+    if (!isNaN(idx)) {
+        PersonaCore.send({cmd:'cue_goto', i:idx});
+    }
+});
+
+// Brightness slider
+briSlider.addEventListener('input', function() {
+    PersonaCore.sfill(briSlider);
+    PersonaCore.send({cmd:'master', v:+briSlider.value});
+});
+PersonaCore.sfill(briSlider);
+
+// --- Init ---
+PersonaCore.connect();
+
+PersonaCore.loadCues(function(list) {
+    cues = list;
+    renderCueList();
+    updateCueCard();
+});
+
+PersonaCore.loadConfig(function(cfg) {
+    if (cfg.theater && cfg.theater.house_scene !== undefined) {
+        houseScene = cfg.theater.house_scene;
+    }
+});
+
+})();
+</script>
+</body>
+</html>

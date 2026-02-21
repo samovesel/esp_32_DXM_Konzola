@@ -1098,6 +1098,50 @@ static bool checkAuth(AsyncWebServerRequest* req) {
 // ============================================================================
 
 // ============================================================================
+//  PERSONA HELPERS
+// ============================================================================
+
+// Serve gzipped file from LittleFS with correct Content-Encoding
+static void serveGzFile(AsyncWebServerRequest* req, const char* path, const char* ct) {
+    if (!LittleFS.exists(path)) { req->send(404, "text/plain", "Not found"); return; }
+    AsyncWebServerResponse* resp = req->beginResponse(LittleFS, path, ct);
+    resp->addHeader("Content-Encoding", "gzip");
+    resp->addHeader("Cache-Control", "no-cache");
+    req->send(resp);
+}
+
+// Persona config GET — returns /persona.json or {}
+static void apiGetPersonaCfg(AsyncWebServerRequest* req) {
+    if (!checkAuth(req)) return;
+    if (!LittleFS.exists("/persona.json")) {
+        req->send(200, "application/json", "{}");
+        return;
+    }
+    req->send(LittleFS, "/persona.json", "application/json");
+}
+
+// Persona config POST — saves JSON body to /persona.json (reuses _layoutBuf for bigger payloads)
+static void apiPostPersonaCfg(AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
+    if (index == 0) _layoutBufLen = 0;
+    size_t cpLen = min((size_t)len, (size_t)(LAYOUT_BUF_SIZE-1-_layoutBufLen));
+    memcpy(_layoutBuf+_layoutBufLen, data, cpLen); _layoutBufLen+=cpLen; _layoutBuf[_layoutBufLen]=0;
+    if (index+len < total) return;
+
+    // Validate JSON
+    JsonDocument doc;
+    if (deserializeJson(doc, _layoutBuf)) {
+        req->send(400, "application/json", "{\"ok\":false,\"error\":\"Invalid JSON\"}");
+        return;
+    }
+    File f = LittleFS.open("/persona.json", "w");
+    if (!f) { req->send(500, "application/json", "{\"ok\":false}"); return; }
+    f.write((const uint8_t*)_layoutBuf, _layoutBufLen);
+    f.close();
+    Serial.println("[WEB] Persona config saved");
+    req->send(200, "application/json", "{\"ok\":true}");
+}
+
+// ============================================================================
 //  LAYOUT API — 2D oder urejevalnik
 // ============================================================================
 
@@ -1262,8 +1306,36 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
     }
   );
 
+  // ---- Persona vmesniki (LittleFS gzip) ----
+  server->on("/portal",    HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/portal.html.gz","text/html"); });
+  server->on("/sound-eng", HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/sound-eng.html.gz","text/html"); });
+  server->on("/theater",   HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/theater.html.gz","text/html"); });
+  server->on("/dj",        HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/dj.html.gz","text/html"); });
+  server->on("/staff",     HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/staff.html.gz","text/html"); });
+  server->on("/event",     HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/event.html.gz","text/html"); });
+  server->on("/busker",    HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/busker.html.gz","text/html"); });
+  server->on("/persona-core.js", HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/persona-core.js.gz","application/javascript"); });
+
+  // PWA manifesti (majhne datoteke, ne-gzip)
+  server->on("/manifest-portal.json",    HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-portal.json","application/manifest+json"); });
+  server->on("/manifest-sound-eng.json", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-sound-eng.json","application/manifest+json"); });
+  server->on("/manifest-theater.json",   HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-theater.json","application/manifest+json"); });
+  server->on("/manifest-dj.json",        HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-dj.json","application/manifest+json"); });
+  server->on("/manifest-staff.json",     HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-staff.json","application/manifest+json"); });
+  server->on("/manifest-event.json",     HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-event.json","application/manifest+json"); });
+  server->on("/manifest-busker.json",    HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-busker.json","application/manifest+json"); });
+  server->on("/manifest.json",           HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-portal.json","application/manifest+json"); });
+
+  // PWA ikone
+  server->on("/icon-192.png", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/icon-192.png","image/png"); });
+  server->on("/icon-512.png", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/icon-512.png","image/png"); });
+
+  // Persona config API
+  server->on("/api/persona-cfg", HTTP_GET, apiGetPersonaCfg);
+  server->on("/api/persona-cfg", HTTP_POST, [](AsyncWebServerRequest* r){}, NULL, apiPostPersonaCfg);
+
   server->begin();
-  Serial.println("[WEB] AsyncWebServer + WebSocket zagnan (6 zavihkov)");
+  Serial.println("[WEB] AsyncWebServer + WebSocket zagnan (6 zavihkov + persone)");
 }
 
 void webLoop() {
