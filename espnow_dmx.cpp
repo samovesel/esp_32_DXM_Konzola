@@ -1,13 +1,24 @@
 #include "espnow_dmx.h"
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include <esp_idf_version.h>
 #include <LittleFS.h>
 
-// ESP-NOW send callback
+// ESP-NOW send callback — podpis se razlikuje med ESP-IDF 4.x in 5.x
 static volatile int _espnowSendResult = 0;
-static void onSendCb(const uint8_t* mac, esp_now_send_status_t status) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+// ESP-IDF 5.1+ / Arduino ESP32 core 3.x: prvi parameter je wifi_tx_info_t*
+static void onSendCb(const wifi_tx_info_t* info, esp_now_send_status_t status) {
+  (void)info;
   _espnowSendResult = (status == ESP_NOW_SEND_SUCCESS) ? 1 : -1;
 }
+#else
+// ESP-IDF 4.x / Arduino ESP32 core 2.x: prvi parameter je uint8_t* mac
+static void onSendCb(const uint8_t* mac, esp_now_send_status_t status) {
+  (void)mac;
+  _espnowSendResult = (status == ESP_NOW_SEND_SUCCESS) ? 1 : -1;
+}
+#endif
 
 void EspNowDmx::begin() {
   loadConfig();

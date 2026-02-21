@@ -425,3 +425,35 @@ Kadar ima naprava več kot 6 razdelkov na enem kanalu, jih združite v smiselne 
 | Novi tipi: `cct`           | —           | Barvna temp.|
 
 **Nazaj kompatibilnost:** Vsi obstoječi profili (v1.0 in v2.0) delujejo brez sprememb. Profili brez `zoomRange` uporabljajo privzete vrednosti (10-60°) v 2D layout editorju.
+
+---
+
+## Interakcija profilov z novimi funkcijami
+
+### HSV → RGBW+A+UV pretvorba
+
+Barvno kolo v spletnem vmesniku pošlje HSV (Hue, Saturation, Value) vrednost na ESP32, ki jo pretvori v ustrezne DMX kanale **glede na profil fixture-a**:
+
+1. HSV → RGB bazna pretvorba
+2. Sistem pregleda profil za prisotnost kanalov:
+   - `color_w` / `color_ww` → bela komponenta se izloči iz desaturiranega dela
+   - `color_a` → amber se izloči iz toplih tonov (rdeča/oranžna)
+   - `color_uv` → UV intenziteta se nastavi glede na modro/vijolično barvo
+3. Rezultat: **ena sama izbira barve** pravilno nastavi vse barvne kanale fixture-a
+
+**Primer:** Fixture s profili `color_r`, `color_g`, `color_b`, `color_w`, `color_a`, `color_uv` → izbira tople bele na barvnem kolu nastavi: R=255, G=200, B=120, W=180, A=80, UV=0 — vse samodejno.
+
+**Zato je pravilno tipiziranje kanalov (type) ključnega pomena!** Napačen tip (npr. `generic` namesto `color_w`) pomeni, da sistem ne more pravilno mapirati barv.
+
+### Pixel Mapper (ESP32-S3)
+
+Pixel Mapper v načinu "Fixture Mirror" bere **barvne kanale** (color_r, color_g, color_b) iz profila fixture-a za preslikavo na WS2812 LED trak. Fixture-i brez barvnih kanalov (npr. samo dimmer) se prikažejo kot beli v intenziteti dimmerja.
+
+### Sound-to-Light
+
+Easy Mode uporablja **tipe kanalov** za samodejno mapiranje:
+- `intensity` → bass poganja dimmer
+- `color_r` / `color_g` / `color_b` → mid poganja barvno rotacijo
+- `strobe` → high poganja strobe efekt
+
+Pro Mode dovoljuje ročno izbiro katerega koli kanala ne glede na tip.

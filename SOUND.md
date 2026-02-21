@@ -1,20 +1,27 @@
-# Sound-to-Light — Uporabniški priročnik
+# Sound-to-Light — Uporabniski prirocnik
+
+> **Novo v tej verziji:** FFT analiza je sedaj strojno pospeena (hardware-accelerated) z uporabo knjiznice **ESP-DSP**. Na ESP32-S3 se uporablja Vector ISA instrukcijski nabor, kar je priblizno **3x hitrejse** od prejsnje ArduinoFFT implementacije. To omogoca nizjo latenco in boljso odzivnost pri vseh Sound-to-Light efektih.
 
 ## 1. Kako deluje Sound-to-Light (STL)?
 
-Naprava zajema zvok prek mikrofona (INMP441) ali line-in vhoda (WM8782S), ga analizira s FFT (Fast Fourier Transform) in razdeli v **8 frekvenčnih pasov**. Energija v vsakem pasu poganja svetlobne efekte na lučeh, ki imajo v patchu vklopljeno opcijo **"Zvok"** (Sound Reactive).
+Naprava zajema zvok prek mikrofona (INMP441) ali line-in vhoda (WM8782S), ga analizira s FFT (Fast Fourier Transform) in razdeli v **8 frekvencnih pasov**. Energija v vsakem pasu poganja svetlobne efekte na luceh, ki imajo v patchu vklopljeno opcijo **"Zvok"** (Sound Reactive).
 
 Signal potuje skozi verigo:
 
 ```
-Mikrofon → FFT → AGC (ojačanje) → EQ (per-band gain) → Noise gate → Frekvenčni pasovi (Bass/Mid/High) → Mapiranje na DMX kanale
+Mikrofon → I2S → ESP-DSP FFT (hardware-accelerated) → AGC → EQ → Noise gate → Frekvencni pasovi → DMX
 ```
+
+ESP-DSP FFT izkoristi strojne zmoznosti ESP32 cipaː
+- Na **ESP32-S3** se uporablja Vector ISA (SIMD instrukcije) za paralelno obdelavo FFT
+- Na **ESP32 (klasicen)** se ESP-DSP prevede v optimizirano C kodo, ki je se vedno hitrejsa od genericne ArduinoFFT
+- FFT tabele se alocirajo v PSRAM, ce je na voljo
 
 ---
 
 ## 2. FFT spekter (vizualizacija)
 
-Zgornja kartica prikazuje 8 stolpcev — po enega za vsak frekvenčni pas:
+Zgornja kartica prikazuje 8 stolpcev — po enega za vsak frekvencni pas:
 
 | Pas  | Obseg       | Opis                              |
 |------|-------------|-----------------------------------|
@@ -23,153 +30,154 @@ Zgornja kartica prikazuje 8 stolpcev — po enega za vsak frekvenčni pas:
 | Low  | 120–250 Hz  | Spodnji mid, toplina vokala      |
 | Mid  | 250–500 Hz  | Sredina — vokal, kitare           |
 | Hi-M | 500–1000 Hz | Zgornji mid, jasnost             |
-| Pres | 1–2 kHz     | Presence, razločnost             |
-| Bril | 2–4 kHz     | Brilliance, činele               |
+| Pres | 1–2 kHz     | Presence, razlocnost             |
+| Bril | 2–4 kHz     | Brilliance, cinele               |
 | Air  | 4–11 kHz    | Zrak, hi-hat, sibilanti          |
 
-Merilci **Bass** / **Mid** / **High** pod spektrom prikazujejo povprečje spodnjih 3, srednjih 3 in zgornjih 2 pasov. **Peak** = trenutni vršni nivo vhoda, **BPM** = samodejno zaznani tempo, **Beat** = "!" ob zaznavi udarca.
+Merilci **Bass** / **Mid** / **High** pod spektrom prikazujejo povprecje spodnjih 3, srednjih 3 in zgornjih 2 pasov. **Peak** = trenutni vrsni nivo vhoda, **BPM** = samodejno zaznani tempo, **Beat** = "!" ob zaznavi udarca.
 
 ---
 
 ## 3. Easy Mode
 
-Najhitrejši način za zagon sound-to-light. Vklopi stikalo **"Vklopljeno"** in sistem samodejno mapira zvok na luči.
+Najhitrejsi nacin za zagon sound-to-light. Vklopi stikalo **"Vklopljeno"** in sistem samodejno mapira zvok na luci.
 
 ### Preseti
 
-| Preset  | Opis                                | Najboljše za                        |
+| Preset  | Opis                                | Najboljse za                        |
 |---------|-------------------------------------|-------------------------------------|
-| Pulse   | Samo bas → dimmer + beat bump       | Minimalistični efekt, eden LED par  |
-| Rainbow | Mid → barvna rotacija, beat sync ON | Počasna atmosfera z barvami         |
-| Storm   | Samo high → strobe + beat bump      | Agresiven strobe na činele          |
+| Pulse   | Samo bas → dimmer + beat bump       | Minimalisticni efekt, eden LED par  |
+| Rainbow | Mid → barvna rotacija, beat sync ON | Pocasna atmosfera z barvami         |
+| Storm   | Samo high → strobe + beat bump      | Agresiven strobe na cinele          |
 | Ambient | Bass + mid, nizka jakost (30%)      | Ozadje, lounge, restavracija        |
-| Club    | Vse vklopljeno, 60%, beat sync ON   | Splošen klubski efekt               |
-| Custom  | Ročna nastavitev vseh opcij         | Ko noben preset ne ustreza          |
+| Club    | Vse vklopljeno, 60%, beat sync ON   | Splosen klubski efekt               |
+| Custom  | Rocna nastavitev vseh opcij         | Ko noben preset ne ustreza          |
 
 ### Parametri
 
-- **Občutljivost** (0.1–5.0): Množilnik na vrhu AGC. Pri 1.0 izhod sledi vršni glasnosti. Pod 1.0 manj občutljivo, nad 1.0 bolj občutljivo.
-- **Jakost** (0–100%): Koliko zvok prispeva k DMX izhodu. Pri 50% se zvočni efekt sešteje z ročnimi fader vrednostmi napol.
-- **Bass → Dimmer**: Bass energija upravlja svetilnost (dimmer kanal). Glasnejši bas = svetlejše.
-- **Mid → Barve**: Mid energija poganja barvno rotacijo (rainbow). Hue se vrti na vsakem fixture-u s 45° zamikom za raznolikost.
-- **High → Strobe**: Visoke frekvence (činele, hi-hat) sprožijo strobe/shutter kanal.
-- **Beat → Bump**: Ob zaznavi beata (bas udarec) se jakost poveča za 50% — ustvari pulz.
+- **Obcutljivost** (0.1–5.0): Mnozilnik na vrhu AGC. Pri 1.0 izhod sledi vrsni glasnosti. Pod 1.0 manj obcutljivo, nad 1.0 bolj obcutljivo.
+- **Jakost** (0–100%): Koliko zvok prispeva k DMX izhodu. Pri 50% se zvocni efekt sesteje z rocnimi fader vrednostmi napol.
+- **Bass → Dimmer**: Bass energija upravlja svetilnost (dimmer kanal). Glasnejsi bas = svetlejse.
+- **Mid → Barve**: Mid energija poganja barvno rotacijo (rainbow). Hue se vrti na vsakem fixture-u s 45 stopinjskim zamikom za raznolikost.
+- **High → Strobe**: Visoke frekvence (cinele, hi-hat) sprozijo strobe/shutter kanal.
+- **Beat → Bump**: Ob zaznavi beata (bas udarec) se jakost poveca za 50% — ustvari pulz.
 - **Beat Sync**: Efekti se sinhronizirajo z zaznano BPM. Brez: zvezna odzivnost. Z: pulziranje v ritmu.
 
 ### Primer — enostaven "club" efekt
 
-1. V zavihku Fixtures označi luči kot "Zvok" (Sound Reactive)
+1. V zavihku Fixtures oznaci luci kot "Zvok" (Sound Reactive)
 2. Odpri Sound → Easy Mode → vklopi "Vklopljeno"
 3. Izberi preset **Club**
-4. Nastavi občutljivost na 1.0, jakost na 60%
-5. Poženi glasbo — luči reagirajo na bas, barve se vrtijo, strobe utripa na činele
+4. Nastavi obcutljivost na 1.0, jakost na 60%
+5. Pozeni glasbo — luci reagirajo na bas, barve se vrtijo, strobe utripa na cinele
 
 ---
 
 ## 4. Audio EQ & AGC
 
-**AGC (Automatic Gain Control)** samodejno prilagaja ojačanje glede na glasnost okolja. Brez AGC bi tiha glasba komaj ustvarila efekt, glasna pa bi vse saturirala.
+**AGC (Automatic Gain Control)** samodejno prilagaja ojacanje glede na glasnost okolja. Brez AGC bi tiha glasba komaj ustvarila efekt, glasna pa bi vse saturirala.
 
 ### Okoljski preseti
 
 | Preset     | Glasnost | AGC          | Gate        | Uporaba                                     |
 |------------|----------|--------------|-------------|---------------------------------------------|
 | Tiha soba  | ~50 dB   | Hiter (0.8)  | Nizek (0.1) | Testiranje doma, studijsko delo, govor       |
-| Club / bar | ~80 dB   | Srednji (0.5)| Zmeren (0.3)| Manjši prostori z glasbo iz zvočnikov       |
-| Koncert    | ~100 dB  | Počasen (0.2)| Visok (0.6) | Veliki odri, močen PA sistem                |
-| Po meri    | —        | —            | —           | Ročna nastavitev vseh parametrov             |
+| Club / bar | ~80 dB   | Srednji (0.5)| Zmeren (0.3)| Manjsi prostori z glasbo iz zvocnikov       |
+| Koncert    | ~100 dB  | Pocasen (0.2)| Visok (0.6) | Veliki odri, mocen PA sistem                |
+| Po meri    | —        | —            | —           | Rocna nastavitev vseh parametrov             |
 
 ### EQ drsniki (8 pasov)
 
-Grafični izenačevalnik, ki množilnik (0.0–3.0) na vsakem frekvenčnem pasu. Privzeto 1.0 = brez spremembe.
+Graficni izenacevalnik, ki mnozilnik (0.0–3.0) na vsakem frekvencnem pasu. Privzeto 1.0 = brez spremembe.
 
-- Povečaj **Sub + Bass** na 2.0 → močnejši odziv na bas boben
-- Zmanjšaj **Air** na 0.3 → manj šumenja od visokih frekvenc
-- Povečaj **Mid** na 1.5 → bolj izrazita barvna rotacija pri vokalu
+- Povecaj **Sub + Bass** na 2.0 → mocnejsi odziv na bas boben
+- Zmanjsaj **Air** na 0.3 → manj sumenja od visokih frekvenc
+- Povecaj **Mid** na 1.5 → bolj izrazita barvna rotacija pri vokalu
 
 ### AGC hitrost (0–1.0)
 
 Kako hitro se sistem prilagodi spremembi glasnosti.
 
-- **Počasi (0.1–0.3)** = stabilno za šov, glasnost se ne spreminja hitro
-- **Hitro (0.7–1.0)** = odzivno za testiranje pri različnih glasnostih
+- **Pocasi (0.1–0.3)** = stabilno za sov, glasnost se ne spreminja hitro
+- **Hitro (0.7–1.0)** = odzivno za testiranje pri razlicnih glasnostih
 
 ### Noise gate (0–1.0)
 
-Filtrira šum ko ni glasbe.
+Filtrira sum ko ni glasbe.
 
-- **0** = izključen (vedno reagira — tudi na šum klime)
+- **0** = izkljucen (vedno reagira — tudi na sum klime)
 - **0.3** = zmeren (ignorira tihe zvoke)
 - **0.8+** = agresiven (samo glasna glasba gre skozi)
 
 ### Primer — nastavi za tiho sobo doma
 
 1. Odpri Audio EQ & AGC → klikni **Tiha soba**
-2. Sub in Bass se postavita na 2.0 (dvojno ojačanje za šibek bas iz telefona)
+2. Sub in Bass se postavita na 2.0 (dvojno ojacanje za sibek bas iz telefona)
 3. AGC hitrost: 0.8 (hitro prilagajanje)
 4. Noise gate: 0.1 (nizek, da prepusti tudi tihe signale)
-5. Poženi glasbo s telefona — luči morajo reagirati
+5. Pozeni glasbo s telefona — luci morajo reagirati
 
 ---
 
 ## 5. Manual Beat
 
-Ritmični efekti **brez zvočnega vira** — za situacije ko mikrofon ne deluje ali ko hočeš natančen tempo. Lahko deluje samostojno ali kot fallback za audio.
+Ritmicni efekti **brez zvocnega vira** — za situacije ko mikrofon ne deluje ali ko hoces natancen tempo. Lahko deluje samostojno ali kot fallback za audio.
 
 ### Vir beata
 
-- **Manual**: Tempo določiš s TAP gumbom ali BPM drsnikom. Vedno aktiven.
-- **Auto (fallback)**: Ko je zvočni signal prisoten, se uporabi avdio beat detekcija. Ko signal izgine (tišina), se preklopi na manual tempo. *Priporočeno za žive nastope!*
+- **Manual**: Tempo dolocis s TAP gumbom ali BPM drsnikom. Vedno aktiven.
+- **Auto (fallback)**: Ko je zvocni signal prisoten, se uporabi avdio beat detekcija. Ko signal izgine (tisina), se preklopi na manual tempo. *Priporoceno za zive nastope!*
 - **Samo avdio**: Samo avdio beat detekcija. Ko ni signala, efekti utihnejo.
+- **Ableton Link**: BPM in beat faza se sinhronizirata prek Wi-Fi z DJ software-om (Ableton Live, Traktor, Rekordbox, Serato, VirtualDJ). Zahteva, da sta ESP32 in racunalnik/telefon z DJ appom na istem Wi-Fi omrezju. Vec o tem v poglavju [6. Ableton Link](#6-ableton-link).
 
 ### TAP TEMPO
 
-Pritisni gumb 4-krat v ritmu glasbe. Sistem izračuna BPM iz intervalov med pritiski. Lahko tudi ročno vpišeš BPM z drsnikom (30–300).
+Pritisni gumb 4-krat v ritmu glasbe. Sistem izracuna BPM iz intervalov med pritiski. Lahko tudi rocno vpises BPM z drsnikom (30–300).
 
 ### Programi
 
 | Program   | Opis                              | Efekt                                          |
 |-----------|-----------------------------------|-------------------------------------------------|
 | Pulse     | Intenziteta pada od beata         | Blisk na beat, nato postopno ugasne             |
-| Chase     | Zaporedna aktivacija              | Ena luč naenkrat, po vrsti                      |
-| Sine      | Gladka sinusoidna oscilacija      | Počasno dihanje svetlobe                        |
+| Chase     | Zaporedna aktivacija              | Ena luc naenkrat, po vrsti                      |
+| Sine      | Gladka sinusoidna oscilacija      | Pocasno dihanje svetlobe                        |
 | Strobe    | Ostro vklop/izklop na beat        | Kratki blisk (15% faze) nato tema               |
 | Rainbow   | Barvna rotacija sinhrona z beatom | Barve se vrtijo v tempu                         |
-| Build     | Gradnja čez N beatov              | Intenziteta raste z vsakim beatom, nato reset   |
-| Random    | Naključne barve ob beatu          | Vsaka luč dobi naključno barvo                  |
-| Alternate | Sode/lihe izmenjujejo             | Luči 1,3,5 → beat 1; luči 2,4,6 → beat 2      |
-| Wave      | Sinusni val s faznim zamikom      | Val svetlobe potuje čez luči                    |
-| Stack     | Vsak beat doda luč                | Postopno prižiganje, nato reset                 |
-| Sparkle   | Naključno utripanje               | Naključne luči kratko zasvetijo                 |
-| Scanner   | Ena luč skenira levo-desno       | Kot "Knight Rider" — ping-pong                  |
+| Build     | Gradnja cez N beatov              | Intenziteta raste z vsakim beatom, nato reset   |
+| Random    | Nakljucne barve ob beatu          | Vsaka luc dobi nakljucno barvo                  |
+| Alternate | Sode/lihe izmenjujejo             | Luci 1,3,5 → beat 1; luci 2,4,6 → beat 2      |
+| Wave      | Sinusni val s faznim zamikom      | Val svetlobe potuje cez luci                    |
+| Stack     | Vsak beat doda luc                | Postopno priziganje, nato reset                 |
+| Sparkle   | Nakljucno utripanje               | Nakljucne luci kratko zasvetijo                 |
+| Scanner   | Ena luc skenira levo-desno       | Kot "Knight Rider" — ping-pong                  |
 
 ### Subdivizija
 
-Množilnik tempa:
-- **1/4x** = 4x počasneje od BPM
+Mnozilnik tempa:
+- **1/4x** = 4x pocasneje od BPM
 - **1x** = normalen tempo
 - **4x** = 4x hitreje (npr. 120 BPM → 480 udarcev/min)
 
 ### Dodatni parametri
 
 - **Intenziteta** (0–100%): Maksimalna svetilnost efekta.
-- **Barvni efekti**: Vklopi barvno spreminjanje (pri programih z barvami). Izklopi za čisto belo.
+- **Barvni efekti**: Vklopi barvno spreminjanje (pri programih z barvami). Izklopi za cisto belo.
 - **Build beatov** (4–32): Koliko beatov traja en cikel Build programa.
-- **Krivulja zatemnitve**: Linear = enakomerno, Exponential = bolj dramatično, Logarithmic = mehkejše.
-- **Attack** (0–500 ms): Čas od teme do polne svetilnosti. 0 = takojšen. 50+ ms = mehkejši vklop.
-- **Decay** (0–2000 ms): Čas od polne svetilnosti do ugasnitve. 0 = privzeto (po programu). 500+ ms = dolg rep.
-- **Paleta**: Izberi barvno shemo — Rainbow, Warm (rdeča/oranžna), Cool (modra/vijolična), Fire, Ocean, Party, ali Custom (4 barve po meri).
+- **Krivulja zatemnitve**: Linear = enakomerno, Exponential = bolj dramaticno, Logarithmic = mehkejse.
+- **Attack** (0–500 ms): Cas od teme do polne svetilnosti. 0 = takojsen. 50+ ms = mehkejsi vklop.
+- **Decay** (0–2000 ms): Cas od polne svetilnosti do ugasnitve. 0 = privzeto (po programu). 500+ ms = dolg rep.
+- **Paleta**: Izberi barvno shemo — Rainbow, Warm (rdeca/oranzna), Cool (modra/vijolicna), Fire, Ocean, Party, ali Custom (4 barve po meri).
 
 ### FX Simetrija (Manual Beat)
 
-Gumbi pod beat programi določajo vrstni red fixture-ov za efekte:
+Gumbi pod beat programi dolocajo vrstni red fixture-ov za efekte:
 
 - **→ Naprej** — normalno (1→2→3→4)
 - **← Nazaj** — obratno (4→3→2→1)
 - **↔ Sredina ven** — iz sredine navzven
 - **⇄ Zunaj not** — od zunaj proti sredini
 
-Uporabno za Chase, Wave, Stack in Scanner programe — npr. simetrija "Sredina ven" ustvari efekt ki se širi od centra odra.
+Uporabno za Chase, Wave, Stack in Scanner programe — npr. simetrija "Sredina ven" ustvari efekt ki se siri od centra odra.
 
 ### Primer — chase efekt na 128 BPM
 
@@ -179,99 +187,249 @@ Uporabno za Chase, Wave, Stack in Scanner programe — npr. simetrija "Sredina v
 4. Program: **Chase**
 5. Subdivizija: **1x**
 6. Intenziteta: 80%, Barvni efekti: ON, Paleta: Rainbow
-7. Luči se po vrsti prižigajo v mavričnih barvah na vsak beat
+7. Luci se po vrsti prizigajo v mavricnih barvah na vsak beat
 
-### Primer — auto fallback za živi nastop
+### Primer — auto fallback za zivi nastop
 
-1. Nastavi Easy Mode z željenim presetom (npr. Club)
+1. Nastavi Easy Mode z zeljenim presetom (npr. Club)
 2. Vklopi Manual Beat z virom **Auto (fallback)**
 3. Nastavi program Chase, BPM 120
-4. Ko igra glasba → luči reagirajo na zvok (Easy Mode)
-5. Ko nastane tišina (prehod med skladbami) → Manual Beat prevzame s Chaseom pri 120 BPM
-6. Ko glasba spet zaživi → samodejno nazaj na audio
+4. Ko igra glasba → luci reagirajo na zvok (Easy Mode)
+5. Ko nastane tisina (prehod med skladbami) → Manual Beat prevzame s Chaseom pri 120 BPM
+6. Ko glasba spet zazivi → samodejno nazaj na audio
 
 ---
 
-## 6. Program Chain (Playlist)
+## 6. Ableton Link
 
-Avtomatsko zaporedje programov. Sistem samodejno preklopi program po zadanem številu beatov.
+### Kaj je Ableton Link?
+
+Ableton Link je **Wi-Fi UDP multicast protokol** za sinhronizacijo beat grida med napravami. Razvil ga je Ableton, a ga podpira sirok nabor DJ in glasbene programske opreme. Protokol omogoca, da vec naprav na istem Wi-Fi omrezju deli skupen BPM in beat fazo — brez centralnega streznika, brez kablov, brez MIDI.
+
+ESP32 se prek Link protokola prikljuci v isto beat mrezo kot DJ software, kar pomeni, da se vsi svetlobni efekti (Pulse, Chase, Rainbow, Strobe...) natancno sinhronizirata s tempom, ki ga doloca DJ.
+
+### Podprta programska oprema
+
+| Software          | Platforma           | Opombe                                 |
+|-------------------|---------------------|----------------------------------------|
+| Ableton Live      | macOS, Windows      | Izvorna podpora (razvili Link)         |
+| Traktor Pro       | macOS, Windows      | Gumb "Link" v nastavitvah              |
+| Rekordbox         | macOS, Windows      | Podpora od verzije 6.0                 |
+| Serato DJ         | macOS, Windows      | Gumb "Link" v zgornjem meniju          |
+| VirtualDJ         | macOS, Windows      | Podpora v Professional verziji         |
+| djay (Algoriddim) | macOS, iOS, Android | Mobilna DJ aplikacija s Link podporo   |
+| Reason            | macOS, Windows      | DAW z Link podporo                     |
+
+Poleg DJ software podpira Link tudi mnogo mobilnih aplikacij (drum machine, synth, looper) — vsaka naprava, ki podpira Ableton Link, se samodejno sinhronizirata z ESP32.
+
+### Kako uporabiti Ableton Link
+
+**Korak 1: Povezi ESP32 in DJ racunalnik na isto Wi-Fi omrezje**
+
+ESP32 in racunalnik (ali telefon) z DJ software-om morata biti na istem Wi-Fi omrezju. Link uporablja UDP multicast, zato mora Wi-Fi router dovoliti multicast promet (vecina domacih routerjev to podpira privzeto).
+
+**Korak 2: Vklopi Link v DJ software-u**
+
+- **Traktor Pro**: Preferences → Link → Enable
+- **Ableton Live**: Gumb "Link" v zgornjem levem kotu
+- **Rekordbox**: Settings → Audio → Ableton Link → ON
+- **Serato DJ**: Setup → DJ Preferences → Enable Ableton Link
+- **VirtualDJ**: Settings → Options → Ableton Link
+
+**Korak 3: Izberi Link kot vir beata v ESP32 spletnem vmesniku**
+
+1. Odpri spletni vmesnik ESP32 (obicajno http://192.168.x.x)
+2. Pojdi na **Sound → Manual Beat**
+3. Pri **Vir beata** izberi **"Ableton Link"**
+4. Sistem se samodejno poveze z Link sejo na Wi-Fi omrezju
+
+**Korak 4: Preveri status povezave**
+
+V statusni vrstici se prikazejo:
+- **Peers**: Stevilo povezanih naprav (npr. "2 peers" = ESP32 + DJ software)
+- **BPM**: Sinhroniziran tempo (npr. "128.0 BPM" — prevzet iz DJ software-a)
+- **Phase**: Trenutna beat faza (0.0–1.0) — prikazana kot utripajoc indikator
+
+Ce je stevilo peers 0, pomeni da DJ software se ni vklopil Linka ali da naprave niso na istem omrezju.
+
+**Korak 5: Uzivaj v sinhroniziranih efektih**
+
+Vsi beat programi (Pulse, Chase, Rainbow, Strobe, Build, Alternate, Wave, Stack, Sparkle, Scanner) se sedaj sinhronizirajo z Link beat gridom. Ko DJ spremeni BPM, se ESP32 samodejno prilagodi. Beat faza je natancno poravnana — luci utripnejo tocno na beat, ne z zaostankom.
+
+### LED statusni prikaz
+
+Na fizicni napravi ESP32 LED indikator prikazuje stanje Link povezave:
+- **Ugasnjeno**: Link ni aktiven
+- **Pocasno utripanje**: Link aktiven, iscem vrstnike (0 peers)
+- **Hitro utripanje na beat**: Link povezan in sinhroniziran
+
+### Zahteve za namestitev
+
+Ableton Link funkcionalnost zahteva namestitev ustrezne knjiznice:
+
+- **Knjiznica**: Ableton Link ESP32 port
+- **GitHub**: https://github.com/pschatzmann/esp32-esp-idf-abl-link
+- **Namestitev**: Kopiraj mapo `include/ableton` v `Arduino/libraries/AbletonLink/`
+- **Preverjanje**: Ce je knjiznica pravilno nalozena, se v serijskem monitorju ob zagonu izpise: `[LINK] Ableton Link knjiznica najdena`
+- **Brez knjiznice**: Ce knjiznica NI nalozena, modul deluje kot **stub** — opcija "Ableton Link" je vidna v meniju, a ob izbiri se izpise opozorilo in funkcionalnost ne deluje. Vse ostale funkcije (Manual, Auto fallback, Samo avdio) delujejo normalno.
+
+### Primeri uporabe z Ableton Link
+
+#### DJ set s Traktor Pro
+
+1. Povezi line-in iz DJ mize v WM8782S na ESP32
+2. V Traktor Pro: Preferences → Link → Enable
+3. V ESP32 spletnem vmesniku: Sound → Manual Beat → Vir beata → **Ableton Link**
+4. Preveri status: "2 peers", BPM prikazan (npr. 126 BPM)
+5. Vklopi Easy Mode → **Club** preset
+6. Nastavi Manual Beat program na **Chase** za prehode med skladbami
+7. Luci samodejno sledijo BPM iz Traktor-ja — ko DJ spremeni tempo, se luci prilagodijo
+
+#### Multi-ESP32 sinhronizacija
+
+Vec ESP32 kontrolerjev na istem Wi-Fi omrezju se lahko vsi sinhronizirata prek Ableton Link:
+
+1. Povezi vse ESP32 naprave na isto Wi-Fi omrezje
+2. Na vsaki ESP32: Sound → Manual Beat → Vir beata → **Ableton Link**
+3. Aktiviraj Link v DJ software-u (ali v katerikoli aplikaciji, ki podpira Link)
+4. Vse ESP32 naprave delijo isti BPM in beat fazo
+5. Rezultat: luci po celem prostoru (npr. oder, bar, plesisce) utripajo v popolni sinhronizaciji
+
+Ce nimas DJ software-a, lahko uporabis katerokoli brezplacno mobilno aplikacijo z Ableton Link podporo (npr. "Link to MIDI" na iOS) kot "master clock" — telefon doloca tempo, vsi ESP32-ji pa sledijo.
+
+#### Ableton Live produkcija s svetlobnim sovom
+
+1. V Ableton Live: vklopi Link (zgornji levi kot)
+2. ESP32 na istem Wi-Fi: Vir beata → **Ableton Link**
+3. Program: **Build** z 16 beati — svetloba raste skozi 4 takte
+4. Ko v Abletonu sprozis drop, se svetloba prav tako "eksplodira" na pravem mestu
+5. Subdivizija **2x** za hitrejsi odziv na hi-hat vzorce
+
+---
+
+## 7. Program Chain (Playlist)
+
+Avtomatsko zaporedje programov. Sistem samodejno preklopi program po zadanem stevilu beatov.
 
 Primer: Pulse (8 beatov) → Chase (16 beatov) → Rainbow (8 beatov) → ponovi.
 
 Vklopi **Chain**, dodaj vnose z gumbom "+", izberi program in trajanje za vsakega.
 
+Program Chain deluje z vsemi viri beata, vkljucno z Ableton Link — preklop programa se zgodi na pravilnem mestu v beat gridu.
+
 ---
 
-## 7. Cone (Per-fixture mapiranje)
+## 8. Cone (Per-fixture mapiranje)
 
-Določi, kateri frekvenčni pas poganja posamezen fixture v Easy Mode:
+Doloci, kateri frekvencni pas poganja posamezen fixture v Easy Mode:
 
 - **Vse (All)**: Fixture reagira na celoten spekter (privzeto)
 - **Bass**: Samo na bas
 - **Mid**: Samo na srednje frekvence
 - **High**: Samo na visoke frekvence
 
-**Primer:** Postavi LED pare na **Bass**, moving heade na **Mid**, strobe na **High**. Rezultat: pari utripajo na bas boben, headi se vrtijo na vokal, strobe pa šika na činele.
+**Primer:** Postavi LED pare na **Bass**, moving heade na **Mid**, strobe na **High**. Rezultat: pari utripajo na bas boben, headi se vrtijo na vokal, strobe pa sika na cinele.
 
 ---
 
-## 8. Pro Mode — Pravila
+## 9. HSV Barvno kolo (Mixer)
 
-Za napredne uporabnike. Ročno definiraj mapiranje: kateri frekvenčni obseg poganja kateri DMX kanal na katerem fixture-u.
+### Kako deluje
+
+Barvni izbiralnik (color picker) v spletnem vmesniku sedaj poslje **HSV vrednosti** (Hue, Saturation, Value) neposredno na ESP32, namesto posameznih RGB kanalov. ESP32 nato izvede pretvorbo v ustrezne DMX kanale glede na profil fixture-a.
+
+### Signalna pot
+
+```
+Color Picker (HSV) → WebSocket → ESP32 → HSV→RGB→RGBW+A+UV → DMX kanali
+```
+
+### Prednosti
+
+- **Manj WebSocket prometa**: En sam HSV paket namesto 6–8 posameznih kanalskih sporocil (R, G, B, W, A, UV). To zmanjsa obremenitev Wi-Fi povezave in pohitri odzivnost.
+- **Profil-zavedna pretvorba**: ESP32 samodejno pretvori barvo v ustrezne kanale glede na profil fixture-a:
+  - **RGB fixture**: HSV → R, G, B
+  - **RGBW fixture**: HSV → R, G, B + izracun belega kanala (W) iz desaturiranega dela barve
+  - **RGBWA fixture**: HSV → R, G, B, W + Amber izracunan iz toplih tonov
+  - **RGBWAUV fixture**: HSV → R, G, B, W, A + UV izracunan iz hladnih/vijolicnih tonov
+- **Konsistentnost**: Ista HSV barva izgleda enako na vseh tipih fixture-ov, ker ESP32 optimalno razporedi energijo med kanali.
+
+### Uporaba
+
+1. V zavihku **Mixer** klikni na barvno kolo ob zelenemu fixture-u
+2. Izberi barvo z vrtenjem po krogu (Hue) in premikanjem po trikotniku (Saturation + Value)
+3. Barva se takoj poslje na ESP32 kot HSV paket
+4. ESP32 pretvori v RGB/RGBW/RGBWAUV glede na profil fixture-a
+5. Slider za "V" (Value/svetilnost) pod kolesom omogoca neodvisno nastavitev svetilnosti brez spreminjanja barve
+
+### Tehnincni detajl
+
+Ce ima fixture profil z W (beli), A (amber) ali UV kanaloma, ESP32 izracuna optimalno razporeditev:
+- **Beli kanal (W)**: Ko je nasicenost (S) nizka, se del energije prenese na beli kanal za cistozso belo svetlobo
+- **Amber kanal (A)**: Ko je Hue v toplem obmocju (15–60 stopinj), se del energije prenese na amber za bogatejse tople tone
+- **UV kanal**: Ko je Hue v vijolicnem obmocju (270–330 stopinj), se del energije prenese na UV za globljo vijolicno
+
+---
+
+## 10. Pro Mode — Pravila
+
+Za napredne uporabnike. Rocno definiraj mapiranje: kateri frekvencni obseg poganja kateri DMX kanal na katerem fixture-u.
 
 Vsako pravilo ima:
 
 - **Fixture + Kanal**: Kateri fixture in kateri kanal (dimmer, R, G, B...)
-- **Freq**: Frekvenčni obseg (npr. 60–250 Hz za bas)
+- **Freq**: Frekvencni obseg (npr. 60–250 Hz za bas)
 - **Izhod**: DMX razpon (npr. 0–255 za poln obseg, 50–200 za omejen)
-- **Krivulja**: Linear, Exponential (bolj dramatično), Logarithmic (mehko), Square (koren)
+- **Krivulja**: Linear, Exponential (bolj dramaticno), Logarithmic (mehko), Square (koren)
 
-Pro pravila delujejo neodvisno od Easy Mode — lahko imaš oboje hkrati.
+Pro pravila delujejo neodvisno od Easy Mode — lahko imas oboje hkrati.
 
 ---
 
-## 9. LFO / FX Generator
+## 11. LFO / FX Generator
 
-Nizkofrekvenčni oscilator — ustvarja ponavljajoče vzorce na DMX kanalih **neodvisno od zvoka**.
+Nizkofrekventni oscilator — ustvarja ponavljajoce vzorce na DMX kanalih **neodvisno od zvoka**.
 
-- **Waveform**: Sine (gladko), Triangle (linearno), Square (ostro vklop/izklop), Saw (žagasto)
+- **Waveform**: Sine (gladko), Triangle (linearno), Square (ostro vklop/izklop), Saw (zagasto)
 - **Target**: Na kateri parameter vpliva (Dimmer, Pan, Tilt, R, G, B)
 - **Rate**: Hitrost oscilacije (Hz). 0.5 = en cikel na 2 sekundi, 2.0 = 2 cikla na sekundo.
-- **Depth**: Amplituda (0–1). 0.5 = nihanje za +/-50% od središča.
-- **Phase**: Fazni zamik med fixture-i (0–1). 0.25 = vsak fixture zamaknjen za četrtino cikla → val.
+- **Depth**: Amplituda (0–1). 0.5 = nihanje za +/-50% od sredisca.
+- **Phase**: Fazni zamik med fixture-i (0–1). 0.25 = vsak fixture zamaknjen za cetrtino cikla → val.
 - **Symmetry**: Simetrija faznega razporeda:
   - **→ Naprej** — normalno (1→2→3→4)
   - **← Nazaj** — obratno (4→3→2→1)
   - **↔ Sredina** — iz sredine navzven
   - **⇄ Zunaj** — od zunaj proti sredini
 
-**Primer — dihanje svetlobe:** Sine, Dimmer, Rate 0.3, Depth 0.8, Phase 0. Na vseh fixture-ih se svetilnost počasi dviguje in spušča.
+**Primer — dihanje svetlobe:** Sine, Dimmer, Rate 0.3, Depth 0.8, Phase 0. Na vseh fixture-ih se svetilnost pocasi dviguje in spusca.
 
 ---
 
-## 10. Shape Generator
+## 12. Shape Generator
 
-Ustvarja gibalne vzorce za **Pan/Tilt** na moving head lučeh.
+Ustvarja gibalne vzorce za **Pan/Tilt** na moving head luceh.
 
-- **Circle**: Krožno gibanje
-- **Figure-8**: Osmička
-- **Triangle / Square**: Geometrične oblike
-- **Line H / Line V**: Vodoravna ali navpična linija
+- **Circle**: Krozno gibanje
+- **Figure-8**: Osmicka
+- **Triangle / Square**: Geometricne oblike
+- **Line H / Line V**: Vodoravna ali navpicna linija
 - **Speed**: Hitrost gibanja
 - **Size**: Velikost vzorca
 - **Spread**: Fazni zamik med fixture-i
 
 ---
 
-## 11. Master Speed
+## 13. Master Speed
 
-Globalni množilnik hitrosti za vse efekte (LFO, Shape, STL). **0.5x** = pol hitreje, **2.0x** = dvojna hitrost. Uporabno za hitro prilagoditev tempa vseh efektov hkrati.
+Globalni mnozilnik hitrosti za vse efekte (LFO, Shape, STL). **0.5x** = pol hitreje, **2.0x** = dvojna hitrost. Uporabno za hitro prilagoditev tempa vseh efektov hkrati.
 
 ---
 
-## 12. Shranjevanje
+## 14. Shranjevanje
 
-Gumb **"Shrani nastavitve"** v vsaki kartici zapiše konfiguracijo v flash pomnilnik ESP32. Ob restartu se nastavitve naložijo. Brez shranjevanja se nastavitve ob izklopu izgubijo.
+Gumb **"Shrani nastavitve"** v vsaki kartici zapise konfiguracijo v flash pomnilnik ESP32. Ob restartu se nastavitve nalozijo. Brez shranjevanja se nastavitve ob izklopu izgubijo.
+
+To velja tudi za nastavitve Ableton Link — ce je Link izbran kot vir beata in nastavitve shranjene, se ob ponovnem zagonu ESP32 samodejno poskusi povezati z Link sejo na Wi-Fi.
 
 ---
 
@@ -279,27 +437,27 @@ Gumb **"Shrani nastavitve"** v vsaki kartici zapiše konfiguracijo v flash pomni
 
 ### Hitra demonstracija doma (telefon kot vir)
 
-1. Fixtures → označi luči kot Sound Reactive
+1. Fixtures → oznaci luci kot Sound Reactive
 2. Sound → Audio EQ & AGC → **Tiha soba** preset
 3. Sound → Easy Mode → **Club** preset
 4. Predvajaj glasbo na telefonu blizu mikrofona
-5. Luči reagirajo — prilagodi EQ po potrebi (povečaj Bass za več odziva na bas)
+5. Luci reagirajo — prilagodi EQ po potrebi (povecaj Bass za vec odziva na bas)
 
 ### Klubski nastop z DJ-em
 
-1. Poveži line-in iz mešalne mize v WM8782S
+1. Povezi line-in iz mesalne mize v WM8782S
 2. Audio EQ & AGC → **Club / bar** preset
 3. Easy Mode → **Club** preset, jakost 70%
 4. Manual Beat → **Auto (fallback)**, program Chase, BPM 128
-5. Ko DJ igra → avdio poganja efekte. V premorih → chase efekt vzdržuje vzdušje.
+5. Ko DJ igra → avdio poganja efekte. V premorih → chase efekt vzdrzuje vzdusje.
 
 ### Koncert — veliki oder
 
 1. Line-in iz FOH mize
 2. Audio EQ & AGC → **Koncert** preset
-3. Zmanjšaj **Sub** na 0.5 (preveč sub-bassa iz PA sistema)
+3. Zmanjsaj **Sub** na 0.5 (prevec sub-bassa iz PA sistema)
 4. Easy Mode s presetom **Pulse** — samo bas poganja dimmer
-5. Manual Beat → **Auto (fallback)**, program Strobe, za močne prehode
+5. Manual Beat → **Auto (fallback)**, program Strobe, za mocne prehode
 
 ### Moving head show brez glasbe
 
@@ -307,20 +465,20 @@ Gumb **"Shrani nastavitve"** v vsaki kartici zapiše konfiguracijo v flash pomni
 2. Manual Beat → vir **Manual**, BPM 100
 3. Program: **Chase**, subdivizija 1x
 4. Shape Generator → Circle, Speed 0.5, Size 50%, Spread 0.25
-5. Luči se vrtijo v krogu, prižigajo pa se zaporedno na beat
+5. Luci se vrtijo v krogu, prizigajo pa se zaporedno na beat
 
 ### Ambient osvetlitev za restavracijo
 
 1. Audio EQ & AGC → **Tiha soba** preset
 2. Easy Mode → **Ambient** preset (nizka jakost 30%)
-3. Zmanjšaj High in Bril EQ na 0.3 (prepreči odziv na pogovor/krožnike)
-4. Povečaj Mid na 1.5 → mehka barvna rotacija ob glasbi v ozadju
+3. Zmanjsaj High in Bril EQ na 0.3 (prepreci odziv na pogovor/kroznike)
+4. Povecaj Mid na 1.5 → mehka barvna rotacija ob glasbi v ozadju
 
-### Strobe na činele (EDM nastop)
+### Strobe na cinele (EDM nastop)
 
 1. Easy Mode → **Storm** preset
-2. Audio EQ & AGC → povečaj **Bril** in **Air** na 2.0
-3. Zmanjšaj **Sub** in **Bass** na 0.3 (ignoriraj bas — samo visoke frekvence)
+2. Audio EQ & AGC → povecaj **Bril** in **Air** na 2.0
+3. Zmanjsaj **Sub** in **Bass** na 0.3 (ignoriraj bas — samo visoke frekvence)
 4. Noise gate na 0.4 → strobe samo ko je glasba dovolj glasna
 
 ### Barvna sinhronizacija z beatom
@@ -328,4 +486,43 @@ Gumb **"Shrani nastavitve"** v vsaki kartici zapiše konfiguracijo v flash pomni
 1. Easy Mode → **Rainbow** preset
 2. Manual Beat → vir **Auto (fallback)**, program Rainbow
 3. Subdivizija: **1/2x** → barve se menjajo na vsak drugi beat
-4. Paleta: **Warm** za toplejše barve ali **Ocean** za hladne tone
+4. Paleta: **Warm** za toplejse barve ali **Ocean** za hladne tone
+
+### DJ set z Ableton Link (Traktor)
+
+1. Povezi line-in iz DJ mize v WM8782S
+2. Audio EQ & AGC → **Club / bar** preset
+3. V Traktor Pro: Preferences → Link → Enable
+4. V ESP32 spletnem vmesniku: Sound → Manual Beat → Vir beata → **Ableton Link**
+5. Preveri: "2 peers" in BPM se ujema s Traktor-jem
+6. Easy Mode → **Club** preset, jakost 70%
+7. Manual Beat program: **Chase** — luci sledijo beat gridu iz Traktor-ja
+8. Ko DJ preide na novo skladbo in spremeni BPM, se luci samodejno prilagodijo
+
+### Multi-ESP32 sinhroniziran oder
+
+1. Postavi vec ESP32 kontrolerjev po prostoru (oder, bar, plesisce, vhod)
+2. Vse povezi na isto Wi-Fi omrezje
+3. Na vsaki ESP32: Vir beata → **Ableton Link**
+4. DJ vklopi Link v svojem software-u
+5. Vse luci po prostoru utripajo v popolni sinhronizaciji z DJ-em
+6. Vsaka ESP32 ima lahko drug program (npr. oder = Chase, bar = Pulse, plesisce = Rainbow)
+7. Skupen BPM in beat faza zagotavljata, da je celoten prostor v ritmu
+
+### Ableton Live produkcija + svetlobni sov
+
+1. V Ableton Live: vklopi Link
+2. ESP32 na istem Wi-Fi: Vir beata → **Ableton Link**
+3. Nastavi Easy Mode → **Club** preset
+4. Manual Beat program → **Build** z 16 beati
+5. V Abletonu pripravljen arrangement z build-up in drop sekcijami
+6. Svetloba samodejno gradi intenziteto cez 4 takte in "eksplodira" na drop
+7. Za se vec dinamike: Program Chain → Build (16b) → Strobe (4b) → Chase (8b) → ponovi
+
+### Brezplacni Link master clock (brez DJ software-a)
+
+1. Ce nimas DJ software-a, nalozi brezplacno "Link to MIDI" app na telefon (iOS/Android)
+2. V aplikaciji nastavi zelen BPM (npr. 125) in vklopi Link
+3. Na ESP32: Vir beata → **Ableton Link**
+4. Telefon deluje kot master clock — ESP32 sledi tempu
+5. BPM lahko spreminjas v realnem casu na telefonu, luci se takoj prilagodijo
