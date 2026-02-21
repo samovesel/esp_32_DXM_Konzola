@@ -285,7 +285,8 @@ enum SoundZone : uint8_t {
 enum BeatSource : uint8_t {
   BSRC_AUDIO   = 0,  // Iz FFT avdio analize
   BSRC_MANUAL  = 1,  // Ročni tap tempo / BPM vpis
-  BSRC_AUTO    = 2   // Avdio ko je signal, sicer manual fallback
+  BSRC_AUTO    = 2,  // Avdio ko je signal, sicer manual fallback
+  BSRC_LINK    = 3   // Ableton Link (Wi-Fi sinhronizacija z DJ software)
 };
 
 // Programi za manual beat mode

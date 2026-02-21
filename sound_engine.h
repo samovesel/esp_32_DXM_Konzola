@@ -4,6 +4,7 @@
 #include "config.h"
 #include "audio_input.h"
 #include "fixture_engine.h"
+#include "link_beat.h"
 
 // ============================================================================
 //  SoundEngine
@@ -153,6 +154,9 @@ private:
   };
   GroupBeatState _grpState[MAX_GROUPS];
 
+  // Ableton Link
+  LinkBeat _link;
+
   void processFFT();
   void extractBands(float dt);
   void detectBeat(float dt);
@@ -178,6 +182,10 @@ public:
 
   // Per-group phase access (Faza 6)
   float getGroupPhase(int g) const { return (g>=0&&g<MAX_GROUPS)?_grpState[g].phase:0; }
+
+  // Ableton Link
+  LinkBeat& getLinkBeat() { return _link; }
+  const LinkBeat& getLinkBeat() const { return _link; }
 };
 
 #endif

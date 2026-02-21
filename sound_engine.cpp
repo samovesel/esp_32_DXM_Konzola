@@ -69,6 +69,9 @@ void SoundEngine::begin(AudioInput* audio, FixtureEngine* fixtures) {
     Serial.println("[SND] FFT buffer alokacija NAPAKA");
   }
 
+  // Ableton Link
+  _link.begin();
+
   loadConfig();
   Serial.println("[SND] Sound engine inicializiran");
 }
@@ -105,6 +108,9 @@ void SoundEngine::update() {
   } else if (now - _lastUpdateTime > 2000) {
     _mbAudioPresent = false; // Ni bilo avdio podatkov > 2s
   }
+
+  // Ableton Link update (vedno, za peer discovery)
+  if (_link.isEnabled()) _link.update();
 
   // Manual beat se posodablja vedno (neodvisno od avdia)
   if (_mbCfg.enabled) {
@@ -597,13 +603,22 @@ void SoundEngine::updateManualBeat(float dt) {
   if (intervalMs < 100) intervalMs = 100;
 
   unsigned long now = millis();
-  float elapsed = (float)(now - _mbLastBeatMs);
+  bool newBeat = false;
 
-  // Izračunaj fazo
-  _mbPhase = fminf(elapsed / intervalMs, 1.0f);
+  // ── Ableton Link source: uporabi Link fazo in BPM ──
+  if (_mbCfg.source == BSRC_LINK && _link.isEnabled()) {
+    _mbPhase = _link.getBeatPhase();
+    _mbCfg.bpm = _link.getBpm();  // Sync BPM from Link
+    newBeat = _link.beatTriggered();
+  } else {
+    // ── Standard source: izračunaj fazo iz timer-ja ──
+    float elapsed = (float)(now - _mbLastBeatMs);
+    _mbPhase = fminf(elapsed / intervalMs, 1.0f);
+    newBeat = (_mbPhase >= 1.0f);
+  }
 
   // Ob novem beatu
-  if (_mbPhase >= 1.0f) {
+  if (newBeat) {
     _mbPhase = 0;
     _mbLastBeatMs = now;
     _mbSmoothBeat = 1.0f;

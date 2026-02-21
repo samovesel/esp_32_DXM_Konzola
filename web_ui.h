@@ -11,6 +11,7 @@
 #include "lfo_engine.h"
 #include "shape_engine.h"
 #include "pixel_mapper.h"
+#include "espnow_dmx.h"
 
 void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
               NodeConfig* cfg, FixtureEngine* fixtures, MixerEngine* mixer,
@@ -20,6 +21,7 @@ void webSetShapeGenerator(ShapeGenerator* shapes);
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 void webSetPixelMapper(PixelMapper* px);
 #endif
+void webSetEspNow(EspNowDmx* espNow);
 void webLoop();   // Periodično pošilja status prek WebSocket
 
 #endif

@@ -20,6 +20,7 @@ static ShapeGenerator* _shapeGen = nullptr;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 static PixelMapper*    _pxMap = nullptr;
 #endif
+static EspNowDmx*      _espNow = nullptr;
 static unsigned long   _lastWsSend = 0;
 static bool            _dmxMonActive = false;
 static bool            _forceSendState = false;  // Trigger immediate full state broadcast
@@ -268,6 +269,8 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     }
     if (mb.bpm < 30) mb.bpm = 30;
     if (mb.bpm > 300) mb.bpm = 300;
+    // Ableton Link: enable/disable based on source selection
+    _snd->getLinkBeat().enable(mb.source == BSRC_LINK);
   }
   // Faza 5: program chain
   else if (strcmp(cmd, "mb_chain") == 0 && _snd) {
@@ -298,6 +301,24 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   }
   else if (strcmp(cmd, "px_save") == 0 && _pxMap) { _pxMap->saveConfig(); }
   #endif
+  // ESP-NOW commands
+  else if (strcmp(cmd, "now_en") == 0 && _espNow) {
+    _espNow->setEnabled((doc["v"]|0) != 0);
+  }
+  else if (strcmp(cmd, "now_add") == 0 && _espNow) {
+    // MAC as string "AA:BB:CC:DD:EE:FF"
+    const char* macStr = doc["mac"];
+    if (macStr) {
+      uint8_t mac[6];
+      sscanf(macStr, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+             &mac[0],&mac[1],&mac[2],&mac[3],&mac[4],&mac[5]);
+      _espNow->addPeer(mac, doc["name"] | "Slave");
+    }
+  }
+  else if (strcmp(cmd, "now_rm") == 0 && _espNow) {
+    _espNow->removePeer(doc["i"]|0);
+  }
+  else if (strcmp(cmd, "now_save") == 0 && _espNow) { _espNow->saveConfig(); }
 
   _mix->unlock();
 }
@@ -1112,6 +1133,7 @@ void webSetShapeGenerator(ShapeGenerator* shapes) { _shapeGen = shapes; }
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 void webSetPixelMapper(PixelMapper* px) { _pxMap = px; }
 #endif
+void webSetEspNow(EspNowDmx* espNow) { _espNow = espNow; }
 
 void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
               NodeConfig* cfg, FixtureEngine* fixtures, MixerEngine* mixer,
@@ -1298,6 +1320,12 @@ void webLoop() {
     mb["phase"]=_snd->getBeatPhase();
     mb["active"]=_snd->isManualBeatActive();
     mb["taps"]=_snd->getTapCount();
+    // Ableton Link status
+    const LinkBeat& lnk = _snd->getLinkBeat();
+    if (lnk.isEnabled()) {
+      mb["link_on"]=true; mb["link_peers"]=lnk.getPeerCount();
+      mb["link_bpm"]=lnk.getBpm(); mb["link_conn"]=lnk.isConnected();
+    }
     // Faza 3: krivulje + envelope
     mb["dc"]=mbc.dimCurve;
     mb["atk"]=mbc.attackMs;

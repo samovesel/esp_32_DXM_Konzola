@@ -64,6 +64,7 @@
 #include "shape_engine.h"
 #include "sacn_output.h"
 #include "pixel_mapper.h"
+#include "espnow_dmx.h"
 
 // ============================================================================
 //  GLOBALNI OBJEKTI
@@ -88,6 +89,7 @@ SacnOutput     sacnOut;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 PixelMapper    pixelMap;
 #endif
+EspNowDmx      espNowDmx;
 
 // DMX output timing
 static unsigned long lastDmxSend = 0;
@@ -522,6 +524,10 @@ void setup() {
   webSetPixelMapper(&pixelMap);
   #endif
 
+  // ESP-NOW wireless DMX
+  espNowDmx.begin();
+  webSetEspNow(&espNowDmx);
+
   // OSC server
   oscServer.begin(&mixer, &fixtures);
 
@@ -588,6 +594,10 @@ void loop() {
     sendArtNetOut();
     if (nodeCfg.sacnEnabled && mixer.getMode() != CTRL_ARTNET) {
       sacnOut.sendFrame(mixer.getDmxOutput(), nodeCfg.channelCount);
+    }
+    // ESP-NOW wireless DMX
+    if (espNowDmx.isEnabled()) {
+      espNowDmx.sendFrame(mixer.getDmxOutput(), nodeCfg.channelCount);
     }
     // Pixel Mapper — preslikaj DMX na WS2812 LED trak
     #if defined(CONFIG_IDF_TARGET_ESP32S3)
