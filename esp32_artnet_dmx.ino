@@ -63,6 +63,7 @@
 #include "lfo_engine.h"
 #include "shape_engine.h"
 #include "sacn_output.h"
+#include "pixel_mapper.h"
 
 // ============================================================================
 //  GLOBALNI OBJEKTI
@@ -84,6 +85,9 @@ OscServer      oscServer;
 LfoEngine      lfoEngine;
 ShapeGenerator shapeGen;
 SacnOutput     sacnOut;
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+PixelMapper    pixelMap;
+#endif
 
 // DMX output timing
 static unsigned long lastDmxSend = 0;
@@ -512,6 +516,12 @@ void setup() {
     sacnOut.begin(nodeCfg.universe);
   }
 
+  // Pixel Mapper (WS2812 LED trak)
+  #if defined(CONFIG_IDF_TARGET_ESP32S3)
+  pixelMap.begin();
+  webSetPixelMapper(&pixelMap);
+  #endif
+
   // OSC server
   oscServer.begin(&mixer, &fixtures);
 
@@ -579,6 +589,17 @@ void loop() {
     if (nodeCfg.sacnEnabled && mixer.getMode() != CTRL_ARTNET) {
       sacnOut.sendFrame(mixer.getDmxOutput(), nodeCfg.channelCount);
     }
+    // Pixel Mapper — preslikaj DMX na WS2812 LED trak
+    #if defined(CONFIG_IDF_TARGET_ESP32S3)
+    if (pixelMap.isActive()) {
+      static float lastPixMs = 0;
+      float nowMs = millis();
+      float dt = (nowMs - lastPixMs) / 1000.0f;
+      lastPixMs = nowMs;
+      if (dt <= 0 || dt > 1.0f) dt = 0.025f;
+      pixelMap.update(mixer.getDmxOutput(), &fixtures, &soundEng, dt);
+    }
+    #endif
   }
 
   // Web — periodično pošiljanje stanja prek WebSocket (mora biti na core 1, ker AsyncTCP ni thread-safe)

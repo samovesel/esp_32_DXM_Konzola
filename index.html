@@ -891,6 +891,25 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
       <b>R2/L2</b>: Master dimmer &nbsp; <b>X/A</b>: Flash &nbsp; <b>B</b>: Blackout
     </div>
   </div>
+  <div class="card"><h3>Pixel Mapper (LED trak)</h3>
+    <div class="toggle"><input type="checkbox" id="pxEnabled" onchange="pxSendCfg()"><label>Omogoci LED trak</label></div>
+    <div style="margin-top:6px;font-size:0.82em">
+      <label style="color:#aaa">LED-ic: </label>
+      <input type="number" id="pxCount" value="30" min="1" max="144" style="width:50px" onchange="pxSendCfg()">
+      <label style="color:#aaa;margin-left:8px">Svetlost: </label>
+      <input type="range" id="pxBright" value="128" min="0" max="255" style="width:80px" onchange="pxSendCfg()">
+    </div>
+    <div style="margin-top:6px;font-size:0.82em">
+      <label style="color:#aaa">Nacin: </label>
+      <select id="pxMode" onchange="pxSendCfg()" style="font-size:0.9em">
+        <option value="1">Fixture Mirror</option>
+        <option value="2">VU Meter</option>
+        <option value="3">Spektrum</option>
+        <option value="4">Beat Pulse</option>
+      </select>
+    </div>
+    <div style="font-size:0.72em;color:#555;margin-top:4px">GPIO 16, WS2812B format. RMT periferija (0% CPU).</div>
+  </div>
   <div class="card"><h3>OSC Server</h3>
     <p style="font-size:0.8em;color:#aaa">UDP port <strong style="color:#0af">8000</strong></p>
     <p style="font-size:0.7em;color:#666;margin-top:4px">/dmx/N (float 0-1), /fixture/N/dimmer (float), /fixture/N/color (fff), /scene/N, /master (float), /blackout (int)</p>
@@ -5222,6 +5241,16 @@ function renderDmxGrid(){
     if(idx>=0&&idx<512){var v=dmxMonData[idx]||0;document.getElementById('dmxMonHover').textContent='Ch '+(idx+1)+': '+v}
   });
 })();
+
+// ============ PIXEL MAPPER ============
+function pxSendCfg(){
+  wsSend({cmd:'px_cfg',
+    en:document.getElementById('pxEnabled').checked?1:0,
+    cnt:+document.getElementById('pxCount').value||30,
+    brt:+document.getElementById('pxBright').value||128,
+    mode:+document.getElementById('pxMode').value||1
+  });
+}
 
 // ============ GAMEPAD API ============
 var gpEnabled=false,gpRafId=null,gpPrevButtons=[];

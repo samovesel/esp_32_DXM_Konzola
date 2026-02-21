@@ -17,6 +17,9 @@ static AudioInput*     _aud = nullptr;
 static AsyncWebSocket* _ws  = nullptr;
 static LfoEngine*      _lfo = nullptr;
 static ShapeGenerator* _shapeGen = nullptr;
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+static PixelMapper*    _pxMap = nullptr;
+#endif
 static unsigned long   _lastWsSend = 0;
 static bool            _dmxMonActive = false;
 static bool            _forceSendState = false;  // Trigger immediate full state broadcast
@@ -281,6 +284,20 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
       }
     }
   }
+  // Pixel Mapper commands
+  #if defined(CONFIG_IDF_TARGET_ESP32S3)
+  else if (strcmp(cmd, "px_cfg") == 0 && _pxMap) {
+    PixelMapConfig pc = _pxMap->getConfig();
+    if (doc.containsKey("en"))   pc.enabled    = (doc["en"]|0) != 0;
+    if (doc.containsKey("cnt"))  pc.ledCount   = doc["cnt"] | 30;
+    if (doc.containsKey("brt"))  pc.brightness = doc["brt"] | 128;
+    if (doc.containsKey("mode")) pc.mode       = (PixelMapMode)(doc["mode"]|0);
+    if (doc.containsKey("fx"))   pc.fixtureIdx = doc["fx"] | 0;
+    if (doc.containsKey("gmask")) pc.groupMask = doc["gmask"] | 0;
+    _pxMap->setConfig(pc);
+  }
+  else if (strcmp(cmd, "px_save") == 0 && _pxMap) { _pxMap->saveConfig(); }
+  #endif
 
   _mix->unlock();
 }
@@ -1092,6 +1109,9 @@ static void apiLayoutDelete(AsyncWebServerRequest* req) {
 
 void webSetLfoEngine(LfoEngine* lfo) { _lfo = lfo; }
 void webSetShapeGenerator(ShapeGenerator* shapes) { _shapeGen = shapes; }
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+void webSetPixelMapper(PixelMapper* px) { _pxMap = px; }
+#endif
 
 void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
               NodeConfig* cfg, FixtureEngine* fixtures, MixerEngine* mixer,
