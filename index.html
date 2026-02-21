@@ -270,6 +270,9 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 .xy-pop{position:fixed;z-index:250;background:#101828;border:1px solid #0af;border-radius:10px;padding:14px 16px;min-width:220px;max-width:260px;box-shadow:0 8px 40px rgba(0,0,0,0.9);display:none}
 .xy-pop h4{color:#0af;margin:0 0 10px;font-size:0.88em;padding-right:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .xy-pop .lx-x{position:absolute;top:10px;right:10px}
+.xy-wand-btn{margin-top:8px;padding:5px 14px;background:#1a1a2e;border:1px solid #555;border-radius:6px;color:#aaa;font-size:0.78em;cursor:pointer;transition:all 0.2s}
+.xy-wand-btn:hover{border-color:#0af;color:#0af}
+.xy-wand-btn.active{background:#0a2a4a;border-color:#0af;color:#0af;box-shadow:0 0 12px rgba(0,170,255,0.3)}
 .mx-cp .lx-x{position:absolute;top:10px;right:10px}
 .mx-cp-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:249}
 .lfo-item{display:flex;align-items:center;gap:6px;padding:4px 8px;background:#1a1a2e;border:1px solid #333;border-radius:4px;margin-bottom:4px;font-size:0.82em;flex-wrap:wrap}
@@ -879,6 +882,15 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     </div>
     <p style="font-size:0.7em;color:#555;margin-top:4px">Podprto v Chrome/Edge. CC → fader, Note → scene recall.</p>
   </div>
+  <div class="card"><h3>Gamepad</h3>
+    <div id="gpStatus" style="font-size:0.8em;color:#888;margin-bottom:6px">Priklopi kontroler in pritisni gumb.</div>
+    <div class="toggle"><input type="checkbox" id="gpEnabled" onchange="gpToggle(this.checked)"><label>Omogoci Gamepad</label></div>
+    <div id="gpInfo" style="font-size:0.78em;color:#aaa;margin-top:4px"></div>
+    <div style="font-size:0.72em;color:#555;margin-top:6px">
+      <b>L-stick</b>: Pan/Tilt (skupina 1) &nbsp; <b>R-stick</b>: Pan/Tilt (skupina 2)<br>
+      <b>R2/L2</b>: Master dimmer &nbsp; <b>X/A</b>: Flash &nbsp; <b>B</b>: Blackout
+    </div>
+  </div>
   <div class="card"><h3>OSC Server</h3>
     <p style="font-size:0.8em;color:#aaa">UDP port <strong style="color:#0af">8000</strong></p>
     <p style="font-size:0.7em;color:#666;margin-top:4px">/dmx/N (float 0-1), /fixture/N/dimmer (float), /fixture/N/color (fff), /scene/N, /master (float), /blackout (int)</p>
@@ -1085,6 +1097,8 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <div style="text-align:center">
     <canvas id="xyPopCanvas" width="200" height="200" style="width:200px;height:200px;display:block;border:1px solid #444;border-radius:6px;background:#0a0a1e;touch-action:none;cursor:crosshair;margin:0 auto"></canvas>
     <div style="font-size:0.72em;color:#666;margin-top:4px">Pan: <span id="xyPopPanV">---</span> &nbsp; Tilt: <span id="xyPopTiltV">---</span></div>
+    <button id="xyWandBtn" class="xy-wand-btn" onclick="xyWandToggle()">&#x1F6F8; Wand</button>
+    <div id="xyWandStatus" style="font-size:0.68em;color:#555;margin-top:2px;display:none"></div>
   </div>
 </div>
 <div id="xyPopOverlay" class="mx-cp-overlay" onclick="closeXyPop()"></div>
@@ -4744,10 +4758,97 @@ function openXyPop(fi,cx,cy,fromLay){
 }
 function closeXyPop(){
   if(Date.now()-xyPopOpenTime<400)return;
+  xyWandStop();
   xyPopOpen=false;xyPopFi=-1;xyPopFromLay=false;
   document.getElementById('xyPop').style.display='none';
   document.getElementById('xyPopOverlay').style.display='none';
 }
+
+// ── Magic Wand (DeviceOrientation → Pan/Tilt) ──
+var _xyWandActive=false,_xyWandBeta0=null,_xyWandGamma0=null;
+var _xyWandRange=50; // degrees each side from center → full pan/tilt range
+var _xyWandLastSend=0;
+
+function xyWandToggle(){
+  if(_xyWandActive){xyWandStop();return;}
+  // iOS 13+ requires permission request from user gesture
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(function(state){
+      if(state==='granted')xyWandStart();
+      else xyWandStatus('Dostop zavrnjen');
+    }).catch(function(){xyWandStatus('Napaka pri dovoljenju');});
+  }else if('DeviceOrientationEvent' in window){
+    xyWandStart();
+  }else{
+    xyWandStatus('Brez giroskopa');
+  }
+}
+function xyWandStart(){
+  _xyWandActive=true;_xyWandBeta0=null;_xyWandGamma0=null;
+  document.getElementById('xyWandBtn').classList.add('active');
+  document.getElementById('xyWandBtn').innerHTML='&#x1F6F8; Wand ON';
+  xyWandStatus('Nagni telefon za Pan/Tilt');
+  window.addEventListener('deviceorientation',_xyWandHandler);
+}
+function xyWandStop(){
+  if(!_xyWandActive)return;
+  _xyWandActive=false;_xyWandBeta0=null;_xyWandGamma0=null;
+  window.removeEventListener('deviceorientation',_xyWandHandler);
+  var btn=document.getElementById('xyWandBtn');
+  if(btn){btn.classList.remove('active');btn.innerHTML='&#x1F6F8; Wand';}
+  var st=document.getElementById('xyWandStatus');if(st)st.style.display='none';
+}
+function xyWandStatus(msg){
+  var el=document.getElementById('xyWandStatus');
+  if(el){el.textContent=msg;el.style.display='block';}
+}
+function _xyWandHandler(e){
+  if(!_xyWandActive||!xyPopOpen||xyPopFi<0)return;
+  var beta=e.beta,gamma=e.gamma; // beta: -180..180 (front/back), gamma: -90..90 (left/right)
+  if(beta===null||gamma===null)return;
+  // First reading = center calibration
+  if(_xyWandBeta0===null){_xyWandBeta0=beta;_xyWandGamma0=gamma;return;}
+  // Throttle to ~30fps
+  var now=Date.now();if(now-_xyWandLastSend<33)return;_xyWandLastSend=now;
+  // Delta from calibration point, mapped to 0-1
+  var dg=(gamma-_xyWandGamma0)/_xyWandRange; // left/right → Pan
+  var db=(beta-_xyWandBeta0)/_xyWandRange;   // forward/back → Tilt
+  var nx=0.5+dg*0.5; // center=0.5, full left=0, full right=1
+  var ny=0.5+db*0.5;
+  nx=Math.max(0,Math.min(1,nx));ny=Math.max(0,Math.min(1,ny));
+  // Send to all fixtures in same group (or just the selected one)
+  _xyWandSendAll(nx,ny);
+  xyPopDraw();
+}
+function _xyWandSendAll(nx,ny){
+  var f=fixtures[xyPopFi];if(!f||!f.channels)return;
+  // Find groups of this fixture
+  var gm=f.groupMask||0;
+  var targets=[];
+  if(gm){
+    for(var i=0;i<fixtures.length;i++){
+      var fx=fixtures[i];
+      if(fx&&fx.active&&(fx.groupMask&gm)&&findChByType(fx,CT.PAN)>=0)targets.push(i);
+    }
+  }
+  if(targets.length===0)targets=[xyPopFi];
+  for(var t=0;t<targets.length;t++){
+    var ti=targets[t],tf=fixtures[ti];if(!tf||!tf.channels)continue;
+    var pc=findChByType(tf,CT.PAN),tc=findChByType(tf,CT.TILT);
+    var pf=findChByType(tf,CT.PANF),tlf=findChByType(tf,CT.TILTF);
+    if(pc>=0){
+      if(pf>=0){var pv=Math.round(nx*65535);var ps=split16bit(pv);tf.channels[pc].currentValue=ps.hi;tf.channels[pf].currentValue=ps.lo;wsSend({cmd:'fxch',f:tf.idx,c:pc,v:ps.hi});wsSend({cmd:'fxch',f:tf.idx,c:pf,v:ps.lo})}
+      else{var pv8=Math.round(nx*255);tf.channels[pc].currentValue=pv8;wsSend({cmd:'fxch',f:tf.idx,c:pc,v:pv8})}
+    }
+    if(tc>=0){
+      if(tlf>=0){var tv=Math.round(ny*65535);var ts=split16bit(tv);tf.channels[tc].currentValue=ts.hi;tf.channels[tlf].currentValue=ts.lo;wsSend({cmd:'fxch',f:tf.idx,c:tc,v:ts.hi});wsSend({cmd:'fxch',f:tf.idx,c:tlf,v:ts.lo})}
+      else{var tv8=Math.round(ny*255);tf.channels[tc].currentValue=tv8;wsSend({cmd:'fxch',f:tf.idx,c:tc,v:tv8})}
+    }
+  }
+  // Update primary fixture display values for XY Pad
+  xyPopSyncSliders();
+}
+
 // Zapri XY popup s tapom izven (ko ni overlay-a, npr. iz 2D layouta)
 document.addEventListener('pointerdown',function(e){
   if(!xyPopOpen||!xyPopFromLay)return;
@@ -5121,6 +5222,93 @@ function renderDmxGrid(){
     if(idx>=0&&idx<512){var v=dmxMonData[idx]||0;document.getElementById('dmxMonHover').textContent='Ch '+(idx+1)+': '+v}
   });
 })();
+
+// ============ GAMEPAD API ============
+var gpEnabled=false,gpRafId=null,gpPrevButtons=[];
+var gpDeadzone=0.15; // ignore small stick drift
+
+function gpToggle(on){
+  gpEnabled=on;
+  if(on){gpPoll();document.getElementById('gpStatus').textContent='Gamepad aktiven.';}
+  else{if(gpRafId)cancelAnimationFrame(gpRafId);gpRafId=null;document.getElementById('gpStatus').textContent='Gamepad izklopljen.';document.getElementById('gpInfo').textContent='';}
+}
+function gpPoll(){
+  if(!gpEnabled)return;
+  gpRafId=requestAnimationFrame(gpPoll);
+  var gps=navigator.getGamepads?navigator.getGamepads():[];
+  var gp=null;
+  for(var i=0;i<gps.length;i++){if(gps[i]&&gps[i].connected){gp=gps[i];break;}}
+  if(!gp){document.getElementById('gpInfo').textContent='Cakam kontroler...';return;}
+  document.getElementById('gpInfo').textContent=gp.id.substring(0,40);
+  var axes=gp.axes,btns=gp.buttons;
+  // L-stick (axes 0,1) → Pan/Tilt za skupino 1 (groupMask bit 0)
+  if(axes.length>=2)gpSendStick(axes[0],axes[1],0);
+  // R-stick (axes 2,3) → Pan/Tilt za skupino 2 (groupMask bit 1)
+  if(axes.length>=4)gpSendStick(axes[2],axes[3],1);
+  // R2 trigger (button 7) → Master dimmer (0-255)
+  if(btns.length>7){
+    var r2=btns[7].value; // 0.0-1.0 analog
+    var masterV=Math.round(r2*255);
+    sendMaster(masterV);
+  }
+  // L2 trigger (button 6) → Group 1 dimmer
+  // X / A button (index 0) → Flash (held)
+  if(btns.length>0){
+    var xPressed=btns[0].pressed;
+    var xWas=gpPrevButtons[0]||false;
+    if(xPressed&&!xWas)flashOn();
+    else if(!xPressed&&xWas)flashOff();
+  }
+  // B button (index 1) → toggle Blackout
+  if(btns.length>1){
+    var bPressed=btns[1].pressed;
+    var bWas=gpPrevButtons[1]||false;
+    if(bPressed&&!bWas)toggleBlackout();
+  }
+  // Save button states
+  gpPrevButtons=[];
+  for(var b=0;b<btns.length;b++)gpPrevButtons[b]=btns[b].pressed;
+}
+
+// Gamepad stick → send Pan/Tilt to all fixtures in a group
+var _gpStickNx=[0.5,0.5],_gpStickNy=[0.5,0.5],_gpLastSend=[0,0];
+function gpSendStick(axisX,axisY,groupBit){
+  // Apply deadzone
+  if(Math.abs(axisX)<gpDeadzone)axisX=0;
+  if(Math.abs(axisY)<gpDeadzone)axisY=0;
+  // Map axis (-1..1) to normalized (0..1)
+  var nx=0.5+axisX*0.5;
+  var ny=0.5+axisY*0.5;
+  // Skip if barely changed
+  if(Math.abs(nx-_gpStickNx[groupBit])<0.005&&Math.abs(ny-_gpStickNy[groupBit])<0.005)return;
+  _gpStickNx[groupBit]=nx;_gpStickNy[groupBit]=ny;
+  // Throttle per group
+  var now=Date.now();if(now-_gpLastSend[groupBit]<40)return;_gpLastSend[groupBit]=now;
+  var mask=1<<groupBit;
+  for(var i=0;i<fixtures.length;i++){
+    var fx=fixtures[i];
+    if(!fx||!fx.active||!(fx.groupMask&mask))continue;
+    var pc=findChByType(fx,CT.PAN),tc=findChByType(fx,CT.TILT);
+    if(pc<0&&tc<0)continue;
+    var pf=findChByType(fx,CT.PANF),tf=findChByType(fx,CT.TILTF);
+    if(pc>=0){
+      if(pf>=0){var pv=Math.round(nx*65535);var ps=split16bit(pv);fx.channels[pc].currentValue=ps.hi;fx.channels[pf].currentValue=ps.lo;wsSend({cmd:'fxch',f:fx.idx,c:pc,v:ps.hi});wsSend({cmd:'fxch',f:fx.idx,c:pf,v:ps.lo})}
+      else{var pv8=Math.round(nx*255);fx.channels[pc].currentValue=pv8;wsSend({cmd:'fxch',f:fx.idx,c:pc,v:pv8})}
+    }
+    if(tc>=0){
+      if(tf>=0){var tv=Math.round(ny*65535);var ts=split16bit(tv);fx.channels[tc].currentValue=ts.hi;fx.channels[tf].currentValue=ts.lo;wsSend({cmd:'fxch',f:fx.idx,c:tc,v:ts.hi});wsSend({cmd:'fxch',f:fx.idx,c:tf,v:ts.lo})}
+      else{var tv8=Math.round(ny*255);fx.channels[tc].currentValue=tv8;wsSend({cmd:'fxch',f:fx.idx,c:tc,v:tv8})}
+    }
+  }
+}
+
+window.addEventListener('gamepadconnected',function(e){
+  document.getElementById('gpStatus').textContent='Gamepad: '+e.gamepad.id.substring(0,40);
+  if(gpEnabled&&!gpRafId)gpPoll();
+});
+window.addEventListener('gamepaddisconnected',function(){
+  document.getElementById('gpStatus').textContent='Gamepad odklopljen.';
+});
 
 // ============ WEB MIDI ============
 var midiAccess=null, midiMappings={}, midiLearnActive=false, midiLearnCb=null;
