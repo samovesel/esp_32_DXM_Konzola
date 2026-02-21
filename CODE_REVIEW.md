@@ -6,7 +6,7 @@ To je **profesionalni sistem za upravljanje razsvetljave** na osnovi ESP32, ki z
 
 - **ArtNet / sACN --> DMX512 pretvornik** (gateway) prek WiFi
 - **Samostojno mesalno mizo** (mixer) z web vmesnikom
-- **Zvocno reaktivno razsvetljavo** z ESP-DSP hardware FFT analizo in detekcijo udarca (beat detection)
+- **Zvocno reaktivno razsvetljavo** z ESP-DSP hardware FFT analizo, parametricnim EQ (nastavljiva center frekvenca in Q faktor za vsak pas) in detekcijo udarca (beat detection)
 - **Upravljanje profilov svetil** in scen s crossfade funkcijo
 - **Ableton Link** sinhronizacijo s DJ programsko opremo (BPM/beat grid)
 - **ESP-NOW brezvicni DMX** za peer-to-peer oddajanje na slave sprejemnike (<1ms latenca)
@@ -123,7 +123,11 @@ esp_32_DXM_Konzola/
   - Minimalna referenca `AGC_MIN_FLOOR = 1.0f` za preprecitev deljenja z 0
   - Per-band gain mnozilniki (0.0 - 3.0)
   - Nastavljiva AGC hitrost in noise gate prag
-- Beat detekcija: prag 1.4x drsece povprecje, min 200ms, BPM izracun
+- **Beat detekcija** (neodvisna od parametricnega EQ — bere surove FFT bine):
+  - Nastavljiv prag obcutljivosti (0.8x–2.5x drseče povprečje, privzeto 1.4x)
+  - Nastavljiv frekvenčni pas (privzeto 30–150 Hz, 4 preseti: Sub, Bass, Wide, Kick)
+  - Nastavljiv lockout interval (100–500ms, privzeto 200ms)
+  - Median-filtered BPM iz 16 inter-beat intervalov (robustnejši od povprečenja)
 - **Ableton Link integracija:**
   - `LinkBeat _link` objekt integriran v SoundEngine
   - Ko je `BSRC_LINK` izbran, se BPM in beat faza berejo iz Link protokola
@@ -137,8 +141,9 @@ esp_32_DXM_Konzola/
   - FX simetrija (Forward, Reverse, Center-Out, Ends-In)
   - Program chain (playlist do 8 programov z beat trajanjem)
   - Per-group beat override (program, subdiv, intensity per skupina)
+  - **5 virov beata:** Manual (tap/drsnik), Avdio BPM (FFT sync), Auto fallback, Samo avdio, Ableton Link
 - **Pro nacin:** 8 pravil z izbiro svetila, kanala, frekvencnega pasu in krivulje odziva
-- Persistenca: binarna shema V4 z obratno zdruzljivostjo (V1-V4)
+- Persistenca: binarna shema V6 z obratno zdruzljivostjo (V1-V6)
 
 ### 7. LFO Engine (`lfo_engine.h/cpp`)
 - Do 8 LFO instanc
@@ -364,7 +369,7 @@ Prehod med nacini vsebuje 1-sekundno mehko prehajanje (mode crossfade) z linearn
 | 29 profilov svetil (JSON) | ~50 KB |
 | 20 scen (binarne) | ~10.7 KB |
 | Konfiguracija (config/patch/groups JSON) | ~2 KB |
-| Zvocne nastavitve (sound.bin, V4) | ~1 KB |
+| Zvocne nastavitve (sound.bin, V6) | ~1 KB |
 | Pixel Mapper nastavitve (pixmap.bin) | <1 KB |
 | ESP-NOW nastavitve (espnow.bin) | <1 KB |
 | **Skupaj ESP32:** | ~65 KB od 2 MB |

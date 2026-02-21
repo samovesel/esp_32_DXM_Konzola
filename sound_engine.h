@@ -89,6 +89,11 @@ private:
   float _bpmAccum = 0;
   int   _bpmCount = 0;
 
+  // BPM median filter (robustnejši od povprečenja)
+  float _bpmIntervals[16];
+  int   _bpmIntervalsCount = 0;
+  int   _bpmIntervalsIdx = 0;
+
   // Beat sync
   float _beatPhase = 0;
   unsigned long _lastBeatMs = 0;
