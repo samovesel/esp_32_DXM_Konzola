@@ -75,6 +75,10 @@ public:
   bool undo();           // Obnovi zadnje shranjeno stanje
   bool hasUndo() const { return _undoValid; }
 
+  // --- Flash (Blinder) ---
+  void setFlash(bool active, uint8_t level = 255);
+  bool isFlashing() const { return _flashActive; }
+
   // --- Locate ---
   void locateFixture(int fixtureIdx, bool on);
   bool isFixtureLocated(int fixtureIdx) const;
@@ -143,6 +147,10 @@ private:
   uint8_t _undoBuffer[DMX_MAX_CHANNELS];
   uint8_t _undoMaster = 255;
   bool    _undoValid = false;
+
+  // Flash (Blinder)
+  bool    _flashActive = false;
+  uint8_t _flashLevel = 255;
 
   // Locate
   struct LocateState { bool active; uint8_t saved[MAX_CHANNELS_PER_FX]; };

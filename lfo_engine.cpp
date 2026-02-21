@@ -62,7 +62,17 @@ void LfoEngine::applyToOutput(const uint8_t* manualValues, uint8_t* dmxOut) {
       if (!fx || !fx->active || fx->profileIndex < 0) { fxIdx++; continue; }
 
       // Per-fixture phase offset za spread/chase efekt
-      float fiPhase = fmodf(lfo.currentPhase + lfo.phase * (float)fxIdx / (float)fxCount, 1.0f);
+      // Symmetry transform: pretvori fxIdx v spreadIdx
+      int spreadIdx = fxIdx;
+      if (fxCount > 1) {
+        switch (lfo.symmetry) {
+          case SYM_REVERSE:    spreadIdx = fxCount - 1 - fxIdx; break;
+          case SYM_CENTER_OUT: { int mid = fxCount / 2; spreadIdx = (fxIdx < mid) ? (mid - 1 - fxIdx) : (fxIdx - mid); } break;
+          case SYM_ENDS_IN:    { int mid = fxCount / 2; int dist = (fxIdx < mid) ? fxIdx : (fxCount - 1 - fxIdx); spreadIdx = mid - dist; } break;
+          default: break;
+        }
+      }
+      float fiPhase = fmodf(lfo.currentPhase + lfo.phase * (float)spreadIdx / (float)fxCount, 1.0f);
       float mod = computeWave(lfo.waveform, fiPhase);
 
       uint8_t chCount = _fixtures->fixtureChannelCount(fi);

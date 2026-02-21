@@ -57,6 +57,7 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
   else if (strcmp(cmd, "master") == 0) _mix->setMasterDimmer(doc["v"]|255);
   else if (strcmp(cmd, "grpdim") == 0) _mix->setGroupDimmer(doc["g"]|0, doc["v"]|255);
   else if (strcmp(cmd, "blackout") == 0) { if(doc["v"]|0) _mix->blackout(); else _mix->unBlackout(); }
+  else if (strcmp(cmd, "flash") == 0) _mix->setFlash((doc["v"]|0)!=0, doc["l"]|255);
   else if (strcmp(cmd, "mode") == 0) { const char* m=doc["v"]; if(m&&strcmp(m,"local")==0) _mix->switchToLocal(); else if(m&&strcmp(m,"artnet")==0) _mix->switchToArtNet(); else if(m&&strcmp(m,"primary_local")==0) _mix->switchToPrimaryLocal(); }
   else if (strcmp(cmd, "switchToArtnet") == 0) _mix->switchToArtNet();
   else if (strcmp(cmd, "recall") == 0) _mix->recallSnapshot(doc["i"]|0);
@@ -77,6 +78,7 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     l.waveform = doc["w"] | 0; l.target = doc["tgt"] | 0;
     l.rate = doc["rate"] | 1.0f; l.depth = doc["depth"] | 0.5f;
     l.phase = doc["phase"] | 0.0f; l.fixtureMask = doc["mask"] | 0UL;
+    l.symmetry = doc["sym"] | 0;
     _lfo->addLfo(l);
   }
   else if (strcmp(cmd, "lfo_rm") == 0 && _lfo) { _lfo->removeLfo(doc["i"]|0); }
@@ -91,6 +93,7 @@ static void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
       if (!doc["depth"].isNull()) l.depth = doc["depth"] | 0.5f;
       if (!doc["phase"].isNull()) l.phase = doc["phase"] | 0.0f;
       if (!doc["mask"].isNull()) l.fixtureMask = doc["mask"] | 0UL;
+      if (!doc["sym"].isNull()) l.symmetry = doc["sym"] | 0;
       _lfo->updateLfo(idx, l);
     }
   }
@@ -1141,7 +1144,7 @@ void webLoop() {
 
   JsonDocument doc;
   doc["t"]="status"; doc["mode"]=(int)_mix->getMode(); doc["fps"]=_mix->getArtNetFps();
-  doc["pkts"]=_mix->getArtNetPackets(); doc["master"]=_mix->getMasterDimmer(); doc["bo"]=_mix->isBlackout();
+  doc["pkts"]=_mix->getArtNetPackets(); doc["master"]=_mix->getMasterDimmer(); doc["bo"]=_mix->isBlackout(); doc["flash"]=_mix->isFlashing();
   doc["heap"]=esp_get_free_heap_size();
   doc["iheap"]=heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
   doc["mspd"]=_mix->getMasterSpeed();
@@ -1175,7 +1178,7 @@ void webLoop() {
       JsonObject o=la.add<JsonObject>();
       o["w"]=l->waveform;o["tgt"]=l->target;o["rate"]=serialized(String(l->rate,2));
       o["depth"]=serialized(String(l->depth,2));o["phase"]=serialized(String(l->phase,2));
-      o["mask"]=l->fixtureMask;o["p"]=serialized(String(l->currentPhase,2));
+      o["mask"]=l->fixtureMask;o["sym"]=l->symmetry;o["p"]=serialized(String(l->currentPhase,2));
     }
   }
 

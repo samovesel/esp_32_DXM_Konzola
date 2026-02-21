@@ -44,6 +44,10 @@ input,select{width:100%;padding:7px;border:1px solid #333;border-radius:4px;back
 .ch-row input[type=range]::-moz-range-thumb{width:10px;height:18px;border-radius:3px;background:var(--ch-col,#0af);cursor:pointer;border:1px solid rgba(255,255,255,0.5)}
 .ch-row .ch-val{width:36px;font-size:0.85em;text-align:center;color:#0ff}
 .ch-row .ch-range{font-size:0.72em;color:#888;min-width:140px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filmstrip{display:flex;flex-wrap:wrap;gap:3px;flex:1}
+.fs-btn{font-size:0.7em;padding:3px 7px;border-radius:3px;border:1px solid #444;background:#1a1a2e;color:#aaa;cursor:pointer;white-space:nowrap}
+.fs-btn:hover{background:#333;color:#fff}
+.fs-btn.fs-sel{background:#0af;color:#000;border-color:#0af;font-weight:bold}
 .master-row{display:flex;align-items:center;gap:10px;padding:10px;background:#1a1a2e;border-radius:6px;margin-bottom:10px}
 .master-row label{margin:0;font-weight:bold;color:#0ff}
 .master-row input[type=range]{flex:1;accent-color:#0ff}
@@ -278,6 +282,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <span class="mode"><span class="dot dot-y" id="dot"></span><span id="modeText">...</span></span>
     <button id="modeBtn" onclick="toggleMode()">...</button>
     <button class="bo" id="boBtn" onclick="toggleBlackout()">BLACKOUT</button>
+    <button id="flashBtn" onpointerdown="flashOn()" onpointerup="flashOff()" onpointerleave="flashOff()" style="background:#f90;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:0.85em;touch-action:none;user-select:none">FLASH</button>
     <button id="undoBtn" onclick="doUndo()" style="background:#555;padding:4px 10px;font-size:0.8em;display:none" title="Razveljavi">↩ Undo</button>
   </div>
   <div class="stats">
@@ -327,7 +332,13 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <!-- Kompakt pogled — multi-select = skupna kontrola -->
   <div id="viewCompact">
     <div class="card"><h3>Izberi fixture / skupino</h3><p style="font-size:0.7em;color:#0af;margin:0 0 6px">Več izbranih = skupna kontrola vseh</p><div class="fxsel" id="groupBtns"></div><div class="fxsel" id="fixBtns"></div></div>
-    <div class="card" id="faderBox" style="display:none"><h3 id="faderTitle">Kanali</h3><div class="ch-grid" id="faders"></div>
+    <div class="card" id="faderBox" style="display:none"><h3 id="faderTitle">Kanali</h3>
+      <div id="fanRow" style="display:none;margin-bottom:6px;align-items:center;gap:6px">
+        <div class="toggle" style="margin:0"><input type="checkbox" id="fanOn" onchange="fanEnabled=this.checked"><label style="font-size:0.75em">Fan (pahljača)</label></div>
+        <input type="range" id="fanAmount" min="-100" max="100" value="100" style="width:80px;accent-color:#e67e22" oninput="document.getElementById('fanVal').textContent=this.value+'%'" title="Razpon: -100% (obrnjeno) do +100%">
+        <span id="fanVal" style="font-size:0.7em;color:#e67e22;width:40px">100%</span>
+      </div>
+      <div class="ch-grid" id="faders"></div>
     </div>
   </div>
   <!-- Konzola pogled — multi-select = prikaz vseh -->
@@ -713,6 +724,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
       <label style="display:inline;margin:0;font-size:0.75em;color:#888">Rate</label><input id="lfoRate" type="number" min="0.1" max="10" step="0.1" value="1.0" style="width:55px">
       <label style="display:inline;margin:0;font-size:0.75em;color:#888">Depth</label><input id="lfoDepth" type="number" min="0" max="1" step="0.05" value="0.5" style="width:55px">
       <label style="display:inline;margin:0;font-size:0.75em;color:#888">Phase</label><input id="lfoPhase" type="number" min="0" max="1" step="0.05" value="0" style="width:55px">
+      <select id="lfoSym" style="width:95px"><option value="0">&#x2192; Naprej</option><option value="1">&#x2190; Nazaj</option><option value="2">&#x2194; Sredina</option><option value="3">&#x21C4; Zunaj</option></select>
     </div>
     <div style="margin-top:4px"><label style="display:inline;margin:0;font-size:0.75em;color:#888">Fixtures:</label><span id="lfoFxSel" style="display:inline-flex;flex-wrap:wrap;gap:2px;margin-left:4px"></span></div>
     <div style="margin-top:6px;display:flex;gap:4px"><button onclick="lfoAdd()">+ Dodaj LFO</button><button onclick="lfoClearAll()" class="danger" style="font-size:0.8em;padding:4px 10px">Zbriši vse</button></div>
@@ -875,6 +887,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <div class="fs-top">
     <button class="fs-close" onclick="exitFullConsole()">&#x2715; Izhod</button>
     <button class="bo" id="fsBoBtn" onclick="toggleBlackout()">BLACKOUT</button>
+    <button id="fsFlashBtn" onpointerdown="flashOn()" onpointerup="flashOff()" onpointerleave="flashOff()" style="background:#f90;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:0.85em;touch-action:none;user-select:none">FLASH</button>
     <button id="fsUndoBtn" onclick="doUndo()" style="background:#555;color:#fff;padding:4px 10px;font-size:0.8em;display:none;border:none;border-radius:4px;cursor:pointer" title="Razveljavi">&#x21A9; Undo</button>
     <button onclick="fsSaveScene()" style="background:#1a6;color:#fff;padding:4px 10px;font-size:0.8em;border:none;border-radius:4px;cursor:pointer" title="Shrani sceno">&#x1F4BE; Shrani sceno</button>
     <div class="fs-master">
@@ -900,6 +913,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
   <div class="lay-top">
     <button class="fs-close" onclick="exitLayoutEditor()">&#x2715; Izhod</button>
     <button class="bo" id="layBoBtn" onclick="toggleBlackout()">BLACKOUT</button>
+    <button id="layFlashBtn" onpointerdown="flashOn()" onpointerup="flashOff()" onpointerleave="flashOff()" style="background:#f90;color:#000;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:0.85em;touch-action:none;user-select:none">FLASH</button>
     <button id="layUndoBtn" onclick="doUndo()" style="background:#555;color:#fff;padding:4px 10px;font-size:0.8em;display:none;border:none;border-radius:4px;cursor:pointer" title="Razveljavi">&#x21A9; Undo</button>
     <button onclick="laySaveScene()" style="background:#1a6;color:#fff;padding:4px 10px;font-size:0.8em;border:none;border-radius:4px;cursor:pointer" title="Shrani sceno">&#x1F4BE; Shrani sceno</button>
     <select id="laySelect" onchange="loadLayoutByName(this.value)" style="background:#1a1a2e;color:#ccc;border:1px solid #0af;border-radius:4px;padding:4px 6px;font-size:0.8em;max-width:110px;flex-shrink:0"><option value="">— novi —</option></select>
@@ -907,6 +921,7 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
     <button onclick="deleteLayout()" style="background:#333;color:#aaa;border:1px solid #555;font-size:0.8em;padding:4px 10px;border-radius:4px;cursor:pointer;flex-shrink:0">Izbriši layout</button>
     <button id="layStageBtn" onclick="toggleLayStageEdit()" style="background:#555;color:#fff;border:none;font-size:0.8em;padding:4px 10px;border-radius:4px;cursor:pointer;flex-shrink:0">Oder</button>
     <button onclick="toggleLaySidebar()" style="background:#555;color:#fff;border:none;font-size:0.8em;padding:4px 10px;border-radius:4px;cursor:pointer;flex-shrink:0">&#9776; Luči</button>
+    <select id="layArrange" onchange="layAutoArrange(this.value);this.value=''" style="background:#1a1a2e;color:#e67e22;border:1px solid #e67e22;border-radius:4px;padding:4px 6px;font-size:0.8em;max-width:120px;flex-shrink:0"><option value="">Razporedi...</option><option value="line">&#x2500; Linija</option><option value="arc">&#x2312; Lok</option><option value="circle">&#x25CB; Krog</option><option value="grid">&#x25A6; Mreža</option></select>
     <div class="fs-master">
       <label>Master</label>
       <input type="range" min="0" max="255" value="255" id="layMasterSlider" oninput="sendMaster(this.value)">
@@ -1074,6 +1089,7 @@ function handleWs(d){
     var flashTxt=window._flashInfo||'';
     document.getElementById('sysInfo').textContent=[heapTxt,flashTxt].filter(Boolean).join(' | ');
     boState=!!d.bo;document.getElementById('boBtn').style.background=boState?'#f33':'#555';
+    if(d.flash!==undefined&&d.flash!==flashState){flashState=!!d.flash;syncFlashBtns()}
     document.getElementById('masterSlider').value=d.master;document.getElementById('masterVal').textContent=d.master;
     // Master speed sync
     if(d.mspd!==undefined){var mse=document.getElementById('mspdSlider');if(mse&&!mse.matches(':active')){mse.value=Math.round(d.mspd*100);document.getElementById('mspdVal').textContent=d.mspd.toFixed(1)+'x';}}
@@ -1178,6 +1194,10 @@ function showOtaDialog(){
   inp.click();
 }
 function toggleBlackout(){wsSend({cmd:'blackout',v:boState?0:1})}
+var flashState=false;
+function flashOn(){if(!flashState){flashState=true;wsSend({cmd:'flash',v:1});syncFlashBtns()}}
+function flashOff(){if(flashState){flashState=false;wsSend({cmd:'flash',v:0});syncFlashBtns()}}
+function syncFlashBtns(){var c=flashState?'#fff':'#f90',bg=flashState?'#f33':'#f90';['flashBtn','fsFlashBtn','layFlashBtn'].forEach(function(id){var b=document.getElementById(id);if(b){b.style.background=bg;b.style.color=c}})}
 function sendMaster(v){
   document.getElementById('masterVal').textContent=v;
   var fs=document.getElementById('fsMasterSlider');if(fs&&document.activeElement!==fs)fs.value=v;
@@ -1193,7 +1213,7 @@ var CH_COLORS={1:'#0af',2:'#ff2020',3:'#20ff20',4:'#2060ff',5:'#ffffff',6:'#ffaa
 var CH_LIGHT_TYPES=new Set([1,2,3,4,5,6,7,21,22,24]); // intensity + vsi barvni kanali
 var CH_MOVEMENT_TYPES=new Set([8,9,10,11]); // pan, pan_fine, tilt, tilt_fine
 // Konstante tipov kanalov (namesto magičnih številk)
-var CT={DIM:1,R:2,G:3,B:4,W:5,A:6,UV:7,PAN:8,PANF:9,TILT:10,TILTF:11,ZOOM:18,LIME:21,CYAN:22,WW:24};
+var CT={DIM:1,R:2,G:3,B:4,W:5,A:6,UV:7,PAN:8,PANF:9,TILT:10,TILTF:11,SPEED:12,GOBO:13,SHUTTER:14,PRESET:15,PRISM:16,FOCUS:17,ZOOM:18,STROBE:19,MACRO:20,LIME:21,CYAN:22,CCT:23,WW:24};
 function chColor(t){return CH_COLORS[t]||'#0af'}
 // Podlage fixture-ov
 var FX_BG=['#1a1a2e','#1e2a1a','#2a1a2a','#2a261a','#1a2a2a','#2a1a1a','#1e1e30','#2a1e1a'];
@@ -1395,29 +1415,40 @@ function split16bit(v){v=Math.max(0,Math.min(65535,Math.round(v)));return{hi:(v>
 function combine16bit(hi,lo){return((hi&0xFF)<<8)|(lo&0xFF)}
 function sendFader16(coarseCh,fineCh,val16,chType){
   val16=+val16;
-  var s=split16bit(val16);
   var firstIdx=[...selComp][0];
   if(selGroup>=0){
+    var s=split16bit(val16);
     wsSend({cmd:'grch',g:selGroup,c:coarseCh,v:s.hi});
     wsSend({cmd:'grch',g:selGroup,c:fineCh,v:s.lo});
   } else {
-    selComp.forEach(function(f){
+    var arr=[...selComp];
+    var n=arr.length;
+    var useFan=fanEnabled&&n>1;
+    var fanAmt=useFan?(+document.getElementById('fanAmount').value)/100:0;
+    arr.forEach(function(f,si){
       var fx=fixtures[f];if(!fx||!fx.channels)return;
       var cc=coarseCh,fc=fineCh;
       if(f!==firstIdx){
         cc=findChByType(fx,chType);fc=findChByType(fx,chType===CT.PAN?CT.PANF:CT.TILTF);
         if(cc<0||fc<0)return;
       }
+      var v=val16;
+      if(useFan){
+        var t=(n>1)?((si/(n-1))-0.5):0;
+        var offset=Math.round(t*fanAmt*65535);
+        v=Math.max(0,Math.min(65535,v+offset));
+      }
+      var s=split16bit(v);
       if(fx.channels[cc])fx.channels[cc].currentValue=s.hi;
       if(fx.channels[fc])fx.channels[fc].currentValue=s.lo;
       wsSend({cmd:'fxch',f:fx.idx,c:cc,v:s.hi});
       wsSend({cmd:'fxch',f:fx.idx,c:fc,v:s.lo});
     });
   }
-  // Sync XY pads when Pan/Tilt changes
   if(chType===CT.PAN||chType===CT.TILT){if(xyPopOpen)xyPopDraw()}
 }
 
+var fanEnabled=false;
 function renderFaders(){
   const box=document.getElementById('faderBox');
   if(selComp.size===0){box.style.display='none';return}
@@ -1442,18 +1473,44 @@ function renderFaders(){
       h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v16+'</span>';
       h+='</div>';
     } else {
-      // 8-bit slider (obstoječ)
+      // 8-bit kanal
       const v=ch.currentValue||0;
-      const rl=ch.ranges&&ch.ranges.length?ch.ranges.map(r=>r.from+'-'+r.to+':'+r.label).join(', '):'';
+      var isFilmstrip=(ch.type===CT.GOBO||ch.type===CT.PRISM||ch.type===CT.MACRO||ch.type===CT.PRESET||ch.type===CT.SHUTTER)&&ch.ranges&&ch.ranges.length>1;
       h+='<div class="ch-row">';
       h+='<span class="ch-name" style="color:'+col+'">'+ch.name+'</span>';
-      h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+';--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" data-type="'+ch.type+'" oninput="sfill(this);sendFader('+ci+',this.value)">';
-      h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v+'</span>';
-      h+='<span class="ch-range">'+rl+'</span></div>';
+      if(isFilmstrip){
+        // Filmstrip: mreža gumbov namesto drsnika
+        h+='<div class="filmstrip" id="fs_'+ci+'">';
+        ch.ranges.forEach(function(r,ri){
+          var mid=Math.round((r.from+r.to)/2);
+          var isActive=(v>=r.from&&v<=r.to);
+          h+='<button class="fs-btn'+(isActive?' fs-sel':'')+'" onclick="sendFader('+ci+','+mid+');filmstripSync('+ci+','+mid+')" title="'+r.from+'-'+r.to+'">'+r.label+'</button>';
+        });
+        h+='</div>';
+        h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v+'</span>';
+      } else {
+        // Slider (obstoječ)
+        var rl=ch.ranges&&ch.ranges.length?ch.ranges.map(function(r){return r.from+'-'+r.to+':'+r.label}).join(', '):'';
+        h+='<input type="range" id="hs_'+ci+'" min="0" max="255" value="'+v+'" style="accent-color:'+col+';--ch-col:'+col+';--ch-pct:'+Math.round(v/2.55)+'%" data-type="'+ch.type+'" oninput="sfill(this);sendFader('+ci+',this.value)">';
+        h+='<span class="ch-val" id="chv'+ci+'" style="color:'+col+'">'+v+'</span>';
+        h+='<span class="ch-range">'+rl+'</span>';
+      }
+      h+='</div>';
     }
   });
   document.getElementById('faders').innerHTML=h;
   bindHorizontalSliders(document.getElementById('faders'));
+  // Pokaži fan vrstico samo pri več izbranih fixture-ih
+  var fr=document.getElementById('fanRow');
+  if(fr)fr.style.display=(selComp.size>1&&selGroup<0)?'flex':'none';
+}
+function filmstripSync(ci,val){
+  var ve=document.getElementById('chv'+ci);if(ve)ve.textContent=val;
+  var fs=document.getElementById('fs_'+ci);if(!fs)return;
+  fs.querySelectorAll('.fs-btn').forEach(function(b){b.classList.remove('fs-sel')});
+  // Označi gumb, ki vsebuje to vrednost
+  var firstIdx=[...selComp][0];var ch=fixtures[firstIdx]&&fixtures[firstIdx].channels?fixtures[firstIdx].channels[ci]:null;
+  if(ch&&ch.ranges){ch.ranges.forEach(function(r,ri){if(val>=r.from&&val<=r.to){var btns=fs.querySelectorAll('.fs-btn');if(btns[ri])btns[ri].classList.add('fs-sel')}})}
 }
 // Najdi kanal po tipu v fixture-u (vrne index ali -1)
 function findChByType(fx,type){
@@ -1469,22 +1526,30 @@ function sendFader(ch,val){
   const chType=first.channels[ch].type;
 
   if(selGroup>=0){
-    // Skupina: pošlji po indexu (backend upravljaj pravilno)
     wsSend({cmd:'grch',g:selGroup,c:ch,v:+val});
   } else {
-    selComp.forEach(f=>{
-      const fx=fixtures[f];if(!fx||!fx.channels)return;
-      // Najdi ustrezni kanal po TIPU, ne po indexu
-      let targetCh=ch; // default: isti index
+    var arr=[...selComp];
+    var n=arr.length;
+    var useFan=fanEnabled&&n>1;
+    var fanAmt=useFan?(+document.getElementById('fanAmount').value)/100:0;
+    arr.forEach(function(f,si){
+      var fx=fixtures[f];if(!fx||!fx.channels)return;
+      var targetCh=ch;
       if(f!==firstIdx){
-        const byType=findChByType(fx,chType);
-        if(byType>=0)targetCh=byType; else return; // nima tega tipa → preskoči
+        var byType=findChByType(fx,chType);
+        if(byType>=0)targetCh=byType; else return;
       }
-      if(fx.channels[targetCh])fx.channels[targetCh].currentValue=+val;
-      wsSend({cmd:'fxch',f:fx.idx,c:targetCh,v:+val});
+      var v=+val;
+      if(useFan){
+        // t: -0.5 do +0.5 glede na pozicijo v selekciji
+        var t=(n>1)?((si/(n-1))-0.5):0;
+        var offset=Math.round(t*fanAmt*255);
+        v=Math.max(0,Math.min(255,v+offset));
+      }
+      if(fx.channels[targetCh])fx.channels[targetCh].currentValue=v;
+      wsSend({cmd:'fxch',f:fx.idx,c:targetCh,v:v});
     });
   }
-  // Sync XY pads when Pan/Tilt changes
   if(chType===CT.PAN||chType===CT.TILT){if(xyPopOpen)xyPopDraw()}
 }
 
@@ -3769,6 +3834,49 @@ function bindLaySidebarDrag(item,fi){
   item.addEventListener('pointercancel',function(){dragging=false;if(ghost){ghost.remove();ghost=null;}});
 }
 
+// ---- Auto-Arrange ----
+function layAutoArrange(mode){
+  if(!mode)return;
+  // Zberi indekse fixture-ov na odru
+  var fis=Object.keys(layData.fixturePositions).map(Number).sort(function(a,b){return a-b});
+  if(fis.length<2)return;
+  var n=fis.length;
+  var margin=60; // odmik od roba SVG
+  var cx=layVbW/2,cy=layVbH/2;
+  if(mode==='line'){
+    // Ravna linija od leve do desne, vertikalno na sredini
+    var x0=margin,x1=layVbW-margin;
+    fis.forEach(function(fi,i){
+      var t=(n>1)?(i/(n-1)):0.5;
+      layData.fixturePositions[fi]={x:Math.round(x0+t*(x1-x0)),y:Math.round(cy)};
+    });
+  } else if(mode==='arc'){
+    // Polkrog (lok) — od leve do desne
+    var rx=(layVbW-2*margin)/2,ry=(layVbH-2*margin)*0.6;
+    fis.forEach(function(fi,i){
+      var t=(n>1)?(i/(n-1)):0.5;
+      var ang=Math.PI+t*Math.PI; // PI → 2PI (spodnji polkrog)
+      layData.fixturePositions[fi]={x:Math.round(cx+Math.cos(ang)*rx),y:Math.round(cy+Math.sin(ang)*ry*0.6)};
+    });
+  } else if(mode==='circle'){
+    var r=Math.min(layVbW-2*margin,layVbH-2*margin)/2*0.85;
+    fis.forEach(function(fi,i){
+      var ang=(i/n)*2*Math.PI-Math.PI/2; // Začni zgoraj
+      layData.fixturePositions[fi]={x:Math.round(cx+Math.cos(ang)*r),y:Math.round(cy+Math.sin(ang)*r*0.65)};
+    });
+  } else if(mode==='grid'){
+    var cols=Math.ceil(Math.sqrt(n));
+    var rows=Math.ceil(n/cols);
+    var spacX=(layVbW-2*margin)/(Math.max(cols-1,1));
+    var spacY=(layVbH-2*margin)/(Math.max(rows-1,1));
+    fis.forEach(function(fi,i){
+      var col=i%cols,row=Math.floor(i/cols);
+      layData.fixturePositions[fi]={x:Math.round(margin+col*spacX),y:Math.round(margin+row*spacY)};
+    });
+  }
+  renderLayLayout();
+}
+
 // ---- Stage drawing ----
 var layEvtsBound=false;
 function bindLaySvgEvents(){
@@ -4828,7 +4936,7 @@ function lfoAdd(){
   if(mask===0){showMsg('Izberi vsaj 1 fixture','err');return}
   wsSend({cmd:'lfo_add',w:+(document.getElementById('lfoWave').value),tgt:+(document.getElementById('lfoTarget').value),
     rate:+(document.getElementById('lfoRate').value),depth:+(document.getElementById('lfoDepth').value),
-    phase:+(document.getElementById('lfoPhase').value),mask:mask});
+    phase:+(document.getElementById('lfoPhase').value),mask:mask,sym:+(document.getElementById('lfoSym').value)});
 }
 function lfoRemove(i){
   if(lfoData[i])lfoData[i]=null;renderLfoList();
@@ -4842,7 +4950,8 @@ function renderLfoList(){
   var h='';
   lfoData.forEach(function(l,i){
     if(!l)return;
-    h+='<div class="lfo-item"><span class="lfo-wave">'+(waves[l.w]||'?')+'</span><span class="lfo-tgt">'+(tgts[l.tgt]||'?')+'</span><span class="lfo-info">'+l.rate+'Hz d:'+l.depth+' ph:'+l.phase+'</span><button onclick="lfoRemove('+i+')" style="background:#c0392b;color:#fff">X</button></div>';
+    var syms=['\u2192','\u2190','\u2194','\u21C4'];
+    h+='<div class="lfo-item"><span class="lfo-wave">'+(waves[l.w]||'?')+'</span><span class="lfo-tgt">'+(tgts[l.tgt]||'?')+'</span><span class="lfo-info">'+l.rate+'Hz d:'+l.depth+' ph:'+l.phase+(l.sym?' '+(syms[l.sym]||''):'')+'</span><button onclick="lfoRemove('+i+')" style="background:#c0392b;color:#fff">X</button></div>';
   });
   if(!h)h='<div style="font-size:0.8em;color:#555">Ni aktivnih LFO-jev</div>';
   el.innerHTML=h;
