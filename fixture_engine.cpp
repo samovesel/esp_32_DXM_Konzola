@@ -173,7 +173,7 @@ const FixtureProfile* FixtureEngine::findProfile(const char* id) const {
 
 bool FixtureEngine::deleteProfile(const char* id) {
   // Multi-mode ID format: "basename__modename" → file is "basename.json"
-  char fileBase[20];
+  char fileBase[32];
   strlcpy(fileBase, id, sizeof(fileBase));
   char* sep = strstr(fileBase, "__");
   if (sep) *sep = '\0';  // Odreži mode suffix
