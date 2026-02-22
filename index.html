@@ -4209,7 +4209,7 @@ function bindFixtureCircle(circle,fi,g){
       if(Math.abs(dx)>3||Math.abs(dy)>3){if(!moved){moved=true;layDragTrashShow(true);}}
       if(!moved)return;
       var nx=startPos.x+dx,ny=startPos.y+dy;
-      nx=Math.max(2,Math.min(layVbW-2,nx));ny=Math.max(2,Math.min(layVbH-2,ny));
+      nx=Math.round(nx);ny=Math.round(ny);
       layData.fixturePositions[fi]={x:Math.round(nx),y:Math.round(ny)};
       var rnx=Math.round(nx),rny=Math.round(ny);
       var c=g.querySelector('.lay-fx-circle');
@@ -4267,7 +4267,7 @@ function bindLaySidebarDrag(item,fi){
     if(e.clientX>=cr.left&&e.clientX<=cr.right&&e.clientY>=cr.top&&e.clientY<=cr.bottom){
       var pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
       var svgPt=pt.matrixTransform(svg.getScreenCTM().inverse());
-      layData.fixturePositions[fi]={x:Math.round(Math.max(2,Math.min(layVbW-2,svgPt.x))),y:Math.round(Math.max(2,Math.min(layVbH-2,svgPt.y)))};
+      layData.fixturePositions[fi]={x:Math.round(svgPt.x),y:Math.round(svgPt.y)};
       renderLayLayout();
     }
   });
