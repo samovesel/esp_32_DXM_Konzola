@@ -1,5 +1,6 @@
 <!DOCTYPE html><html lang="sl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="/manifest-pro.json">
 <title>ArtNet/DMX Node</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -285,7 +286,10 @@ input[orient=vertical]::-moz-range-thumb{width:34px;height:12px;border-radius:3p
 .lfo-item .lfo-info{color:#888;flex:1}
 .lfo-item button{padding:2px 8px;font-size:0.8em}
 .cue-cur{background:#1a3020!important;border-left:3px solid #27ae60}
+#pwaInstallFloat{display:none;position:fixed;bottom:18px;right:18px;z-index:9999;background:#0af;color:#111;border:none;padding:10px 18px;border-radius:24px;font-size:0.85em;font-weight:700;cursor:pointer;box-shadow:0 2px 12px rgba(0,170,255,.4);transition:opacity .2s}
+#pwaInstallFloat:active{opacity:.7}
 </style></head><body>
+<button id="pwaInstallFloat" onclick="pwaInstall()">&#x2B07; Namesti aplikacijo</button>
 
 <header>
   <div>
@@ -5878,4 +5882,33 @@ function makePopupDraggable(popupId,handleSel){
 
 wsConnect();loadFixtures();loadSettings();loadScenes();updateFadeLabel();midiInit();
 makePopupDraggable('mxCp','h4');makePopupDraggable('xyPop','h4');makePopupDraggable('lxPopup','h4');
+
+// ===== PWA Install =====
+var deferredPrompt=null;
+function _pwaIsInstalled(){
+  return window.matchMedia('(display-mode: standalone)').matches||
+         window.navigator.standalone===true||
+         localStorage.getItem('pwa_installed')==='1';
+}
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();deferredPrompt=e;
+  if(_pwaIsInstalled())return;
+  document.getElementById('pwaInstallFloat').style.display='block';
+});
+window.addEventListener('appinstalled',function(){
+  localStorage.setItem('pwa_installed','1');
+  document.getElementById('pwaInstallFloat').style.display='none';
+  deferredPrompt=null;
+});
+function pwaInstall(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(r){
+      if(r.outcome==='accepted')localStorage.setItem('pwa_installed','1');
+      deferredPrompt=null;
+    });
+    document.getElementById('pwaInstallFloat').style.display='none';
+  }
+}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});}
 </script></body></html>

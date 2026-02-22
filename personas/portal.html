@@ -281,15 +281,29 @@ function discoverDevice() {
 
 // ===== PWA Install Prompt =====
 var deferredPrompt = null;
+function _pwaIsInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true ||
+           localStorage.getItem('pwa_installed') === '1';
+}
 window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
+    if (_pwaIsInstalled()) return;
     document.getElementById('installBtn').style.display = 'block';
+});
+window.addEventListener('appinstalled', function() {
+    localStorage.setItem('pwa_installed', '1');
+    document.getElementById('installBtn').style.display = 'none';
+    deferredPrompt = null;
 });
 function pwaInstall() {
     if (deferredPrompt) {
         deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(function() { deferredPrompt = null; });
+        deferredPrompt.userChoice.then(function(r) {
+            if (r.outcome === 'accepted') localStorage.setItem('pwa_installed', '1');
+            deferredPrompt = null;
+        });
         document.getElementById('installBtn').style.display = 'none';
     }
 }

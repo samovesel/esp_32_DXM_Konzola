@@ -1366,6 +1366,7 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   server->on("/manifest-staff.json",     HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-staff.json"); });
   server->on("/manifest-event.json",     HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-event.json"); });
   server->on("/manifest-busker.json",    HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-busker.json"); });
+  server->on("/manifest-pro.json",      HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-pro.json"); });
   server->on("/manifest.json",           HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-portal.json"); });
 
   // PWA ikone
