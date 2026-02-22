@@ -43,6 +43,7 @@
 
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include <DNSServer.h>
 #include <ArtnetWifi.h>
 #include <LittleFS.h>
 #include "esp_bt.h"
@@ -90,6 +91,10 @@ SacnOutput     sacnOut;
 PixelMapper    pixelMap;
 #endif
 EspNowDmx      espNowDmx;
+
+// Captive portal DNS server (AP način)
+static DNSServer dnsServer;
+static bool apModeActive = false;
 
 // DMX output timing
 static unsigned long lastDmxSend = 0;
@@ -179,6 +184,13 @@ void wifiSetup() {
     WiFi.softAP(nodeCfg.hostname, "artnetdmx");
     Serial.printf("[WiFi] AP '%s', IP: %s\n", nodeCfg.hostname, WiFi.softAPIP().toString().c_str());
     ledSet(LED_YELLOW);
+  }
+
+  // Captive portal DNS server (AP način) — preusmeri vse DNS poizvedbe na ESP32
+  if (WiFi.getMode() == WIFI_AP) {
+    apModeActive = true;
+    dnsServer.start(53, "*", WiFi.softAPIP());
+    Serial.println("[DNS] Captive portal DNS aktiven");
   }
 
   // mDNS — dostop prek hostname.local (npr. artnet-node.local)
@@ -576,6 +588,9 @@ void setup() {
 void loop() {
   // Watchdog feed
   esp_task_wdt_reset();
+
+  // Captive portal DNS (AP način)
+  if (apModeActive) dnsServer.processNextRequest();
 
   // ArtNet — branje UDP paketov
   artnet.read();

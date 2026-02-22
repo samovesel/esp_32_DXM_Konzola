@@ -115,6 +115,13 @@ function showMsg(msg) {
     setTimeout(function() { t.style.opacity = '0'; }, 2000);
 }
 
+// Service Worker registracija
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js', {scope: '/'})
+        .then(function(reg) { console.log('[SW] Registered'); })
+        .catch(function(e) { console.log('[SW] Error:', e); });
+}
+
 // Export
 global.PersonaCore = {
     connect: wsConnect,
