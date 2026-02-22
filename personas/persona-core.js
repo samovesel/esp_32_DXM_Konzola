@@ -103,7 +103,49 @@ function loadCues(cb) {
 // Detect standalone PWA mode
 function isStandalone() {
     return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone === true;
+           window.navigator.standalone === true ||
+           !!document.fullscreenElement;
+}
+
+// Fullscreen API fallback za bližnjice (ko WebAPK ni na voljo)
+function goFullscreen() {
+    var el = document.documentElement;
+    var rq = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (rq) rq.call(el).catch(function(){});
+}
+
+function exitFullscreen() {
+    var ex = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (ex && document.fullscreenElement) ex.call(document).catch(function(){});
+}
+
+// Prikaži fullscreen gumb če ni standalone način
+function initFullscreenHint() {
+    if (isStandalone()) return;
+    // Počakaj da se stran naloži
+    var btn = document.createElement('button');
+    btn.id = 'fsBtn';
+    btn.innerHTML = '&#x26F6;'; // fullscreen unicode
+    btn.title = 'Celozaslonski način';
+    btn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;width:48px;height:48px;' +
+        'border-radius:50%;border:none;background:#0af;color:#000;font-size:22px;cursor:pointer;' +
+        'box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
+    btn.onclick = function() {
+        goFullscreen();
+        btn.style.display = 'none';
+    };
+    document.body.appendChild(btn);
+    // Skrij gumb ko je fullscreen aktiven
+    document.addEventListener('fullscreenchange', function() {
+        btn.style.display = document.fullscreenElement ? 'none' : 'flex';
+    });
+}
+
+// Zaženi fullscreen hint po DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFullscreenHint);
+} else {
+    initFullscreenHint();
 }
 
 // Simple toast message
