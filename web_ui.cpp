@@ -1352,15 +1352,21 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   server->on("/persona-core.js", HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/persona-core.js.gz","application/javascript"); });
   server->on("/sw.js", HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/sw.js.gz","application/javascript"); });
 
-  // PWA manifesti (majhne datoteke, ne-gzip)
-  server->on("/manifest-portal.json",    HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-portal.json","application/manifest+json"); });
-  server->on("/manifest-sound-eng.json", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-sound-eng.json","application/manifest+json"); });
-  server->on("/manifest-theater.json",   HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-theater.json","application/manifest+json"); });
-  server->on("/manifest-dj.json",        HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-dj.json","application/manifest+json"); });
-  server->on("/manifest-staff.json",     HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-staff.json","application/manifest+json"); });
-  server->on("/manifest-event.json",     HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-event.json","application/manifest+json"); });
-  server->on("/manifest-busker.json",    HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-busker.json","application/manifest+json"); });
-  server->on("/manifest.json",           HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-portal.json","application/manifest+json"); });
+  // PWA manifesti (majhne datoteke, ne-gzip, no-cache da Chrome vedno dobi svež manifest)
+  auto serveManifest = [](AsyncWebServerRequest* r, const char* path) {
+      if (!LittleFS.exists(path)) { r->send(404, "text/plain", "Not found"); return; }
+      AsyncWebServerResponse* resp = r->beginResponse(LittleFS, path, "application/manifest+json");
+      resp->addHeader("Cache-Control", "no-store");
+      r->send(resp);
+  };
+  server->on("/manifest-portal.json",    HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-portal.json"); });
+  server->on("/manifest-sound-eng.json", HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-sound-eng.json"); });
+  server->on("/manifest-theater.json",   HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-theater.json"); });
+  server->on("/manifest-dj.json",        HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-dj.json"); });
+  server->on("/manifest-staff.json",     HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-staff.json"); });
+  server->on("/manifest-event.json",     HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-event.json"); });
+  server->on("/manifest-busker.json",    HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-busker.json"); });
+  server->on("/manifest.json",           HTTP_GET, [serveManifest](AsyncWebServerRequest* r){ serveManifest(r,"/p/manifest-portal.json"); });
 
   // PWA ikone
   server->on("/icon-192.png", HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/icon-192.png","image/png"); });

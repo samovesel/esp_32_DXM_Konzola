@@ -2,7 +2,7 @@
 // Cachira persona UI datoteke za offline zagon
 // Strategija: cache-first za persona statiko, network-only za API/WS/Pro UI
 
-var CACHE_NAME = 'dmx-pwa-v1';
+var CACHE_NAME = 'dmx-pwa-v2';
 
 var CACHE_URLS = [
     '/portal',
@@ -15,14 +15,7 @@ var CACHE_URLS = [
     '/persona-core.js',
     '/sw.js',
     '/icon-192.png',
-    '/icon-512.png',
-    '/manifest-portal.json',
-    '/manifest-sound-eng.json',
-    '/manifest-theater.json',
-    '/manifest-dj.json',
-    '/manifest-staff.json',
-    '/manifest-event.json',
-    '/manifest-busker.json'
+    '/icon-512.png'
 ];
 
 // Install: pre-cache vseh persona datotek
