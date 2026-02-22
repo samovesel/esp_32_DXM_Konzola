@@ -60,6 +60,14 @@ h1{font-size:1.4em;margin-bottom:4px;color:#0af}
 #installBtn{display:none;margin-top:12px;background:#0af;color:#111;border:none;
   padding:10px 20px;border-radius:8px;font-size:0.9em;font-weight:600;cursor:pointer}
 #installBtn:active{opacity:0.8}
+/* PWA info */
+#pwaInfo{margin-top:12px;width:100%;max-width:400px;font-size:0.75em;color:#666;text-align:center}
+#pwaInfo summary{cursor:pointer;color:#888;font-size:0.85em;list-style:none;display:flex;align-items:center;justify-content:center;gap:4px}
+#pwaInfo summary::-webkit-details-marker{display:none}
+#pwaInfo .steps{text-align:left;background:#1a1a2e;border-radius:8px;padding:10px 14px;margin-top:8px;line-height:1.6}
+#pwaInfo .steps b{color:#0af}
+#pwaInfo .steps code{background:#222;padding:1px 5px;border-radius:3px;font-size:0.95em;color:#f90}
+#pwaInfo .shortcut-hint{margin-top:6px;color:#888;font-size:0.95em}
 </style>
 </head>
 <body>
@@ -115,6 +123,14 @@ h1{font-size:1.4em;margin-bottom:4px;color:#0af}
   <a href="/">&#9881; Polni vmesnik (Pro)</a>
   <button id="installBtn" onclick="pwaInstall()">Namesti aplikacijo</button>
   <span class="device-name" id="deviceInfo"></span>
+</div>
+
+<!-- PWA info (prikazano kadar ni secure context) -->
+<div id="pwaInfo" style="display:none">
+  <details>
+    <summary>&#9432; Namesti kot aplikacijo</summary>
+    <div class="steps" id="pwaSteps"></div>
+  </details>
 </div>
 <div id="toast"></div>
 
@@ -277,6 +293,43 @@ function pwaInstall() {
         document.getElementById('installBtn').style.display = 'none';
     }
 }
+
+// ===== PWA / Secure Context Info =====
+(function() {
+    var info = document.getElementById('pwaInfo');
+    var steps = document.getElementById('pwaSteps');
+    if (!info || !steps) return;
+    if (window.isSecureContext) {
+        // SW deluje — prikaži info samo če ni standalone
+        if (!PersonaCore.isStandalone()) {
+            info.style.display = 'block';
+            steps.innerHTML = '<p class="shortcut-hint">Tapni <b>Namesti aplikacijo</b> zgoraj, ali uporabi meni brskalnika.</p>';
+        }
+        return;
+    }
+    // Ni secure context — SW ne bo deloval
+    info.style.display = 'block';
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    var isAndroid = /Android/.test(navigator.userAgent);
+    var html = '';
+    if (isAndroid) {
+        html += '<p><b>Za polno aplikacijo (offline + namestitev):</b></p>' +
+            '<p>1. Odpri <code>chrome://flags</code> v Chrome</p>' +
+            '<p>2. Poišči <code>insecure origins</code></p>' +
+            '<p>3. Dodaj: <code>http://' + location.host + '</code></p>' +
+            '<p>4. Tapni <b>Relaunch</b></p>' +
+            '<p style="margin-top:8px"><b>Za bližnjico brez offline:</b></p>' +
+            '<p>Chrome meni (&#8942;) &rarr; <b>Dodaj na začetni zaslon</b></p>';
+    } else if (isIOS) {
+        html += '<p><b>Dodaj na začetni zaslon:</b></p>' +
+            '<p>Tapni <b>Deli</b> (&#9997;) &rarr; <b>Dodaj na začetni zaslon</b></p>' +
+            '<p class="shortcut-hint">Odpre se kot samostojna aplikacija (brez offline načina)</p>';
+    } else {
+        html += '<p><b>Dodaj med zaznamke</b> za hiter dostop.</p>' +
+            '<p class="shortcut-hint">Offline način zahteva HTTPS.</p>';
+    }
+    steps.innerHTML = html;
+})();
 
 // ===== Init =====
 // Preveri ali je naprava dosegljiva — če da, pokaži grid; če ne, pokaži connection manager
