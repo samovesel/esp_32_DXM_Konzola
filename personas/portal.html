@@ -39,6 +39,27 @@ h1{font-size:1.4em;margin-bottom:4px;color:#0af}
 .footer a:hover{color:#0af}
 .device-name{font-size:0.75em;color:#555;margin-top:8px}
 @media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr);max-width:600px}}
+/* Connection Manager */
+#connMgr{text-align:center;width:100%;max-width:400px}
+#connMgr .spinner{display:inline-block;width:40px;height:40px;border:3px solid #333;
+  border-top-color:#0af;border-radius:50%;animation:spin 0.8s linear infinite;margin:20px 0 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#connMgr .status{color:#888;font-size:0.85em;margin-bottom:16px}
+#connMgr .manual{margin-top:12px}
+#connMgr input[type=text]{background:#222;border:1px solid #444;color:#eee;padding:8px 12px;
+  border-radius:6px;font-size:0.9em;width:180px;text-align:center}
+#connMgr input[type=text]::placeholder{color:#666}
+#connMgr button{background:#0af;color:#111;border:none;padding:8px 16px;border-radius:6px;
+  font-size:0.85em;font-weight:600;cursor:pointer;margin-left:6px}
+#connMgr button:active{opacity:0.8}
+#connMgr .devices{margin-top:12px;font-size:0.8em;color:#666}
+#connMgr .dev-item{display:inline-block;background:#1a1a2e;padding:4px 10px;border-radius:12px;
+  margin:3px;cursor:pointer;border:1px solid #333;color:#aaa}
+#connMgr .dev-item:hover{border-color:#0af;color:#0af}
+/* PWA install */
+#installBtn{display:none;margin-top:12px;background:#0af;color:#111;border:none;
+  padding:10px 20px;border-radius:8px;font-size:0.9em;font-weight:600;cursor:pointer}
+#installBtn:active{opacity:0.8}
 </style>
 </head>
 <body>
@@ -46,7 +67,18 @@ h1{font-size:1.4em;margin-bottom:4px;color:#0af}
 <h1>DMX Konzola</h1>
 <p class="subtitle" id="deviceName">Izberi vmesnik</p>
 
-<div class="grid">
+<!-- Connection Manager (prikazan kadar naprava ni dosegljiva) -->
+<div id="connMgr" style="display:none">
+  <div class="spinner" id="connSpinner"></div>
+  <div class="status" id="connStatus">Iskanje naprave...</div>
+  <div class="manual" id="connManual" style="display:none">
+    <input type="text" id="connIp" placeholder="IP naslov (npr. 192.168.1.50)">
+    <button onclick="manualConnect()">Poveži</button>
+  </div>
+  <div class="devices" id="connDevices"></div>
+</div>
+
+<div class="grid" id="personaGrid">
   <a class="card" href="/sound-eng">
     <span class="icon">&#127911;</span>
     <span class="name">Tonski mojster</span>
@@ -81,18 +113,185 @@ h1{font-size:1.4em;margin-bottom:4px;color:#0af}
 
 <div class="footer">
   <a href="/">&#9881; Polni vmesnik (Pro)</a>
+  <button id="installBtn" onclick="pwaInstall()">Namesti aplikacijo</button>
   <span class="device-name" id="deviceInfo"></span>
 </div>
 <div id="toast"></div>
 
 <script src="/persona-core.js"></script>
 <script>
-PersonaCore.connect();
+// ===== Connection Manager =====
+var STORAGE_KEY = 'dmx_devices';
+var DISCOVER_TIMEOUT = 3000;
+
+function getDevices() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch(e) { return []; }
+}
+function saveDevice(host, hostname) {
+    var devs = getDevices();
+    // Posodobi ali dodaj
+    var found = false;
+    for (var i = 0; i < devs.length; i++) {
+        if (devs[i].host === host) {
+            devs[i].hostname = hostname;
+            devs[i].lastSeen = Date.now();
+            found = true;
+            break;
+        }
+    }
+    if (!found) devs.unshift({host: host, hostname: hostname, lastSeen: Date.now()});
+    // Ohrani zadnjih 10
+    if (devs.length > 10) devs = devs.slice(0, 10);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(devs));
+}
+
+function tryDiscover(host) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function() { ctrl.abort(); }, DISCOVER_TIMEOUT);
+    return fetch('http://' + host + '/api/discover', {mode:'cors', signal: ctrl.signal})
+        .then(function(r) { clearTimeout(timer); return r.json(); })
+        .then(function(d) { return {host: host, data: d}; })
+        .catch(function() { clearTimeout(timer); return null; });
+}
+
+function showConnMgr() {
+    document.getElementById('connMgr').style.display = 'block';
+    document.getElementById('personaGrid').style.display = 'none';
+}
+function hideConnMgr() {
+    document.getElementById('connMgr').style.display = 'none';
+    document.getElementById('personaGrid').style.display = '';
+}
+function setStatus(msg) {
+    document.getElementById('connStatus').textContent = msg;
+}
+function showManual() {
+    document.getElementById('connSpinner').style.display = 'none';
+    document.getElementById('connManual').style.display = 'block';
+    // Prikaži znane naprave
+    var devs = getDevices();
+    if (devs.length > 0) {
+        var html = 'Zadnje znane naprave: ';
+        for (var i = 0; i < devs.length; i++) {
+            html += '<span class="dev-item" onclick="tryDevice(\'' + devs[i].host + '\')">' +
+                    (devs[i].hostname || devs[i].host) + ' (' + devs[i].host + ')</span>';
+        }
+        document.getElementById('connDevices').innerHTML = html;
+    }
+}
+function tryDevice(host) {
+    document.getElementById('connSpinner').style.display = '';
+    document.getElementById('connManual').style.display = 'none';
+    setStatus('Povezovanje na ' + host + '...');
+    tryDiscover(host).then(function(result) {
+        if (result) {
+            saveDevice(result.host, result.data.hostname);
+            if (result.host !== location.host) {
+                location.href = 'http://' + result.host + '/portal';
+            } else {
+                hideConnMgr();
+                PersonaCore.connect();
+            }
+        } else {
+            setStatus('Naprava ' + host + ' ni dosegljiva');
+            showManual();
+        }
+    });
+}
+function manualConnect() {
+    var ip = document.getElementById('connIp').value.trim();
+    if (!ip) return;
+    // Dodaj port če manjka
+    if (ip.indexOf(':') === -1) ip = ip;
+    tryDevice(ip);
+}
+
+function discoverDevice() {
+    // 1. Poskusi trenutni host
+    setStatus('Preverjam trenutni naslov...');
+    tryDiscover(location.host).then(function(result) {
+        if (result) {
+            // Trenutni host deluje — shrani in prikaži UI
+            saveDevice(result.host, result.data.hostname);
+            hideConnMgr();
+            PersonaCore.connect();
+            return;
+        }
+        // 2. Poskusi zadnje znane naslove
+        var devs = getDevices();
+        var hosts = [];
+        for (var i = 0; i < devs.length; i++) {
+            if (devs[i].host !== location.host) hosts.push(devs[i].host);
+        }
+        // 3. Poskusi mDNS iz shranjenih hostname-ov
+        var mdnsHosts = [];
+        for (var i = 0; i < devs.length; i++) {
+            if (devs[i].hostname) {
+                var mdns = devs[i].hostname.toLowerCase() + '.local';
+                if (hosts.indexOf(mdns) === -1) mdnsHosts.push(mdns);
+            }
+        }
+        // Poskusi tudi privzeto
+        if (mdnsHosts.indexOf('artnet-node.local') === -1) mdnsHosts.push('artnet-node.local');
+
+        var allHosts = hosts.concat(mdnsHosts);
+
+        if (allHosts.length === 0) {
+            setStatus('Naprava ni najdena');
+            showManual();
+            return;
+        }
+
+        setStatus('Iščem na znanih naslovih...');
+        var promises = [];
+        for (var i = 0; i < allHosts.length; i++) {
+            promises.push(tryDiscover(allHosts[i]));
+        }
+        Promise.all(promises).then(function(results) {
+            for (var i = 0; i < results.length; i++) {
+                if (results[i]) {
+                    saveDevice(results[i].host, results[i].data.hostname);
+                    location.href = 'http://' + results[i].host + '/portal';
+                    return;
+                }
+            }
+            // Nič ni delovalo
+            setStatus('Naprava ni najdena');
+            showManual();
+        });
+    });
+}
+
+// ===== PWA Install Prompt =====
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBtn').style.display = 'block';
+});
+function pwaInstall() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function() { deferredPrompt = null; });
+        document.getElementById('installBtn').style.display = 'none';
+    }
+}
+
+// ===== Init =====
+// Preveri ali je naprava dosegljiva — če da, pokaži grid; če ne, pokaži connection manager
 PersonaCore.onHello(function(d) {
+    hideConnMgr();
     if (d.fw) document.getElementById('deviceName').textContent = 'Firmware: ' + d.fw;
     var info = document.getElementById('deviceInfo');
     if (info) info.textContent = location.host;
+    // Shrani napravo v localStorage
+    saveDevice(location.host, d.hostname || '');
 });
+
+// Zaženi discovery — najprej hitro preizkusimo ali je ESP32 dosegljiv
+showConnMgr();
+discoverDevice();
 </script>
 </body>
 </html>

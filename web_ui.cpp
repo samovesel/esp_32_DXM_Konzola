@@ -1266,6 +1266,18 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
     resp->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     req->send(resp);
   });
+  // Discovery endpoint (CORS za cross-origin PWA discovery)
+  server->on("/api/discover",HTTP_GET,[](AsyncWebServerRequest* req){
+    JsonDocument doc;
+    doc["hostname"]=_cfg->hostname; doc["fw"]=FW_VERSION;
+    doc["universe"]=_cfg->universe; doc["channels"]=_cfg->channelCount;
+    doc["mode"]=(WiFi.getMode()==WIFI_AP)?"ap":"sta";
+    String json; serializeJson(doc,json);
+    AsyncWebServerResponse* resp=req->beginResponse(200,"application/json",json);
+    resp->addHeader("Access-Control-Allow-Origin","*");
+    req->send(resp);
+  });
+
   server->on("/api/config",HTTP_GET,[](AsyncWebServerRequest* req){if(!checkAuth(req))return;apiGetConfig(req);});
   server->on("/api/config",HTTP_POST,[](AsyncWebServerRequest* req){},NULL,apiPostConfig);
   server->on("/api/fixtures",HTTP_GET,[](AsyncWebServerRequest* req){if(!checkAuth(req))return;apiGetFixtures(req);});
@@ -1338,6 +1350,7 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   server->on("/event",     HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/event.html.gz","text/html"); });
   server->on("/busker",    HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/busker.html.gz","text/html"); });
   server->on("/persona-core.js", HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/persona-core.js.gz","application/javascript"); });
+  server->on("/sw.js", HTTP_GET, [](AsyncWebServerRequest* r){ serveGzFile(r,"/p/sw.js.gz","application/javascript"); });
 
   // PWA manifesti (majhne datoteke, ne-gzip)
   server->on("/manifest-portal.json",    HTTP_GET, [](AsyncWebServerRequest* r){ r->send(LittleFS,"/p/manifest-portal.json","application/manifest+json"); });
@@ -1356,6 +1369,21 @@ void webBegin(AsyncWebServer* server, AsyncWebSocket* ws,
   // Persona config API
   server->on("/api/persona-cfg", HTTP_GET, apiGetPersonaCfg);
   server->on("/api/persona-cfg", HTTP_POST, [](AsyncWebServerRequest* r){}, NULL, apiPostPersonaCfg);
+
+  // Captive portal detection endpoints (preusmeri na /portal v AP načinu)
+  server->on("/generate_204", HTTP_GET, [](AsyncWebServerRequest* r){ r->redirect("/portal"); });
+  server->on("/hotspot-detect.html", HTTP_GET, [](AsyncWebServerRequest* r){ r->redirect("/portal"); });
+  server->on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest* r){ r->redirect("/portal"); });
+  server->on("/redirect", HTTP_GET, [](AsyncWebServerRequest* r){ r->redirect("/portal"); });
+
+  // Catch-all: v AP načinu redirect neznanih URL-ov na /portal
+  server->onNotFound([](AsyncWebServerRequest* r){
+    if (WiFi.getMode() == WIFI_AP) {
+      r->redirect("http://" + WiFi.softAPIP().toString() + "/portal");
+    } else {
+      r->send(404, "text/plain", "Not found");
+    }
+  });
 
   server->begin();
   Serial.println("[WEB] AsyncWebServer + WebSocket zagnan (6 zavihkov + persone)");
